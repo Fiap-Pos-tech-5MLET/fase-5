@@ -485,12 +485,25 @@ Este projeto está licenciado sob a **Licença MIT** - veja o arquivo [LICENSE](
 
 ---
 
-## 🌟 Agradecimentos
+## 📚 Documentação Adicional
 
-Agradecimento especial à **Associação Passos Mágicos** por disponibilizar os dados e pela inspiração deste projeto que visa contribuir para a transformação da vida de crianças e jovens através da educação.
 
-Para mais informações sobre a Associação Passos Mágicos, visite: [Site oficial da Associação]
+### Guias de Testes e Qualidade
+- **[TESTING.md](TESTING.md)** - Guia completo de testes e cobertura
+- **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** - Estratégia de testes do projeto
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Resumo da implementação
+
+### Guias de Desenvolvimento
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Instruções para IA Code Review
+  - Padrões de qualidade de código
+  - Convenções de nomenclatura
+  - Checklist de revisão
 
 ---
 
-**Feito com ❤️ pela Equipe 5MLET - FIAP Pós-Tech Machine Learning Engineering**
+## 🙏 Agradecimentos
+
+- **FIAP** - Pela excelente estrutura do curso de Pós-Graduação em Machine Learning
+- **Professores** - Pelo conhecimento compartilhado e orientação
+- **Comunidade PyTorch** - Pela documentação e recursos disponíveis
+- **Comunidade Open Source** - Pelas bibliotecas e ferramentas utilizadas
