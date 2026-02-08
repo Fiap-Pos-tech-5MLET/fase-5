@@ -205,3 +205,40 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Data directories (keep structure, ignore content)
+data/raw/*
+data/processed/*
+data/interim/*
+data/external/*
+!data/**/.gitkeep
+
+# Model artifacts
+app/artifacts/*.pkl
+app/artifacts/*.joblib
+app/artifacts/*.h5
+app/artifacts/*.pth
+app/model/*.pkl
+app/model/*.joblib
+!app/artifacts/.gitkeep
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
