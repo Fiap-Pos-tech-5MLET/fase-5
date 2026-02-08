@@ -468,9 +468,14 @@ make mlflow
 Este projeto foi desenvolvido como parte do **Tech Challenge Fase 5** da **Pós-Graduação em Machine Learning Engineering da FIAP**.
 
 **Equipe 5MLET**:
-- [Nome do Desenvolvedor 1]
-- [Nome do Desenvolvedor 2]
-- [Nome do Desenvolvedor 3]
+
+| Nome | RM | GitHub |
+|------|-----|--------|
+| Lucas Felipe de Jesus Machado | RM364306 | [@lfjmachado](https://github.com/lfjmachado) |
+| Antônio Teixeira Santana Neto | RM364480 | [@antonioteixeirasn](https://github.com/antonioteixeirasn) |
+| Gabriela Moreno Rocha dos Santos | RM364538 | [@gabrielaMSantos](https://github.com/gabrielaMSantos) |
+| Erik Douglas Alves Gomes | RM364379 | [@Erik-DAG](https://github.com/Erik-DAG) |
+| Leonardo Fernandes Soares | RM364648 | [@leferso](https://github.com/leferso) |
 
 ---
 

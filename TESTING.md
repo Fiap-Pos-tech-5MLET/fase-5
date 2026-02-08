@@ -1,6 +1,6 @@
-# Testing Guide - Stock Prediction API (LSTM)
+# Testing Guide - Associação Passos Mágicos ML Project
 
-Este documento descreve a estratégia de testes, cobertura de código e como executar os testes.
+Este documento descreve a estratégia de testes, cobertura de código e como executar os testes do projeto de análise e predição de desenvolvimento educacional.
 
 ## Índice
 - [Estrutura de Testes](#estrutura-de-testes)

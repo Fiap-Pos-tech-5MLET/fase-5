@@ -1,8 +1,8 @@
 # Guia de Contribuição
 
-Obrigado pelo interesse em contribuir para o projeto **Tech Challenge Fase 4 - Stock Prediction API**!
+Obrigado pelo interesse em contribuir para o projeto **Tech Challenge Fase 5 - Associação Passos Mágicos**!
 
-Este projeto faz parte do **Tech Challenge da Pós-Graduação em Machine Learning Engineering da FIAP (Pos Tech)**.
+Este projeto faz parte do **Tech Challenge da Pós-Graduação em Machine Learning Engineering da FIAP (Pos Tech)**, focado em análise e predição do desenvolvimento educacional de crianças e jovens atendidos pela Associação Passos Mágicos.
 Este documento estabelece as diretrizes detalhadas para garantir que o projeto se mantenha organizado, seguro, testado e com alta qualidade de código.
 
 ## � Índice
@@ -25,8 +25,8 @@ O projeto utiliza **Python 3.11+**. Recomendamos fortemente o uso de ambientes v
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/Fiap-Pos-tech-5MLET/fase-4.git
-cd fase-4
+git clone https://github.com/Fiap-Pos-tech-5MLET/fase-5.git
+cd fase-5
 
 # 2. Crie e ative o ambiente virtual
 python -m venv venv

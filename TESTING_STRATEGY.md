@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-Este documento descreve a estratégia completa de testes, garantindo 100% de cobertura nos módulos críticos e 90% de cobertura geral do projeto.
+Este documento descreve a estratégia completa de testes para o projeto de análise e predição de desenvolvimento educacional da Associação Passos Mágicos, garantindo 100% de cobertura nos módulos críticos e 90% de cobertura geral do projeto.
 
 ---
 
