@@ -3,12 +3,12 @@
 # Variables
 PYTHON := python3
 PIP := pip
-PROJECT_NAME := stock-prediction-api
+PROJECT_NAME := passos-magicos-ml-api
 DOCKER_IMAGE := $(PROJECT_NAME):latest
 
 help:
 	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║   Stock Prediction API - Make Commands                         ║"
+	@echo "║   Associação Passos Mágicos ML API - Make Commands            ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "Development Setup:"
