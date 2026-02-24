@@ -1,3 +1,27 @@
+# Excluir artefatos e dados que não precisam ir ao contexto de build
+.git
+venv
+env
+.venv
+.pytest_cache
+__pycache__
+htmlcov
+docs
+notebooks
+data
+dev
+tests
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.egg-info
+dist
+build
+*.log
+.env
+instances
+/.vscode
 # Git
 .git
 .gitignore

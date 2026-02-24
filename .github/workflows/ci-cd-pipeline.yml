@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -333,21 +334,28 @@ jobs:
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Construir imagem Docker
+      - name: Construir e publicar imagem Docker (GHCR)
         id: docker-build
         uses: docker/build-push-action@v6
         with:
           context: .
-          tags: datathon-api:ci
-          load: true
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/fase-5:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: Testar container (smoke test)
         id: docker-test
         run: |
           echo "🐳 Testando container Docker (porta 80 - Nginx)..."
-          if ! docker run -d --name datathon-api-ci -p 80:80 datathon-api:ci; then
+          # Pull the published image from GHCR for a more hermetic smoke test
+          IMAGE=ghcr.io/${{ github.repository_owner }}/fase-5:ci-${{ github.sha }}
+          if ! docker pull "$IMAGE"; then
+            echo "⚠️ Imagem GHCR não encontrada, tentando usar imagem local datathon-api:ci"
+            IMAGE=datathon-api:ci
+          fi
+          if ! docker run -d --name datathon-api-ci -p 80:80 "$IMAGE"; then
             echo "❌ Falha ao iniciar container"
             exit 1
           fi

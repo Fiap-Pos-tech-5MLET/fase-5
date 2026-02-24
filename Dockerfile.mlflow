@@ -1,0 +1,16 @@
+FROM python:3.11-slim AS builder
+WORKDIR /wheels
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc g++ libffi-dev libssl-dev python3-dev && rm -rf /var/lib/apt/lists/*
+COPY requirements-mlflow.txt /wheels/requirements-mlflow.txt
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r /wheels/requirements-mlflow.txt
+
+FROM python:3.11-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /wheels /wheels
+COPY requirements-mlflow.txt /app/requirements-mlflow.txt
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r /app/requirements-mlflow.txt
+COPY . /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+EXPOSE 5000
+CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "${PORT:-5000}", "--backend-store-uri", "file:///app/mlruns", "--default-artifact-root", "file:///app/app/models"]

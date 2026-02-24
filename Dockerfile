@@ -1,21 +1,41 @@
+FROM python:3.11-slim AS builder
+
+LABEL maintainer="Fiap Pos-tech 5MLET"
+LABEL description="Datathon Passos Mágicos - Builder (wheels)"
+
+ENV PIP_NO_CACHE_DIR=off
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        g++ \
+        libffi-dev \
+        libssl-dev \
+        libpq-dev \
+        python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /wheels
+
+# Copy only requirements first to leverage build cache
+COPY requirements.txt /wheels/requirements.txt
+
+# Build wheels for all requirements (so final image doesn't need build deps)
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r /wheels/requirements.txt
+
 FROM python:3.11-slim
 
-# Metadados
 LABEL maintainer="Fiap Pos-tech 5MLET"
-LABEL description="Datathon Passos Mágicos - ML API (Container Único com Nginx + Supervisor)"
+LABEL description="Datathon Passos Mágicos - Runtime (Nginx + Supervisor + App)"
 
-# Instalar dependências do sistema
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    build-essential \
-    libffi-dev \
-    libpq-dev \
-    libssl-dev \
-    nginx \
-    supervisor \
-    curl \
-    gettext-base \
+# Install only runtime system dependencies (no build tools)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        nginx \
+        supervisor \
+        curl \
+        gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -24,44 +44,39 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Copiar requirements e instalar dependências Python
-COPY requirements.txt .
-ENV PIP_ROOT_USER_ACTION=ignore
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy wheels from builder and install without building
+COPY --from=builder /wheels /wheels
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r /app/requirements.txt
 
-# Definir variável de ambiente para produção
-ENV ENVIRONMENT=production
-
-# Criar diretórios necessários
+# Create necessary directories
 RUN mkdir -p /app/app/models /app/app/artifacts /app/mlruns /app/data /var/log/supervisor
 
-# Copiar código da aplicação
-COPY . .
+# Copy minimal application files (context is reduced by .dockerignore)
+COPY . /app
 
-# Copiar arquivo de configuração do Nginx como template (será preenchido no entrypoint)
+# Place nginx template
 COPY nginx.conf /etc/nginx/sites-available/default.template
 
-# Copiar página de landing
+# Place landing page
 COPY index.html /app/index.html
 
-# Criar arquivo de configuração do supervisor para rodar múltiplos processos
-RUN mkdir -p /var/log/supervisor
-COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+# Supervisor config to run multiple services
+RUN mkdir -p /var/log/supervisor && cat > /etc/supervisor/conf.d/supervisord.conf <<'EOF'
 [supervisord]
 nodaemon=true
 logfile=/var/log/supervisor/supervisord.log
 user=root
 
 [program:nginx]
-command=/usr/sbin/nginx -g "daemon off;"
+command=/usr/sbin/nginx -g 'daemon off;'
 autostart=true
 autorestart=true
 stderr_logfile=/var/log/supervisor/nginx.err.log
 stdout_logfile=/var/log/supervisor/nginx.out.log
 
 [program:api]
-command=uvicorn app.main:app --host 127.0.0.1 --port 8000
+command=uvicorn app.main:app --host localhost --port 8000
 directory=/app
 autostart=true
 autorestart=true
@@ -69,7 +84,7 @@ stderr_logfile=/var/log/supervisor/api.err.log
 stdout_logfile=/var/log/supervisor/api.out.log
 
 [program:dashboard]
-command=streamlit run app/dashboard.py --server.port 8501 --server.address 127.0.0.1 --server.baseUrlPath /dashboard --server.headless true
+command=streamlit run app/dashboard.py --server.port 8501 --server.address localhost --server.baseUrlPath /dashboard --server.headless true
 directory=/app
 autostart=true
 autorestart=true
@@ -77,7 +92,7 @@ stderr_logfile=/var/log/supervisor/dashboard.err.log
 stdout_logfile=/var/log/supervisor/dashboard.out.log
 
 [program:mlflow]
-command=mlflow server --host 127.0.0.1 --port 5000 --backend-store-uri file:///app/mlruns --default-artifact-root file:///app/app/models
+command=mlflow server --host localhost --port 5000 --backend-store-uri file:///app/mlruns --default-artifact-root file:///app/app/models
 directory=/app
 autostart=true
 autorestart=true
@@ -85,16 +100,14 @@ stderr_logfile=/var/log/supervisor/mlflow.err.log
 stdout_logfile=/var/log/supervisor/mlflow.out.log
 EOF
 
-# Expor porta 80 (Nginx)
+# Expose the port used by Nginx (Render will set PORT at runtime)
 EXPOSE 80
 
-# Copiar entrypoint que injeta a porta em tempo de execução e inicia supervisord
+# Entrypoint
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Health check via Nginx
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/ || exit 1
 
-# Rodar entrypoint que ajusta nginx e inicia supervisord
 ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,0 +1,4 @@
+# Minimal requirements for MLflow UI/service
+mlflow==2.18.0
+pandas==2.2.3
+numpy==1.26.4

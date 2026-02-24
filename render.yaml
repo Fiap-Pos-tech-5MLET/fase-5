@@ -2,29 +2,63 @@ services:
   # ========================================
   # Container Único - Nginx + API + Dashboard + MLflow
   # ========================================
+  # API service
   - type: web
-    name: datathon-passos-magicos
+    name: datathon-api
     env: docker
     region: oregon
     plan: free
     branch: main
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.api
     dockerContext: .
-    
-    # Variáveis de ambiente
     envVars:
       - key: ENVIRONMENT
         value: production
       - key: PYTHONUNBUFFERED
         value: "1"
-      - key: PORT
-        value: "80"
-    
-    # Health check
-    healthCheckPath: /
-    
-    # Persistência de dados
+    healthCheckPath: /api/
+
+  # Dashboard (Streamlit)
+  - type: web
+    name: datathon-dashboard
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile.dashboard
+    dockerContext: .
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /dashboard/
+
+  # MLflow
+  - type: web
+    name: datathon-mlflow
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile.mlflow
+    dockerContext: .
+    envVars:
+      - key: ENVIRONMENT
+        value: production
     disk:
       name: mlflow-data
       mountPath: /app/mlruns
       sizeGB: 1
+
+  # Frontend / Proxy (Nginx)
+  - type: web
+    name: datathon-frontend
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile.nginx
+    dockerContext: .
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /
