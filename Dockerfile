@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     curl \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -38,8 +39,8 @@ RUN mkdir -p /app/app/models /app/app/artifacts /app/mlruns /app/data /var/log/s
 # Copiar código da aplicação
 COPY . .
 
-# Copiar arquivo de configuração do Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copiar arquivo de configuração do Nginx como template (será preenchido no entrypoint)
+COPY nginx.conf /etc/nginx/sites-available/default.template
 
 # Copiar página de landing
 COPY index.html /app/index.html
@@ -68,7 +69,7 @@ stderr_logfile=/var/log/supervisor/api.err.log
 stdout_logfile=/var/log/supervisor/api.out.log
 
 [program:dashboard]
-command=streamlit run app/dashboard.py --server.port 8501 --server.address 127.0.0.1
+command=streamlit run app/dashboard.py --server.port 8501 --server.address 127.0.0.1 --server.baseUrlPath /dashboard --server.headless true
 directory=/app
 autostart=true
 autorestart=true
@@ -87,9 +88,13 @@ EOF
 # Expor porta 80 (Nginx)
 EXPOSE 80
 
+# Copiar entrypoint que injeta a porta em tempo de execução e inicia supervisord
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Health check via Nginx
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/ || exit 1
 
-# Rodar supervisor que gerencia todos os 3 processos
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Rodar entrypoint que ajusta nginx e inicia supervisord
+ENTRYPOINT ["/app/entrypoint.sh"]

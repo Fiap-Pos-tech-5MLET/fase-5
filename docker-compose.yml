@@ -10,7 +10,7 @@ services:
       - SECRET_KEY=5MLET
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - ALGORITHM=HS256
-      - ENVIRONMENT=development
+      - ENVIRONMENT=production
     volumes:
       - ./app:/app/app
       - ./src:/app/src
