@@ -1,0 +1,130 @@
+[project]
+name = "datathon-passos-magicos"
+version = "1.0.0"
+description = "ML Pipeline para predição de risco de defasagem escolar"
+requires-python = ">=3.9"
+
+[tool.ruff]
+# Target Python version
+target-version = "py39"
+
+# Line length matching Black
+line-length = 100
+
+# Format configuration
+[tool.ruff.format]
+# Use spaces for indentation
+indent-style = "space"
+# Match Black's quote style
+quote-style = "double"
+# Skip magic trailing comma
+skip-magic-trailing-comma = false
+
+# Lint configuration
+[tool.ruff.lint]
+# Extended select of error codes
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort (import sorting)
+    "N",    # pep8-naming
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+    "ARG",  # flake8-unused-arguments
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific rules
+]
+
+# Ignore specific error codes
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "W505",   # Line too long (handled by formatter)
+    "E203",   # Whitespace before ':'
+    "ARG001", # Unused function argument
+    "ARG002", # Unused method argument
+    "N806",   # Variable in function should be lowercase (X, y are ML standard)
+    "N803",   # Argument name should be lowercase (X is ML standard)
+    "B017",   # Do not assert blind exception (used in tests)
+    "RUF001", # String contains ambiguous unicode (emojis in UI text)
+    "UP035",  # typing.Dict is deprecated (Python 3.10+ compat, but allow both)
+    "UP045",  # Use X | None (Python 3.10+ compat, but allow Optional)
+    "UP006",  # Use dict instead of Dict (Python 3.9+ compat)
+    "UP007",  # Use X | Y (Python 3.10+ compat, but allow Optional for clarity)
+    "F401",   # Unused imports in sklearn try/except blocks
+    "F821",   # Undefined name (Pipeline in tests - conditional import)
+    "F841",   # Local variable assigned but never used (test data prep)
+    "B007",   # Loop control variable not used (intentional in iteration)
+    "C408",   # Unnecessary dict() call (style preference)
+    "SIM118", # Use `key in dict` instead of `key in dict.keys()` (minor)
+    "RUF043", # Pattern passed to match= (test error patterns)
+]
+
+# Files to exclude
+exclude = [
+    "__pycache__",
+    ".git",
+    ".ruff_cache",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    ".pytest_cache",
+    "htmlcov",
+]
+
+[tool.ruff.lint.isort]
+# Configure isort for import sorting
+force-single-line = false
+known-first-party = ["src", "app"]
+
+[tool.mypy]
+python_version = "3.9"
+check_untyped_defs = true
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+strict_equality = true
+ignore_missing_imports = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "numpy",
+    "pandas",
+    "sklearn",
+    "torch",
+    "streamlit",
+    "plotly",
+    "seaborn",
+    "matplotlib",
+]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src", "app"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+precision = 2

@@ -1,0 +1,46 @@
+[theme]
+primaryColor = "#7C3AED"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1D29"
+textColor = "#E2E8F0"
+font = "sans serif"
+
+[client]
+showErrorDetails = false
+toolbarMode = "viewer"
+showSidebarNavigation = true
+showMenuItems = false
+
+[logger]
+level = "warning"
+
+[browser]
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+
+[server]
+port = 8501
+headless = true
+baseUrlPath = "/dashboard"
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 5
+maxMessageSize = 50
+runOnSave = false
+fileWatcherType = "none"
+enableStaticServing = false
+enableWebsocketCompression = true
+
+[runner]
+magicEnabled = false
+fastReruns = true
+
+[client.toolbarMode]
+value = "viewer"
+
+[logger]
+level = "error"
+
+[ui]
+hideTopBar = false
+hideSidebarNav = false

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: datathon-passos-magicos
+    runtime: docker
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: ./
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ENVIRONMENT
+        value: production
+      - key: STREAMLIT_SERVER_FILE_WATCHER_TYPE
+        value: "none"
+      - key: MLFLOW_TRACKING_URI
+        value: file:./mlruns
+    healthCheckPath: /health

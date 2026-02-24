@@ -1,0 +1,71 @@
+# Excluir artefatos e dados que não precisam ir ao contexto de build
+.git
+venv
+env
+.venv
+.pytest_cache
+__pycache__
+htmlcov
+docs
+notebooks
+data
+dev
+tests
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.egg-info
+dist
+build
+*.log
+.env
+instances
+/.vscode
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+*.egg-info
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+coverage.xml
+htmlcov/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# MLflow local data (mounted via volume)
+mlruns/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Notebooks
+notebooks/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gemini/Agent
+.gemini/
+.agent/

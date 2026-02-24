@@ -1,0 +1,39 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    ENVIRONMENT=production
+
+WORKDIR /app
+
+# Instalação de dependências do sistema e compiladores para ML
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    build-essential \
+    gcc \
+    g++ \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalação das dependências otimizadas para o Render
+COPY requirements.txt ./requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt && \
+    find /usr/local -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
+# Cópia do código e artefatos
+COPY app /app/app
+COPY src /app/src
+COPY scripts /app/scripts
+COPY index.html /app/index.html
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Preparação do ambiente
+RUN mkdir -p /app/app/models /app/app/artifacts /app/mlruns /app/data && \
+    chmod -R 755 /app && \
+    pip install --no-cache-dir supervisor
+
+EXPOSE 8080
+
+CMD ["/usr/local/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
