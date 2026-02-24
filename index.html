@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passos Mágicos — Predição de Risco Escolar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .description {
+            color: #777;
+            margin-bottom: 50px;
+            line-height: 1.6;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .buttons {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn {
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            color: white;
+        }
+
+        .btn-api {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-api:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-app {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-app:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-mlflow {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .btn-mlflow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .info {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: left;
+            margin-top: 30px;
+        }
+
+        .info h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .info p {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .features {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            color: #666;
+        }
+
+        .feature strong {
+            color: #333;
+        }
+
+        .footer {
+            margin-top: 40px;
+            color: #999;
+            font-size: 0.9em;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Passos Mágicos</h1>
+        <p class="subtitle">Predição de Risco de Defasagem Escolar</p>
+        
+        <p class="description">
+            Sistema de Machine Learning para identificar e prever o risco de defasagem educacional 
+            em alunos da Associação Passos Mágicos, permitindo intervenções precoces e personalizadas.
+        </p>
+
+        <div class="features">
+            <div class="feature">
+                <strong>📚 API REST</strong><br>
+                FastAPI com documentação interativa
+            </div>
+            <div class="feature">
+                <strong>📊 Dashboard</strong><br>
+                Streamlit para visualização de dados
+            </div>
+            <div class="feature">
+                <strong>📈 MLflow</strong><br>
+                Rastreamento de experimentos
+            </div>
+        </div>
+
+        <div class="buttons">
+            <a href="/api/docs" class="btn btn-api">
+                📚 API Docs
+            </a>
+            <a href="/dashboard/" class="btn btn-app">
+                📊 Dashboard
+            </a>
+            <a href="/mlflow/" class="btn btn-mlflow">
+                📈 MLflow
+            </a>
+        </div>
+
+        <div class="info">
+            <h3>✨ Funcionalidades Principais</h3>
+            <p>
+                ✅ <strong>Predições em Tempo Real:</strong> Classifique estudantes por risco de defasagem<br>
+                ✅ <strong>Treinamento Automatizado:</strong> Pipeline completo com validação e promoção de modelos<br>
+                ✅ <strong>Monitoramento de Drift:</strong> Detecção automática de mudanças nos dados<br>
+                ✅ <strong>Auditoria Completa:</strong> Rastreamento de todas as predições e treinamentos<br>
+                ✅ <strong>MLflow Integration:</strong> Rastreamento de experimentos e versionamento de modelos
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>🚀 Desenvolvido para Datathon Passos Mágicos — FastAPI, Streamlit e Scikit-Learn</p>
+            <p style="margin-top: 10px; font-weight: bold; color: #667eea;">FIAP Pós-Tech 5MLET — Tech Challenge Fase 5</p>
+        </div>
+    </div>
+</body>
+</html>

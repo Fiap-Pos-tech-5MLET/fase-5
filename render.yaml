@@ -1,0 +1,30 @@
+services:
+  # ========================================
+  # Container Único - Nginx + API + Dashboard + MLflow
+  # ========================================
+  - type: web
+    name: datathon-passos-magicos
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    
+    # Variáveis de ambiente
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PORT
+        value: "80"
+    
+    # Health check
+    healthCheckPath: /
+    
+    # Persistência de dados
+    disk:
+      name: mlflow-data
+      mountPath: /app/mlruns
+      sizeGB: 1

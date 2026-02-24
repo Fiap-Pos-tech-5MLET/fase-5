@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "80:80"
+    environment:
+      - PROJECT_NAME="TC4: Long Short Term Memory (LSTM)"
+      - SECRET_KEY=5MLET
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - ALGORITHM=HS256
+      - ENVIRONMENT=development
+    volumes:
+      - ./app:/app/app
+      - ./src:/app/src
+      - ./data:/app/data
+    restart: unless-stopped
