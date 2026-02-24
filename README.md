@@ -645,7 +645,7 @@ mlflow ui --port 5000
 ## 🎥 Vídeo Demonstrativo
 Assista ao vídeo explicativo do projeto e seu funcionamento:
 - 📹 **Link do vídeo**: [Em breve]
-- 💎 **Link API Pública**: [API](https://datathon-machine-learning-engineering.onrender.com/)
+- 💎 **Link API Pública**: [API - datathon-machine-learning-engineering](https://datathon-machine-learning-engineering.onrender.com/)
 - 📊 **Conteúdo**: Arquitetura, demonstração da API, pipeline de treinamento e resultados
 
 ### 📸 Screenshots da Aplicação
@@ -655,6 +655,11 @@ Assista ao vídeo explicativo do projeto e seu funcionamento:
 - 📊 **Dashboard Streamlit**: Interface interativa para visualização, predições e retreinamento
 - 📖 **API Documentation**: Swagger UI com documentação completa dos endpoints
 - 🔍 **MLflow UI**: Tracking de experimentos, métricas e modelos
+
+#### Landing Page
+![Landing Page](docs/images/tela_principal.png)
+*Página inicial unificando acesso à API e Dashboard*
+
 
 > Para screenshots atualizados, acesse a [documentação do projeto](docs/datathon/) ou visite a API em produção.
 
