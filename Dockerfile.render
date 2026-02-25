@@ -27,7 +27,6 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY app /app/app
 COPY src /app/src
 COPY scripts /app/scripts
-COPY .streamlit /app/.streamlit
 COPY index.html /app/index.html
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY nginx-render.conf /etc/nginx/nginx.conf

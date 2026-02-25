@@ -193,7 +193,7 @@
             // Configura o link do Dashboard baseado no ambiente
             const dashboardUrl = window.location.hostname === 'localhost' 
                 ? 'http://localhost:8501'
-                : '/dashboard';
+                : (window.DASHBOARD_URL || `${window.location.protocol}//${window.location.hostname}:8501`);
             document.getElementById('dashboard-link').href = dashboardUrl;
         </script>
 

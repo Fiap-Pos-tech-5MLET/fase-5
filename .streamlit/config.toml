@@ -16,6 +16,7 @@ level = "warning"
 
 [browser]
 gatherUsageStats = false
+serverAddress = "0.0.0.0"
 
 [server]
 port = 8501
