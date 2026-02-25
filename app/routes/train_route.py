@@ -170,7 +170,7 @@ def promote() -> PromoteResponse:
         return PromoteResponse(
             status="promoted",
             message="Modelo candidato promovido para produção com sucesso!",
-            loaded_at=loaded_at,
+            loaded_at=loaded_at or "N/A",
             champion_run_id=promoted_run_id,
         )
     except FileNotFoundError as exc:
