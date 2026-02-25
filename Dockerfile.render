@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     python3-dev \
-    nginx \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalação das dependências otimizadas para o Render
@@ -29,7 +28,6 @@ COPY src /app/src
 COPY scripts /app/scripts
 COPY index.html /app/index.html
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY nginx-render.conf /etc/nginx/nginx.conf
 
 # Preparação do ambiente
 RUN mkdir -p /app/app/models /app/app/artifacts /app/mlruns /app/data && \
