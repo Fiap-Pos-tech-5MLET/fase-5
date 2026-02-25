@@ -167,12 +167,12 @@ def promote() -> PromoteResponse:
             os.remove(candidate_run_id_path)
         logger.info("Candidate files removed after promotion.")
 
-        return {
-            "status": "promoted",
-            "message": "Modelo candidato promovido para produção com sucesso!",
-            "loaded_at": loaded_at,
-            "champion_run_id": promoted_run_id,
-        }
+        return PromoteResponse(
+            status="promoted",
+            message="Modelo candidato promovido para produção com sucesso!",
+            loaded_at=loaded_at,
+            champion_run_id=promoted_run_id,
+        )
     except FileNotFoundError as exc:
         logger.error("File error: %s", exc)
         raise HTTPException(
@@ -214,10 +214,10 @@ def discard() -> DiscardResponse:
             os.remove(candidate_run_id_path)
         logger.info("Candidate model and run_id discarded. Champion model unchanged.")
 
-        return {
-            "status": "discarded",
-            "message": ("Modelo candidato descartado. O modelo atual em produção foi mantido."),
-        }
+        return DiscardResponse(
+            status="discarded",
+            message="Modelo candidato descartado. O modelo atual em produção foi mantido.",
+        )
     except OSError as exc:
         logger.error("Discard failed: %s", exc)
         raise HTTPException(
@@ -250,17 +250,17 @@ def model_metrics() -> ModelMetricsResponse:
 
     if not champion_run_id:
         logger.info("No champion_run_id.txt found. Returning basic model info.")
-        return {
-            "source": "local",
-            "message": (
+        return ModelMetricsResponse(
+            source="local",
+            message=(
                 "Nenhuma run do MLflow vinculada ao modelo em produção. "
                 "Execute /retrain e /promote."
             ),
-            "run_id": None,
-            "metrics": None,
-            "params": None,
-            "artifacts": [],
-        }
+            run_id=None,
+            metrics=None,
+            params=None,
+            artifacts=[],
+        )
 
     try:
         run = mlflow.get_run(champion_run_id)
@@ -273,41 +273,41 @@ def model_metrics() -> ModelMetricsResponse:
         artifacts_list = client.list_artifacts(champion_run_id)
         artifact_names = [a.path for a in artifacts_list if a.path.endswith(".png")]
 
-        return {
-            "source": "mlflow",
-            "run_id": champion_run_id,
-            "run_name": run.info.run_name,
-            "start_time": run.info.start_time,
-            "end_time": run.info.end_time,
-            "status": run.info.status,
-            "metrics": metrics,
-            "params": params,
-            "artifacts": artifact_names,
-        }
+        return ModelMetricsResponse(
+            source="mlflow",
+            run_id=champion_run_id,
+            run_name=run.info.run_name,
+            start_time=run.info.start_time,
+            end_time=run.info.end_time,
+            status=run.info.status,
+            metrics=metrics,
+            params=params,
+            artifacts=artifact_names,
+        )
     except ImportError as exc:
         logger.warning("MLflow not available: %s", exc)
-        return {
-            "source": "error",
-            "run_id": champion_run_id,
-            "message": f"MLflow não disponível: {exc!s}",
-            "metrics": None,
-            "params": None,
-            "artifacts": [],
-        }
+        return ModelMetricsResponse(
+            source="error",
+            run_id=champion_run_id,
+            message=f"MLflow não disponível: {exc!s}",
+            metrics=None,
+            params=None,
+            artifacts=[],
+        )
     except ValueError as exc:
         logger.warning(
             "Failed to fetch from MLflow (run_id=%s): %s",
             champion_run_id,
             exc,
         )
-        return {
-            "source": "error",
-            "run_id": champion_run_id,
-            "message": f"Erro ao consultar MLflow: {exc!s}",
-            "metrics": None,
-            "params": None,
-            "artifacts": [],
-        }
+        return ModelMetricsResponse(
+            source="error",
+            run_id=champion_run_id,
+            message=f"Erro ao consultar MLflow: {exc!s}",
+            metrics=None,
+            params=None,
+            artifacts=[],
+        )
 
 
 @router.get("/model-artifact/{artifact_name}")

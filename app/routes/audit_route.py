@@ -32,7 +32,7 @@ def health_check() -> Dict[str, bool]:
         Dict[str, bool]: Status basico e indicacao de modelo carregado.
     """
     model = get_current_model()
-    return {"status": "ok", "model_loaded": model is not None}
+    return {"status": True, "model_loaded": model is not None}
 
 
 @router.get("/model-info", response_model=ModelInfoResponse)
@@ -124,7 +124,7 @@ def model_info() -> ModelInfoResponse:
         except (AttributeError, KeyError):
             pass
 
-    return info
+    return ModelInfoResponse(**info)
 
 
 @router.get("/drift", response_class=HTMLResponse)

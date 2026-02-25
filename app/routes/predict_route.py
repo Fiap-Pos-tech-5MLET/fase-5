@@ -132,10 +132,10 @@ def predict(student: StudentData) -> PredictionResponse:
 
         logger.info("Prediction: risk=%d, probability=%.4f", int(prediction[0]), float(proba[0]))
 
-        return {
-            "risk_prediction": int(prediction[0]),
-            "risk_probability": float(proba[0]),
-        }
+        return PredictionResponse(
+            risk_prediction=int(prediction[0]),
+            risk_probability=float(proba[0]),
+        )
     except ValueError as exc:
         logger.error("Prediction error: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
