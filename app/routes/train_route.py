@@ -1,13 +1,17 @@
 """
-Rotas de treinamento e gestão de modelos.
+Rotas de treinamento e gestao de modelos.
 
-Endpoints para retreinamento, promoção, descarte e consulta de métricas.
+Implementa o ciclo champion/challenger para MLOps:
+- /retrain cria um modelo candidato (challenger) sem afetar producao
+- /promote substitui o champion pelo challenger aprovado
+- /discard remove o challenger rejeitado
+- /model-metrics e /model-artifact trazem rastreabilidade via MLflow
 """
 
 import logging
 import os
 import shutil
-from typing import Annotated
+from typing import Annotated, Any, Dict
 
 import mlflow
 from fastapi import APIRouter, Body, HTTPException
@@ -28,21 +32,25 @@ router = APIRouter()
 
 
 @router.post("/retrain")
-def retrain(params: Annotated[RetrainRequest, Body(...)]) -> dict:
+def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
     """
     Treina um modelo candidato (challenger) SEM sobrescrever o modelo em produção (champion).
 
     O modelo candidato é salvo em models/model_candidate.pkl.
     Use POST /promote para promovê-lo ou POST /discard para descartá-lo.
 
+    Quando usar: apos identificar drift, queda de metricas ou chegada de
+    novos dados do ciclo escolar. O retorno inclui metricas e run_id do MLflow
+    para comparacao objetiva com o champion atual.
+
     Args:
-        params: Hiperparâmetros de treinamento.
+        params (RetrainRequest): Hiperparametros de treinamento.
 
     Returns:
-        Dicionário com status, métricas e run_id.
+        Dict[str, Any]: Status do treino, metricas e run_id do MLflow.
 
     Raises:
-        HTTPException: 500 se treinamento falhar.
+        HTTPException: 500 se o treinamento falhar.
     """
     try:
         _, _, candidate_path = get_model_paths()
@@ -110,17 +118,22 @@ def retrain(params: Annotated[RetrainRequest, Body(...)]) -> dict:
 
 
 @router.post("/promote", response_model=PromoteResponse)
-def promote():
+def promote() -> PromoteResponse:
     """
     Promove o modelo candidato (challenger) para produção (champion).
 
     Copia model_candidate.pkl → model.pkl e recarrega o modelo na API.
+    Atualiza o run_id do champion para rastreabilidade no MLflow.
+
+    Quando usar: somente apos avaliacao de metricas, regressao e alinhamento
+    com os objetivos do projeto.
 
     Returns:
-        PromoteResponse com status e timestamp.
+        PromoteResponse: Status da promocao e timestamp de carregamento.
 
     Raises:
-        HTTPException: 404 se candidato não existir, 500 se promoção falhar.
+        HTTPException: 404 se candidato nao existir.
+        HTTPException: 500 se a promocao falhar.
     """
     models_dir, model_path, candidate_path = get_model_paths()
     candidate_run_id_path = os.path.join(models_dir, "candidate_run_id.txt")
@@ -175,15 +188,19 @@ def promote():
 
 
 @router.post("/discard", response_model=DiscardResponse)
-def discard():
+def discard() -> DiscardResponse:
     """
     Descarta o modelo candidato (challenger) e mantém o modelo atual (champion).
 
+    Quando usar: se o challenger tiver metricas piores, sinais de overfitting
+    ou degradacao em dados recentes.
+
     Returns:
-        DiscardResponse com status.
+        DiscardResponse: Status do descarte.
 
     Raises:
-        HTTPException: 404 se candidato não existir, 500 se descarte falhar.
+        HTTPException: 404 se candidato nao existir.
+        HTTPException: 500 se o descarte falhar.
     """
     models_dir, _, candidate_path = get_model_paths()
     candidate_run_id_path = os.path.join(models_dir, "candidate_run_id.txt")
@@ -210,15 +227,18 @@ def discard():
 
 
 @router.get("/model-metrics", response_model=ModelMetricsResponse)
-def model_metrics():
+def model_metrics() -> ModelMetricsResponse:
     """
     Retorna métricas, parâmetros e artefatos do modelo champion em produção.
 
     Busca da run do MLflow correspondente ao champion (via champion_run_id.txt).
     Fallback: retorna informações básicas se MLflow não estiver disponível.
 
+    Valor: permite auditoria e comparacao entre versoes, suportando decisao
+    de promover ou descartar candidatos.
+
     Returns:
-        ModelMetricsResponse com métricas e artefatos.
+        ModelMetricsResponse: Metricas e artefatos do champion.
     """
     models_dir, _, _ = get_model_paths()
     champion_run_id_path = os.path.join(models_dir, "champion_run_id.txt")
@@ -291,20 +311,23 @@ def model_metrics():
 
 
 @router.get("/model-artifact/{artifact_name}")
-def model_artifact(artifact_name: str):
+def model_artifact(artifact_name: str) -> FileResponse:
     """
     Serve um artefato (imagem) da run do champion no MLflow.
 
     Fallback: serve do diretório local models/artifacts/.
 
+    Valor: disponibiliza graficos de ROC, feature importance e reports
+    que sustentam a explicacao do modelo.
+
     Args:
-        artifact_name: Nome do arquivo de artefato.
+        artifact_name (str): Nome do arquivo de artefato.
 
     Returns:
-        FileResponse com imagem PNG.
+        FileResponse: Imagem PNG do artefato.
 
     Raises:
-        HTTPException: 404 se artefato não for encontrado.
+        HTTPException: 404 se artefato nao for encontrado.
     """
     models_dir, _, _ = get_model_paths()
     champion_run_id_path = os.path.join(models_dir, "champion_run_id.txt")
