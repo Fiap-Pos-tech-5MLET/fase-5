@@ -9,8 +9,9 @@ Organização:
 """
 
 import os
+import types
 import tempfile
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,7 @@ from src.data_cleaning import (
     create_target,
     handle_missing_values,
     load_data,
+    validate_data_quality,
 )
 
 
@@ -338,6 +340,56 @@ class TestTargetCreation:
         expected = [1, 0, 0, 1, 0]
 
         np.testing.assert_array_equal(result["TARGET"].values, expected)
+
+
+@pytest.mark.unit
+@pytest.mark.data_cleaning
+class TestDataQualityValidation:
+    """Testes para validação de qualidade com Great Expectations."""
+
+    def test_validate_data_quality_success(self, monkeypatch: pytest.MonkeyPatch):
+        """Validação deve passar com dados válidos."""
+        validator = MagicMock()
+        validator.expect_column_values_to_be_between.return_value = {"success": True}
+        validator.expect_column_values_to_not_be_null.return_value = {"success": True}
+
+        ge_stub = types.SimpleNamespace(from_pandas=lambda _df: validator)
+        monkeypatch.setitem(os.sys.modules, "great_expectations", ge_stub)
+
+        df = pd.DataFrame({"INDE_2024": [10.0, 20.0], "DEFASAGEM": [0.0, 1.0]})
+
+        validate_data_quality(df)
+
+    def test_validate_data_quality_negative_inde(self, monkeypatch: pytest.MonkeyPatch):
+        """Deve falhar quando INDE_2024 contém valores negativos."""
+        validator = MagicMock()
+        validator.expect_column_values_to_be_between.return_value = {"success": False}
+        validator.expect_column_values_to_not_be_null.return_value = {"success": True}
+
+        ge_stub = types.SimpleNamespace(from_pandas=lambda _df: validator)
+        monkeypatch.setitem(os.sys.modules, "great_expectations", ge_stub)
+
+        df = pd.DataFrame({"INDE_2024": [-1.0, 20.0], "DEFASAGEM": [0.0, 1.0]})
+
+        with pytest.raises(ValueError, match="INDE_2024"):
+            validate_data_quality(df)
+
+    def test_validate_data_quality_defasagem_null_ratio(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """Deve falhar quando taxa de nulos em DEFASAGEM excede limite."""
+        validator = MagicMock()
+        validator.expect_column_values_to_be_between.return_value = {"success": True}
+        validator.expect_column_values_to_not_be_null.return_value = {"success": False}
+
+        ge_stub = types.SimpleNamespace(from_pandas=lambda _df: validator)
+        monkeypatch.setitem(os.sys.modules, "great_expectations", ge_stub)
+
+        df = pd.DataFrame({"INDE_2024": [10.0, 20.0], "DEFASAGEM": [None, 1.0]})
+
+        with pytest.raises(ValueError, match="DEFASAGEM"):
+            validate_data_quality(df)
 
     def test_create_target_removes_null_rows(self):
         """Testa remoção de linhas com DEFASAGEM nula."""

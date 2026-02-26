@@ -314,11 +314,24 @@ jobs:
             exit 0
           fi
 
+          cat > /tmp/release_pr_body.md <<'EOF'
+          ## Release para Produção
+
+          Este PR foi criado automaticamente após validações completas da branch develop.
+
+          ## Checklist de revisão
+
+          - [ ] Lint rigoroso e type-check aprovados
+          - [ ] Testes completos e coverage revisada
+          - [ ] Verificações de segurança aprovadas
+          - [ ] Release aprovada para merge em main
+          EOF
+
           if ! gh pr create \
             --base main \
             --head develop \
             --title "🚀 Release: Atualização de Produção" \
-            --body "## Release para Produção\n\nEste PR foi criado automaticamente após validações completas na branch **develop**.\n\n## Checklist de Revisão\n- [ ] Lint rigoroso e type-check aprovados\n- [ ] Testes completos e coverage revisada\n- [ ] Verificações de segurança aprovadas\n- [ ] Release aprovada para merge em main" 2>&1 | tee /tmp/gh-pr-create.log; then
+            --body-file /tmp/release_pr_body.md 2>&1 | tee /tmp/gh-pr-create.log; then
             {
               echo "### ❌ Erro ao criar PR de release com gh"
               echo '```text'

@@ -513,24 +513,45 @@ GET  /model-metrics
 GET  /model-artifact/{name}
 ```
 
+### Autorização em rotas sensíveis
+
+As rotas de escrita e retreinamento exigem o header `X-API-KEY` com o valor configurado na variável de ambiente `API_KEY`:
+
+- `POST /retrain`
+- `POST /promote`
+- `POST /discard`
+
+Sem chave válida, a API responde `401 Unauthorized`.
+
 ### Exemplo de ingestão via cURL
 
 ```bash
-curl -X 'POST' \
-  'http://localhost:8000/api/predict' \
+curl -X POST \
+  'http://localhost/api/predict' \
   -H 'accept: application/json' \
   -H 'x-requested-by: banca_fiap' \
   -H 'Content-Type: application/json' \
   -d '{
   "data": {
     "IDADE": 16,
-    "FALTAS": 12,
-    "INDE_2023": 6.5
+    "FASE": "Fase 1 (3° e 4° ano)",
+    "INDE_22": 6.5,
+    "INDE_23": 7.1,
+    "ANO_INGRESSO": 2022,
+    "GÊNERO": "Feminino"
   }
 }'
 ```
 
 > Se estiver usando Docker com Nginx local, utilize `http://localhost/api/predict`.
+
+### Estratégia Champion/Challenger (rastreabilidade)
+
+- O endpoint `/retrain` gera um **candidato** e grava o `run_id` em `app/models/candidate_run_id.txt`.
+- O endpoint `/promote` só promove para produção após validação, copiando o `run_id` para `app/models/champion_run_id.txt`.
+- O endpoint `/model-metrics` usa `app/models/champion_run_id.txt` para consultar a run exata no MLflow.
+
+Com isso, apenas modelos validados viram champion, e cada promoção fica auditável por `run_id`.
 
 ---
 
@@ -549,6 +570,10 @@ mlflow ui --port 5000
 MLflow local: `http://127.0.0.1:5000`
 
 > Em produção no Render, o foco principal é API + Dashboard. O uso de MLflow na nuvem depende do perfil de recursos e da configuração do ambiente.
+
+### Racional de segurança e recursos em produção
+
+No deploy de produção, o serviço de MLflow foi desativado para reduzir consumo de memória/CPU e evitar pressão de recursos no container principal (API + Dashboard + Nginx). O roteamento permanece centralizado no Nginx (`nginx.conf`) e a execução de processos é controlada pelo Supervisor (`supervisord.conf`), onde o bloco do MLflow fica desabilitado por padrão.
 
 ### Métricas rastreadas
 

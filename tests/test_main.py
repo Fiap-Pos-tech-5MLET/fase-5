@@ -119,7 +119,7 @@ class TestMainRoutes:
         client = TestClient(app)
         # POST /retrain sem dados pode retornar 422 ou funcionar
         response = client.post("/retrain", json={})
-        assert response.status_code in [200, 422, 500, 503]
+        assert response.status_code in [200, 401, 422, 500, 503]
 
     @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI não disponível")
     def test_audit_route_exists(self):
@@ -134,14 +134,14 @@ class TestMainRoutes:
         """Testa que rota /promote existe."""
         client = TestClient(app)
         response = client.post("/promote")
-        assert response.status_code in [200, 400, 404, 500]
+        assert response.status_code in [200, 401, 400, 404, 500]
 
     @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI não disponível")
     def test_discard_route_exists(self):
         """Testa que rota /discard existe."""
         client = TestClient(app)
         response = client.post("/discard")
-        assert response.status_code in [200, 400, 404, 500]
+        assert response.status_code in [200, 401, 400, 404, 500]
 
     @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI não disponível")
     def test_routes_documentation(self):
