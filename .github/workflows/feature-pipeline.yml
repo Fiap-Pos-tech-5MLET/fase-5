@@ -5,6 +5,10 @@ on:
     branches:
       - "feature/*"
       - "bugfix/*"
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -191,6 +195,7 @@ jobs:
   auto-pr-to-develop:
     name: 1.4 Abrir PR automático para develop
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     needs: [tests, docker-build]
     timeout-minutes: 10
 
