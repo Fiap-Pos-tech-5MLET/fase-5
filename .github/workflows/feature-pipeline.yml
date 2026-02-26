@@ -1,0 +1,227 @@
+name: Feature Pipeline
+
+on:
+  # Executa validações para branches de desenvolvimento de funcionalidade/correção
+  push:
+    branches:
+      - "feature/*"
+      - "bugfix/*"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: feature-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Qualidade de Código (Ruff + Black)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Configurar Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependências
+        id: install-deps
+        run: |
+          echo "📦 Instalando dependências para lint e formatação..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff black
+          echo "✅ Dependências instaladas"
+
+      - name: Verificar formatação com Black
+        id: black-check
+        run: black --check app/ src/ tests/ scripts/
+
+      - name: Verificar lint com Ruff
+        id: ruff-check
+        run: ruff check app/ src/ tests/ scripts/
+
+      - name: Resumo da etapa Lint
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🔎 Etapa: Qualidade de Código (Feature)"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo "- **Branch**: ${{ github.ref_name }}"
+            echo ""
+            echo "### Detalhamento"
+            echo "- setup-python: ${{ steps.setup-python.outcome }}"
+            echo "- install-deps: ${{ steps.install-deps.outcome }}"
+            echo "- black-check: ${{ steps.black-check.outcome }}"
+            echo "- ruff-check: ${{ steps.ruff-check.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tests:
+    name: Testes Unitários Rápidos (Pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Configurar Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependências
+        id: install-deps
+        run: |
+          echo "📦 Instalando dependências de teste rápido..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+          echo "✅ Dependências de teste instaladas"
+
+      - name: Executar testes rápidos
+        id: pytest-fast
+        run: pytest tests/ -q --maxfail=1 --disable-warnings
+
+      - name: Resumo da etapa Testes
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🧪 Etapa: Testes Unitários Rápidos (Feature)"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo ""
+            echo "### Detalhamento"
+            echo "- setup-python: ${{ steps.setup-python.outcome }}"
+            echo "- install-deps: ${{ steps.install-deps.outcome }}"
+            echo "- pytest-fast: ${{ steps.pytest-fast.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  auto-pr-to-develop:
+    name: Abrir PR automático para develop
+    runs-on: ubuntu-latest
+    needs: tests
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Verificar PR existente e criar Draft PR se necessário
+        id: pr-create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_BRANCH: ${{ github.ref_name }}
+        run: |
+          echo "🔄 Verificando PR da branch ${CURRENT_BRANCH} para develop..."
+
+          EXISTING_PR=$(gh pr list \
+            --base develop \
+            --head "${CURRENT_BRANCH}" \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "${EXISTING_PR}" ] && [ "${EXISTING_PR}" != "null" ]; then
+            echo "✅ PR já existe: #${EXISTING_PR}"
+            exit 0
+          fi
+
+          echo "🚀 Criando Draft PR automático para develop..."
+          gh pr create \
+            --draft \
+            --base develop \
+            --head "${CURRENT_BRANCH}" \
+            --title "🧪 Feature pronta para homologação: ${CURRENT_BRANCH}" \
+            --body "## Objetivo\n\nIntegração automática da branch de trabalho para homologação em **develop**.\n\n## Checklist\n- [ ] Lint/formatação aprovados\n- [ ] Testes unitários rápidos aprovados\n- [ ] Mudança revisada pelo time"
+          echo "✅ Draft PR criado com sucesso"
+
+      - name: Resumo da etapa Automação de PR
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🔀 Etapa: Automação PR para develop"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo "- **Etapa crítica**: pr-create = ${{ steps.pr-create.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: Relatório do Pipeline
+    runs-on: ubuntu-latest
+    needs: [lint, tests, auto-pr-to-develop]
+    if: always()
+    timeout-minutes: 5
+
+    steps:
+      - name: Gerar resumo final da pipeline Feature
+        run: |
+          START_TIME=$(date +%s)
+          LINT_STATUS="${{ needs.lint.result }}"
+          TESTS_STATUS="${{ needs.tests.result }}"
+          PR_STATUS="${{ needs.auto-pr-to-develop.result }}"
+
+          {
+            echo "# 📊 Relatório do Pipeline - Feature"
+            echo ""
+            echo "- **Branch**: \\`${{ github.ref_name }}\\`"
+            echo "- **Commit**: \\`${{ github.sha }}\\`"
+            echo "- **Autor**: ${{ github.actor }}"
+            echo ""
+            echo "## 📋 Resumo de Etapas"
+            echo "| Etapa | Status |"
+            echo "|-------|--------|"
+            echo "| Qualidade de Código | ${LINT_STATUS} |"
+            echo "| Testes Unitários Rápidos | ${TESTS_STATUS} |"
+            echo "| Automação de PR | ${PR_STATUS} |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${LINT_STATUS}" != "success" || "${TESTS_STATUS}" != "success" || "${PR_STATUS}" != "success" ]]; then
+            {
+              echo "## ❌ Falhas detectadas"
+              echo "- Revise as etapas acima com status diferente de \\`success\\`."
+              echo "- O log detalhado de erro está no job correspondente."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## ✅ Pipeline concluída com sucesso"
+              echo "- Branch pronta para fluxo de homologação via develop."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          END_TIME=$(date +%s)
+          {
+            echo ""
+            echo "- **Duração da etapa de relatório**: $((END_TIME - START_TIME))s"
+          } >> "$GITHUB_STEP_SUMMARY"

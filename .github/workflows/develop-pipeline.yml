@@ -1,0 +1,290 @@
+name: Develop Pipeline
+
+on:
+  # Executa homologação completa quando mudanças chegam na develop
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: develop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Qualidade de Código (Lint rigoroso + MyPy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Configurar Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependências
+        id: install-deps
+        run: |
+          echo "📦 Instalando dependências de qualidade..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff black mypy
+          echo "✅ Dependências instaladas"
+
+      - name: Verificar formatação com Black
+        id: black-check
+        run: black --check app/ src/ tests/ scripts/
+
+      - name: Verificar lint com Ruff
+        id: ruff-check
+        run: ruff check app/ src/ tests/ scripts/
+
+      - name: Verificar tipos com MyPy
+        id: mypy-check
+        run: mypy src/ app/utils/ app/routes/ scripts/ --ignore-missing-imports
+
+      - name: Resumo da etapa Qualidade
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🔎 Etapa: Qualidade de Código (Develop)"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo ""
+            echo "### Detalhamento"
+            echo "- setup-python: ${{ steps.setup-python.outcome }}"
+            echo "- install-deps: ${{ steps.install-deps.outcome }}"
+            echo "- black-check: ${{ steps.black-check.outcome }}"
+            echo "- ruff-check: ${{ steps.ruff-check.outcome }}"
+            echo "- mypy-check: ${{ steps.mypy-check.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tests:
+    name: Testes Completos com Coverage
+    runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Configurar Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependências
+        id: install-deps
+        run: |
+          echo "📦 Instalando dependências para testes completos..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          echo "✅ Dependências instaladas"
+
+      - name: Executar suíte completa com cobertura
+        id: pytest-coverage
+        run: |
+          echo "🧪 Executando testes completos com cobertura..."
+          pytest tests/ \
+            --cov=app \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml
+          echo "✅ Testes e cobertura concluídos"
+
+      - name: Resumo da etapa Testes
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🧪 Etapa: Testes Completos (Develop)"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo ""
+            echo "### Detalhamento"
+            echo "- setup-python: ${{ steps.setup-python.outcome }}"
+            echo "- install-deps: ${{ steps.install-deps.outcome }}"
+            echo "- pytest-coverage: ${{ steps.pytest-coverage.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  security:
+    name: Segurança (Bandit + Detect-Secrets)
+    runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Configurar Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar ferramentas de segurança
+        id: install-security-tools
+        run: |
+          echo "🔒 Instalando ferramentas de segurança..."
+          python -m pip install --upgrade pip
+          pip install bandit detect-secrets
+          echo "✅ Ferramentas instaladas"
+
+      - name: Executar Bandit
+        id: bandit-check
+        run: bandit -r app/ src/
+
+      - name: Executar Detect-Secrets
+        id: detect-secrets-check
+        run: detect-secrets scan --all-files > .secrets.scan
+
+      - name: Resumo da etapa Segurança
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🔐 Etapa: Segurança (Develop)"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo ""
+            echo "### Detalhamento"
+            echo "- setup-python: ${{ steps.setup-python.outcome }}"
+            echo "- install-security-tools: ${{ steps.install-security-tools.outcome }}"
+            echo "- bandit-check: ${{ steps.bandit-check.outcome }}"
+            echo "- detect-secrets-check: ${{ steps.detect-secrets-check.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  auto-release-pr:
+    name: Criar PR de release (develop -> main)
+    runs-on: ubuntu-latest
+    needs: [tests, security]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Verificar PR de release existente e criar se necessário
+        id: release-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔄 Verificando PR de release develop -> main..."
+          EXISTING_PR=$(gh pr list \
+            --base main \
+            --head develop \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "${EXISTING_PR}" ] && [ "${EXISTING_PR}" != "null" ]; then
+            echo "✅ PR develop -> main já existe: #${EXISTING_PR}"
+            exit 0
+          fi
+
+          echo "🚀 Criando PR automático de release..."
+          gh pr create \
+            --base main \
+            --head develop \
+            --title "🚀 Release: Atualização de Produção" \
+            --body "## Release para Produção\n\nEste PR foi criado automaticamente após validações completas na branch **develop**.\n\n## Checklist de Revisão\n- [ ] Lint rigoroso e type-check aprovados\n- [ ] Testes completos e cobertura revisada\n- [ ] Verificações de segurança aprovadas\n- [ ] Release aprovada para merge em main"
+          echo "✅ PR de release criado com sucesso"
+
+      - name: Resumo da etapa Automação de Release
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🔀 Etapa: Automação de PR de Release"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo "- **Etapa crítica**: release-pr = ${{ steps.release-pr.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: Relatório do Pipeline
+    runs-on: ubuntu-latest
+    needs: [quality, tests, security, auto-release-pr]
+    if: always()
+    timeout-minutes: 5
+
+    steps:
+      - name: Gerar relatório consolidado da Develop
+        run: |
+          START_TIME=$(date +%s)
+          QUALITY_STATUS="${{ needs.quality.result }}"
+          TESTS_STATUS="${{ needs.tests.result }}"
+          SECURITY_STATUS="${{ needs.security.result }}"
+          RELEASE_PR_STATUS="${{ needs.auto-release-pr.result }}"
+
+          {
+            echo "# 📊 Relatório do Pipeline - Develop"
+            echo ""
+            echo "- **Branch**: \\`${{ github.ref_name }}\\`"
+            echo "- **Commit**: \\`${{ github.sha }}\\`"
+            echo "- **Autor**: ${{ github.actor }}"
+            echo ""
+            echo "## 📋 Resumo de Etapas"
+            echo "| Etapa | Status |"
+            echo "|-------|--------|"
+            echo "| Qualidade (Black/Ruff/MyPy) | ${QUALITY_STATUS} |"
+            echo "| Testes com Coverage | ${TESTS_STATUS} |"
+            echo "| Segurança (Bandit/Detect-Secrets) | ${SECURITY_STATUS} |"
+            echo "| Automação PR Release | ${RELEASE_PR_STATUS} |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${QUALITY_STATUS}" != "success" || "${TESTS_STATUS}" != "success" || "${SECURITY_STATUS}" != "success" || "${RELEASE_PR_STATUS}" != "success" ]]; then
+            {
+              echo "## ❌ Falhas detectadas"
+              echo "- Verifique as etapas com status diferente de \\`success\\` para identificar onde ocorreu o erro."
+              echo "- O erro detalhado está no log do job correspondente."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## ✅ Pipeline concluída com sucesso"
+              echo "- Branch develop validada e release pronta para main."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          END_TIME=$(date +%s)
+          {
+            echo ""
+            echo "- **Duração da etapa de relatório**: $((END_TIME - START_TIME))s"
+          } >> "$GITHUB_STEP_SUMMARY"
