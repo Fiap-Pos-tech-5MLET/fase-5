@@ -2,11 +2,11 @@
 name = "datathon-passos-magicos"
 version = "1.0.0"
 description = "ML Pipeline para predição de risco de defasagem escolar"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 
 [tool.ruff]
 # Target Python version
-target-version = "py39"
+target-version = "py311"
 
 # Line length matching Black
 line-length = 100
