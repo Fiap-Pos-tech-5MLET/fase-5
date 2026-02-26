@@ -439,13 +439,12 @@ flowchart LR
   - Pode abrir PR de release para `main`
 
 3. **Main Pipeline** (`main-pipeline.yml`)
-  - Executa em `main` e PRs para `main`
+  - Executa apenas em `push` na branch `main`
   - Faz smoke tests, build Docker e deploy no Render via deploy hook
   - Executa smoke pós-deploy e rollback automático em falhas
 
 4. **IssueOps Rollback** (`issue-ops-rollback.yml`)
   - Workflow de rollback emergencial acionado por label `ops:rollback` em issue
-  - Também pode ser acionado manualmente via `workflow_dispatch`
 
 ### 3. 🚑 Gestão de Incidentes e Rollback (Resiliência)
 
