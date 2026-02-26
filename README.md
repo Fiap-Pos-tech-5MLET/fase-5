@@ -117,7 +117,7 @@ Arquitetura modular para cobrir o ciclo completo de dados, treino, inferência e
 - **Desenvolvimento local**: execução com Docker Compose (porta de entrada única em `http://localhost`).
 - **Produção no Render**: container único com **Nginx + FastAPI + Streamlit** sob supervisão do **Supervisor**.
 
-### 🏗️ Arquitetura de Execução
+### 1. 🏗️ Arquitetura de Execução
 
 ```mermaid
 flowchart TD
@@ -193,11 +193,13 @@ flowchart LR
     end
 
     %% Estilização
-    classDef steps fill:#f9f9f9,stroke:#333,stroke-width:1px;
-    classDef model fill:#fff4dd,stroke:#d4a017,stroke-width:2px;
-    
-    class Prep,Predict steps;
-    class Champion,MLflow model;
+    classDef step_first fill:#e3f2fd,stroke:#1976d2,stroke-width:1px,color:#000;
+    classDef step_second fill:#f3f2f1,stroke:#616161,stroke-width:1px,color:#000;
+    classDef dbs fill:#fff4dd,stroke:#d4a017,stroke-width:2px,color:#000;
+
+    class Prep step_first;
+    class Predict step_second;
+    class Data,Champion,MLflow dbs;
 ```
 
 ### 🎯 Componentes Principais
@@ -387,61 +389,42 @@ Para mais detalhes, consulte [TESTING.md](TESTING.md).
 
 ---
 
-## 🔄 CI/CD Pipeline
+## 2. 🔄 Esteira CI/CD (Fluxo GitFlow Horizontal)
 
 O projeto adota pipelines GitHub Actions por branch, alinhados ao fluxo GitFlow.
 ```mermaid
 flowchart LR
-    %% ==========================================
-    %% Estilização (Cores)
-    %% ==========================================
     classDef event fill:#f5f5f5,stroke:#424242,stroke-width:2px,color:#000;
     classDef feat fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
     classDef dev fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000;
     classDef prod fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000;
 
-    %% ==========================================
-    %% FASE 1: FEATURE PIPELINE
-    %% ==========================================
     Start([Push feature/*]):::event --> P1_1
-
     subgraph P1 [1. Pipeline Feature]
         P1_1(Linting Ruff):::feat --> P1_2(Testes Pytest):::feat
         P1_1 --> P1_3(Build Docker):::feat
         P1_2 --> P1_4(Automação PR):::feat
         P1_3 --> P1_4
     end
-
     P1_4 --> APR1([Merge develop]):::event
-
-    %% ==========================================
-    %% FASE 2: DEVELOP PIPELINE
-    %% ==========================================
     APR1 --> P2_1
-
     subgraph P2 [2. Pipeline Develop]
-        P2_1(Validar Origem PR):::dev --> P2_2(Qualidade: Ruff + MyPy):::dev
-        P2_2 --> P2_3(Testes + Coverage):::dev
-        P2_2 --> P2_4(Segurança: Bandit + Secrets):::dev
+    P2_1(Qualidade: Ruff + MyPy):::dev --> P2_3(Testes + Coverage):::dev
+    P2_1 --> P2_4(Segurança: Bandit + Secrets):::dev
         P2_3 --> P2_5(Build Docker):::dev
         P2_4 --> P2_5
         P2_5 --> P2_6(Automação PR Release):::dev
     end
-
     P2_6 --> APR2([Merge main]):::event
-
-    %% ==========================================
-    %% FASE 3: MAIN PIPELINE
-    %% ==========================================
     APR2 --> P3_1
-
     subgraph P3 [3. Pipeline Main]
-        P3_1(Validar Origem PR):::prod --> P3_2(Smoke Tests):::prod
+    P3_1(Validar Origem PR):::prod --> P3_2(Smoke Tests):::prod
         P3_2 --> P3_3(Build Docker):::prod
-        P3_3 --> P3_4(Deploy Contínuo Render):::prod
+    P3_3 --> P3_4(Deploy Render):::prod
+    P3_4 --> P3_5(Post-Deploy Smoke):::prod
+    P3_5 --> P3_6(Auto Rollback em Falha):::prod
     end
-
-    P3_4 --> F([API Atualizada em Produção]):::event
+  P3_6 --> F([API em Produção]):::event
 ```
 ### Workflows ativos
 
@@ -451,17 +434,40 @@ flowchart LR
   - Pode abrir PR automático para `develop`
 
 2. **Develop Pipeline** (`develop-pipeline.yml`)
-  - Executa em `develop` e PRs para `develop`
-  - Valida política de origem da branch
+  - Executa em `push` na branch `develop`
   - Executa qualidade, testes completos, segurança e build Docker
   - Pode abrir PR de release para `main`
 
 3. **Main Pipeline** (`main-pipeline.yml`)
-  - Executa em `main` e PRs para `main`
+  - Executa apenas em `push` na branch `main`
   - Faz smoke tests, build Docker e deploy no Render via deploy hook
+  - Executa smoke pós-deploy e rollback automático em falhas
 
 4. **IssueOps Rollback** (`issue-ops-rollback.yml`)
-  - Workflow de rollback emergencial acionado por label em issue
+  - Workflow de rollback emergencial acionado por label `ops:rollback` em issue
+
+### 3. 🚑 Gestão de Incidentes e Rollback (Resiliência)
+
+```mermaid
+flowchart LR
+    classDef incident fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#c62828;
+    classDef action fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
+    classDef automation fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000;
+    classDef final fill:#f5f5f5,stroke:#424242,stroke-width:2px,color:#000;
+
+    Start((🚨 Incidente)):::incident --> Type{Tipo?}
+    Type -- "Código" --> Code[Issue + Label: ops:rollback]:::action
+    Code --> IssueOps[Workflow: IssueOps Rollback]:::automation
+    IssueOps --> Revert[Git Revert na Main]:::automation
+
+    Type -- "Modelo" --> Model[Editar champion_run_id.txt]:::action
+
+    Revert --> MainPipeline
+    Model --> MainPipeline[3. Main Pipeline: Deploy]:::automation
+    MainPipeline --> Success([✅ Estabilizado]):::final
+    Success --> Hotfix[Criar Branch: hotfix/*]:::action
+    Hotfix --> PR[Merge Main e Develop]:::automation
+```
 
 ### Características
 
