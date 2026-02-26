@@ -36,7 +36,6 @@ htmlcov/
 mlruns/
 mlartifacts/
 archive_*/
-data/raw/*
 data/processed/*
 data/interim/*
 data/external/*
@@ -44,7 +43,6 @@ app/artifacts/*.pkl
 app/artifacts/*.joblib
 app/artifacts/*.h5
 app/artifacts/*.pth
-app/models/*.pkl
 app/models/*.joblib
 
 # Non-runtime project assets
