@@ -59,6 +59,7 @@ ignore = [
     "C408",   # Unnecessary dict() call (style preference)
     "SIM118", # Use `key in dict` instead of `key in dict.keys()` (minor)
     "RUF043", # Pattern passed to match= (test error patterns)
+    "E402",   # Imports after sys.path bootstrap in scripts
 ]
 
 # Files to exclude
@@ -80,7 +81,7 @@ force-single-line = false
 known-first-party = ["src", "app"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 check_untyped_defs = true
 disallow_untyped_defs = false
 disallow_untyped_calls = false

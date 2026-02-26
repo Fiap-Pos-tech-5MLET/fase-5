@@ -49,12 +49,11 @@ from src.data_cleaning import (
     load_data,
 )
 from src.feature_engineering import create_features, select_features
+from src.feature_store import persist_dataset_version, register_feature_view
 from src.model import save_model, train_model
 
 
-def plot_classification_report(
-    y_true: np.ndarray, y_pred: np.ndarray, output_path: str
-) -> None:
+def plot_classification_report(y_true: np.ndarray, y_pred: np.ndarray, output_path: str) -> None:
     """
     Gera e salva heatmap do classification report.
 
@@ -63,12 +62,8 @@ def plot_classification_report(
         y_pred: Valores preditos pelo modelo.
         output_path: Caminho para salvar a imagem.
     """
-    clf_report = classification_report(
-        y_true, y_pred, output_dict=True, zero_division=0
-    )
-    sns.heatmap(
-        pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, cmap="Blues", fmt=".2f"
-    )
+    clf_report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
+    sns.heatmap(pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, cmap="Blues", fmt=".2f")
     plt.title("Classification Report")
     plt.tight_layout()
     plt.savefig(output_path)
@@ -76,9 +71,7 @@ def plot_classification_report(
     logger.debug(f"Classification report salvo em: {output_path}")
 
 
-def plot_roc_curve(
-    estimator: Pipeline, X: pd.DataFrame, y: pd.Series, output_path: str
-) -> None:
+def plot_roc_curve(estimator: Pipeline, X: pd.DataFrame, y: pd.Series, output_path: str) -> None:
     """
     Gera e salva curva ROC.
 
@@ -100,10 +93,7 @@ def plot_roc_curve(
 
 
 def plot_feature_importance(
-    model: Pipeline,
-    feature_names: Optional[np.ndarray],
-    output_path: str,
-    top_n: int = 20
+    model: Pipeline, feature_names: Optional[np.ndarray], output_path: str, top_n: int = 20
 ) -> None:
     """
     Gera e salva gráfico de importância de features.
@@ -130,9 +120,7 @@ def plot_feature_importance(
 
     # Use feature names if available
     if feature_names is not None and len(feature_names) == len(importances):
-        plt.xticks(
-            range(n_show), [feature_names[i] for i in indices[:n_show]], rotation=90
-        )
+        plt.xticks(range(n_show), [feature_names[i] for i in indices[:n_show]], rotation=90)
     else:
         if feature_names is not None:
             logger.warning(
@@ -156,6 +144,21 @@ def main(
     k: Union[int, str] = "all",
     test_size: float = 0.2,
 ) -> Tuple[Dict[str, Any], str]:
+    """Executa o pipeline de treinamento com rastreabilidade completa.
+
+    Args:
+        data_path (Optional[str]): Caminho para os dados brutos.
+        model_path (Optional[str]): Caminho de saída do modelo treinado.
+        artifacts_dir (Optional[str]): Diretório para artefatos visuais.
+        n_estimators (int): Número de árvores no RandomForest.
+        max_depth (Optional[int]): Profundidade máxima das árvores.
+        min_samples_split (int): Mínimo de amostras para split.
+        k (Union[int, str]): Número de features para SelectKBest.
+        test_size (float): Proporção para conjunto de teste.
+
+    Returns:
+        Tuple[Dict[str, Any], str]: Métricas de avaliação e run_id do MLflow.
+    """
     DATA_PATH = data_path or "data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
     MODEL_PATH = model_path or "models/model.pkl"
     ARTIFACTS_DIR = artifacts_dir or "models/artifacts"
@@ -194,9 +197,20 @@ def main(
         logger.info("Selecting features...")
         X, y = select_features(df)
 
+        logger.info("Persisting feature store metadata and dataset versions...")
+        feature_registry_path = register_feature_view(
+            feature_df=X,
+            target_name="TARGET",
+        )
+        features_snapshot_path, dataset_version = persist_dataset_version(
+            df=X,
+            dataset_name="train_features",
+        )
+
         # Log Data Params
         mlflow.log_param("n_samples", X.shape[0])
         mlflow.log_param("n_features", X.shape[1])
+        mlflow.log_param("dataset_version", dataset_version)
 
         logger.info(f"Training on {X.shape[0]} samples and {X.shape[1]} features...")
         model, metrics, X_test, y_test = train_model(
@@ -218,8 +232,8 @@ def main(
             mlflow.log_param("min_samples_split", rf.min_samples_split)
             mlflow.log_param("test_size", test_size)
             mlflow.log_param("k_best", k)
-        except:
-            pass
+        except (AttributeError, KeyError, TypeError) as exc:
+            logger.warning("Não foi possível registrar alguns hiperparâmetros: %s", exc)
 
         logger.info("--- Model Metrics ---")
         logger.info(f"\n{metrics['classification_report']}")
@@ -255,10 +269,7 @@ def main(
             else:
                 # Fallback if get_feature_names_out fails on ColumnTransformer (older sklearn versions)
                 all_features = np.array(
-                    [
-                        f"Feat_{i}"
-                        for i in range(model.named_steps["classifier"].n_features_in_)
-                    ]
+                    [f"Feat_{i}" for i in range(model.named_steps["classifier"].n_features_in_)]
                 )
 
             # Apply selection mask if SelectKBest was used
@@ -268,7 +279,7 @@ def main(
             else:
                 feature_names = all_features
 
-        except Exception as e:
+        except (AttributeError, KeyError, TypeError, ValueError, IndexError) as e:
             logger.warning(f"Error extracting feature names: {e}")
             feature_names = None
 
@@ -277,6 +288,8 @@ def main(
         mlflow.log_artifact(roc_path)
         mlflow.log_artifact(report_path)
         mlflow.log_artifact(feat_imp_path)
+        mlflow.log_artifact(feature_registry_path)
+        mlflow.log_artifact(features_snapshot_path)
 
         # Log Model Artifact
         mlflow.sklearn.log_model(model, "model")

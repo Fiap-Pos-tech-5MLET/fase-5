@@ -66,9 +66,7 @@ def generate_drift_report() -> None:
         # Split into Reference (Train) and Current (Test)
         # In a real scenario, Reference would be your training data snapshot
         # and Current would be the new batch of data from production.
-        reference_data, current_data = train_test_split(
-            full_data, test_size=0.2, random_state=42
-        )
+        reference_data, current_data = train_test_split(full_data, test_size=0.2, random_state=42)
 
         logger.info(f"Reference data shape: {reference_data.shape}")
         logger.info(f"Current data shape: {current_data.shape}")

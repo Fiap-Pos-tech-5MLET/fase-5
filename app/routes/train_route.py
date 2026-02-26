@@ -14,8 +14,9 @@ import shutil
 from typing import Annotated, Any, Dict
 
 import mlflow
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import (
     DiscardResponse,
@@ -24,6 +25,7 @@ from app.models.schemas import (
     RetrainRequest,
 )
 from app.utils.model_loader import get_model_paths, reload_model
+from app.utils.structured_logging import log_with_request
 from scripts.train import main as run_training
 
 logger = logging.getLogger("train_route")
@@ -32,7 +34,10 @@ router = APIRouter()
 
 
 @router.post("/retrain")
-def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
+async def retrain(
+    params: Annotated[RetrainRequest, Body(...)],
+    request: Request,
+) -> Dict[str, Any]:
     """
     Treina um modelo candidato (challenger) SEM sobrescrever o modelo em produção (champion).
 
@@ -58,17 +63,22 @@ def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
         # Convert k=None to 'all' for SelectKBest
         k_value = params.k if params.k is not None else "all"
 
-        logger.info(
-            "Retraining triggered (challenger mode): n_estimators=%d, max_depth=%s, "
-            "min_samples_split=%d, k=%s, test_size=%.2f",
-            params.n_estimators,
-            params.max_depth,
-            params.min_samples_split,
-            k_value,
-            params.test_size,
+        log_with_request(
+            logger=logger,
+            level=logging.INFO,
+            event="model_retrain",
+            request=request,
+            requested_by=params.requested_by,
+            status="started",
+            n_estimators=params.n_estimators,
+            max_depth=params.max_depth,
+            min_samples_split=params.min_samples_split,
+            k=k_value,
+            test_size=params.test_size,
         )
 
-        result = run_training(
+        result = await run_in_threadpool(
+            run_training,
             model_path=candidate_path,
             n_estimators=params.n_estimators,
             max_depth=params.max_depth,
@@ -83,7 +93,15 @@ def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
         else:
             metrics, run_id = result, None
 
-        logger.info("Challenger model trained (run_id=%s). NOT promoted yet.", run_id)
+        log_with_request(
+            logger=logger,
+            level=logging.INFO,
+            event="model_retrain",
+            request=request,
+            requested_by=params.requested_by,
+            status="success",
+            run_id=run_id,
+        )
 
         return {
             "status": "success",
@@ -92,6 +110,7 @@ def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
                 "promovê-lo ou /discard para descartá-lo."
             ),
             "promoted": False,
+            "requested_by": params.requested_by,
             "candidate_path": candidate_path,
             "run_id": run_id,
             "metrics": metrics,
@@ -104,13 +123,29 @@ def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
             },
         }
     except ImportError as exc:
-        logger.error("Import error: %s", exc)
+        log_with_request(
+            logger=logger,
+            level=logging.ERROR,
+            event="model_retrain",
+            request=request,
+            requested_by=params.requested_by,
+            status="failed",
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Import failed: {exc!s}",
         ) from exc
     except ValueError as exc:
-        logger.error("Training error: %s", exc)
+        log_with_request(
+            logger=logger,
+            level=logging.ERROR,
+            event="model_retrain",
+            request=request,
+            requested_by=params.requested_by,
+            status="failed",
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Training failed: {exc!s}",
@@ -118,7 +153,7 @@ def retrain(params: Annotated[RetrainRequest, Body(...)]) -> Dict[str, Any]:
 
 
 @router.post("/promote", response_model=PromoteResponse)
-def promote() -> PromoteResponse:
+async def promote() -> PromoteResponse:
     """
     Promove o modelo candidato (challenger) para produção (champion).
 
@@ -188,7 +223,7 @@ def promote() -> PromoteResponse:
 
 
 @router.post("/discard", response_model=DiscardResponse)
-def discard() -> DiscardResponse:
+async def discard() -> DiscardResponse:
     """
     Descarta o modelo candidato (challenger) e mantém o modelo atual (champion).
 
@@ -227,7 +262,7 @@ def discard() -> DiscardResponse:
 
 
 @router.get("/model-metrics", response_model=ModelMetricsResponse)
-def model_metrics() -> ModelMetricsResponse:
+async def model_metrics() -> ModelMetricsResponse:
     """
     Retorna métricas, parâmetros e artefatos do modelo champion em produção.
 
@@ -311,7 +346,7 @@ def model_metrics() -> ModelMetricsResponse:
 
 
 @router.get("/model-artifact/{artifact_name}")
-def model_artifact(artifact_name: str) -> FileResponse:
+async def model_artifact(artifact_name: str) -> FileResponse:
     """
     Serve um artefato (imagem) da run do champion no MLflow.
 

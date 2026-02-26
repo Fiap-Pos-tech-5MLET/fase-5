@@ -95,6 +95,8 @@ class TestPredictRoute:
         data = response.json()
         assert "risk_prediction" in data
         assert "risk_probability" in data
+        assert "explanation_method" in data
+        assert "top_features" in data
         assert data["risk_prediction"] in [0, 1]
         assert 0.0 <= data["risk_probability"] <= 1.0
 
@@ -163,6 +165,7 @@ class TestPredictRoute:
 
         assert response.status_code == 200
         assert "risk_prediction" in response.json()
+        assert "explanation_method" in response.json()
 
     @patch("app.routes.predict_route.get_current_model")
     @patch("app.routes.predict_route.create_features")
@@ -358,6 +361,7 @@ class TestPredictRoute:
         assert response.status_code == 200
         data = response.json()
         assert "risk_prediction" in data
+        assert "top_features" in data
         assert "risk_probability" in data
 
     @patch("app.routes.predict_route.get_current_model")
@@ -414,6 +418,11 @@ class TestPredictRoute:
 
         # Validar estrutura da resposta
         assert isinstance(data, dict)
-        assert set(data.keys()) == {"risk_prediction", "risk_probability"}
+        assert set(data.keys()) == {
+            "risk_prediction",
+            "risk_probability",
+            "explanation_method",
+            "top_features",
+        }
         assert isinstance(data["risk_prediction"], int)
         assert isinstance(data["risk_probability"], (int, float))
