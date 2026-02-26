@@ -167,6 +167,18 @@ def render_retrain_page(
         )
         st.markdown(summary_html, unsafe_allow_html=True)
 
+    requested_by_input = st.text_input(
+        "Solicitado por (nome ou e-mail)",
+        value="",
+        max_chars=120,
+        help="Obrigatório para auditoria de governança do retreinamento.",
+    )
+    requested_by = (
+        requested_by_input.strip()
+        if isinstance(requested_by_input, str)
+        else str(requested_by_input).strip()
+    )
+
     st.markdown("")
 
     col_btn, col_warn = st.columns([1, 2])
@@ -183,12 +195,17 @@ def render_retrain_page(
     if retrain_btn:
         st.markdown("---")
 
+        if len(requested_by) < 3:
+            st.error("❌ Informe ao menos 3 caracteres no campo 'Solicitado por'.")
+            return
+
         progress_bar = st.progress(0, text="Iniciando pipeline...")
 
         try:
             progress_bar.progress(20, text="📡 Enviando requisição para a API...")
 
             retrain_payload = {
+                "requested_by": requested_by,
                 "n_estimators": n_estimators,
                 "max_depth": max_depth,
                 "min_samples_split": min_samples_split,

@@ -4,7 +4,9 @@ Schema para wrapper de dados do aluno.
 Aceita formato flexível para retrocompatibilidade.
 """
 
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class StudentData(BaseModel):
@@ -13,4 +15,4 @@ class StudentData(BaseModel):
     Mantém retrocompatibilidade com o formato anterior {"data": {...}}.
     """
 
-    data: dict
+    data: dict[str, Any] = Field(description="Dicionário de atributos de entrada do aluno")

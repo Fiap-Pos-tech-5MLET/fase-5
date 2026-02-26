@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datathon-api
+  labels:
+    app: datathon-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: datathon-api
+  template:
+    metadata:
+      labels:
+        app: datathon-api
+    spec:
+      containers:
+        - name: datathon-api
+          image: datathon-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ENVIRONMENT
+              value: production
+            - name: MLFLOW_TRACKING_URI
+              value: file:/app/mlruns
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"

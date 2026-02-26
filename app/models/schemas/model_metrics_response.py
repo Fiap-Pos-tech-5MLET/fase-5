@@ -4,21 +4,21 @@ Schema para resposta de métricas do modelo.
 Define o formato de saída do endpoint /model-metrics.
 """
 
-from typing import Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ModelMetricsResponse(BaseModel):
     """Métricas do modelo champion."""
 
-    source: str
-    run_id: Optional[str]
-    message: Optional[str] = None
-    run_name: Optional[str] = None
-    start_time: Optional[int] = None
-    end_time: Optional[int] = None
-    status: Optional[str] = None
-    metrics: Optional[dict]
-    params: Optional[dict]
-    artifacts: list
+    source: Literal["local", "mlflow", "error"]
+    run_id: Optional[str] = Field(min_length=1)
+    message: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    run_name: Optional[str] = Field(default=None, min_length=1)
+    start_time: Optional[int] = Field(default=None, ge=0)
+    end_time: Optional[int] = Field(default=None, ge=0)
+    status: Optional[Literal["RUNNING", "SCHEDULED", "FINISHED", "FAILED", "KILLED"]] = None
+    metrics: Optional[dict[str, Any]] = None
+    params: Optional[dict[str, Any]] = None
+    artifacts: list[str]

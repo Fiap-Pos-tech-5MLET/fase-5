@@ -8,9 +8,12 @@ aliases e transformações de dados.
 import pytest
 from pydantic import ValidationError
 
+from app.models.schemas.discard_response import DiscardResponse
 from app.models.schemas.model_info_response import ModelInfoResponse
 from app.models.schemas.model_metrics_response import ModelMetricsResponse
-from app.models.schemas.prediction_response import PredictionResponse
+from app.models.schemas.prediction_response import FeatureContribution, PredictionResponse
+from app.models.schemas.promote_response import PromoteResponse
+from app.models.schemas.retrain_request import RetrainRequest
 from app.models.schemas.student_data import StudentData
 from app.models.schemas.student_input import StudentInput
 
@@ -112,6 +115,16 @@ class TestStudentInputSchema:
         """StudentInput deve rejeitar string não-numérica para campos float."""
         with pytest.raises(ValidationError):
             StudentInput(**{"IDADE": "abc"})
+
+    def test_student_input_rejects_out_of_range_age(self) -> None:
+        """StudentInput deve rejeitar idade fora de faixa."""
+        with pytest.raises(ValidationError):
+            StudentInput(**{"IDADE": 150})
+
+    def test_student_input_rejects_out_of_range_inde(self) -> None:
+        """StudentInput deve rejeitar INDE fora de faixa."""
+        with pytest.raises(ValidationError):
+            StudentInput(**{"INDE_22": 120})
 
     def test_student_input_multiple_pedra_fields(self) -> None:
         """StudentInput deve aceitar PEDRA_20, PEDRA_21, PEDRA_22, PEDRA_23."""
@@ -222,54 +235,188 @@ class TestPredictionResponseSchema:
 
     def test_prediction_response_creates_with_valid_data(self) -> None:
         """PredictionResponse deve criar com risk_prediction e risk_probability."""
-        prediction = PredictionResponse(**{"risk_prediction": 1, "risk_probability": 0.85})
+        prediction = PredictionResponse(
+            **{
+                "risk_prediction": 1,
+                "risk_probability": 0.85,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert prediction.risk_prediction == 1
         assert prediction.risk_probability == 0.85
 
     def test_prediction_response_requires_risk_prediction(self) -> None:
         """PredictionResponse exige risk_prediction."""
         with pytest.raises(ValidationError):
-            PredictionResponse(**{"risk_probability": 0.85})
+            PredictionResponse(
+                **{
+                    "risk_probability": 0.85,
+                    "explanation_method": "shap",
+                    "top_features": [],
+                }
+            )
 
     def test_prediction_response_requires_risk_probability(self) -> None:
         """PredictionResponse exige risk_probability."""
         with pytest.raises(ValidationError):
-            PredictionResponse(**{"risk_prediction": 1})
+            PredictionResponse(
+                **{
+                    "risk_prediction": 1,
+                    "explanation_method": "shap",
+                    "top_features": [],
+                }
+            )
 
     def test_prediction_response_risk_prediction_binary(self) -> None:
         """risk_prediction deve ser 0 ou 1."""
-        pred0 = PredictionResponse(**{"risk_prediction": 0, "risk_probability": 0.1})
-        pred1 = PredictionResponse(**{"risk_prediction": 1, "risk_probability": 0.9})
+        pred0 = PredictionResponse(
+            **{
+                "risk_prediction": 0,
+                "risk_probability": 0.1,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
+        pred1 = PredictionResponse(
+            **{
+                "risk_prediction": 1,
+                "risk_probability": 0.9,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert pred0.risk_prediction == 0
         assert pred1.risk_prediction == 1
 
+        with pytest.raises(ValidationError):
+            PredictionResponse(
+                **{
+                    "risk_prediction": 2,
+                    "risk_probability": 0.9,
+                    "explanation_method": "shap",
+                    "top_features": [],
+                }
+            )
+
     def test_prediction_response_risk_probability_range(self) -> None:
         """risk_probability deve estar em [0.0, 1.0]."""
-        # Pydantic aceita floats fora do range, mas semanticamente devem estar no range
-        pred = PredictionResponse(**{"risk_prediction": 1, "risk_probability": 0.5})
+        pred = PredictionResponse(
+            **{
+                "risk_prediction": 1,
+                "risk_probability": 0.5,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert 0.0 <= pred.risk_probability <= 1.0
+
+        with pytest.raises(ValidationError):
+            PredictionResponse(
+                **{
+                    "risk_prediction": 1,
+                    "risk_probability": 1.5,
+                    "explanation_method": "shap",
+                    "top_features": [],
+                }
+            )
 
     def test_prediction_response_probability_zero(self) -> None:
         """PredictionResponse deve aceitar risk_probability=0.0 (sem risco)."""
-        prediction = PredictionResponse(**{"risk_prediction": 0, "risk_probability": 0.0})
+        prediction = PredictionResponse(
+            **{
+                "risk_prediction": 0,
+                "risk_probability": 0.0,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert prediction.risk_probability == 0.0
 
     def test_prediction_response_probability_one(self) -> None:
         """PredictionResponse deve aceitar risk_probability=1.0 (risco certo)."""
-        prediction = PredictionResponse(**{"risk_prediction": 1, "risk_probability": 1.0})
+        prediction = PredictionResponse(
+            **{
+                "risk_prediction": 1,
+                "risk_probability": 1.0,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert prediction.risk_probability == 1.0
 
     def test_prediction_response_float_conversion(self) -> None:
         """risk_probability deve converter de string para float."""
-        prediction = PredictionResponse(**{"risk_prediction": 1, "risk_probability": "0.75"})
+        prediction = PredictionResponse(
+            **{
+                "risk_prediction": 1,
+                "risk_probability": "0.75",
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert isinstance(prediction.risk_probability, float)
         assert prediction.risk_probability == 0.75
 
     def test_prediction_response_int_conversion(self) -> None:
         """risk_prediction deve converter de string para int."""
-        prediction = PredictionResponse(**{"risk_prediction": "1", "risk_probability": 0.75})
+        prediction = PredictionResponse(
+            **{
+                "risk_prediction": "1",
+                "risk_probability": 0.75,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         assert isinstance(prediction.risk_prediction, int)
         assert prediction.risk_prediction == 1
+
+    def test_feature_contribution_validates_direction(self) -> None:
+        """FeatureContribution deve validar direção permitida."""
+        valid = FeatureContribution(
+            feature_name="INDE_23",
+            feature_value=75.0,
+            contribution=0.2,
+            direction="aumenta_risco",
+        )
+        assert valid.direction == "aumenta_risco"
+
+        with pytest.raises(ValidationError):
+            FeatureContribution(
+                feature_name="INDE_23",
+                feature_value=75.0,
+                contribution=0.2,
+                direction="indefinido",
+            )
+
+
+@pytest.mark.unit
+@pytest.mark.schemas
+class TestRetrainRequestSchema:
+    """Testes para validação de atributos no schema de retreinamento."""
+
+    def test_retrain_request_requires_requested_by(self) -> None:
+        """requested_by deve ser obrigatório para governança."""
+        with pytest.raises(ValidationError):
+            RetrainRequest(
+                n_estimators=100,
+                max_depth=10,
+                min_samples_split=2,
+                k=10,
+                test_size=0.2,
+            )
+
+    def test_retrain_request_rejects_invalid_n_estimators(self) -> None:
+        """n_estimators negativo deve falhar."""
+        with pytest.raises(ValidationError):
+            RetrainRequest(
+                requested_by="lucas_admin",
+                n_estimators=-10,
+                max_depth=10,
+                min_samples_split=2,
+                k=10,
+                test_size=0.2,
+            )
 
 
 # ============================================================================
@@ -417,6 +564,22 @@ class TestModelInfoResponseSchema:
         assert isinstance(model_info.retraining_strategy, dict)
         assert model_info.retraining_strategy["frequency"] == "monthly"
 
+    def test_model_info_response_rejects_negative_features(self) -> None:
+        """ModelInfoResponse deve rejeitar n_features negativo."""
+        with pytest.raises(ValidationError):
+            ModelInfoResponse(
+                **{
+                    "model_loaded": True,
+                    "model_path": "/path/to/model.pkl",
+                    "retraining_strategy": {"frequency": "monthly"},
+                    "production_scenarios": {"scenario1": "data"},
+                    "loaded_at": None,
+                    "model_type": None,
+                    "n_features": -1,
+                    "features": None,
+                }
+            )
+
 
 # ============================================================================
 # TEST MODEL METRICS RESPONSE SCHEMA
@@ -533,6 +696,19 @@ class TestModelMetricsResponseSchema:
         assert isinstance(metrics.artifacts, list)
         assert len(metrics.artifacts) == 3
 
+    def test_model_metrics_response_rejects_invalid_source(self) -> None:
+        """ModelMetricsResponse deve rejeitar source fora do enum."""
+        with pytest.raises(ValidationError):
+            ModelMetricsResponse(
+                **{
+                    "source": "external",
+                    "run_id": "abc123",
+                    "metrics": {},
+                    "params": {},
+                    "artifacts": [],
+                }
+            )
+
 
 # ============================================================================
 # INTEGRATION TESTS (Pydantic Validation)
@@ -566,7 +742,14 @@ class TestSchemaIntegration:
 
     def test_prediction_response_json_serializable(self) -> None:
         """PredictionResponse deve ser JSON-serializável."""
-        prediction = PredictionResponse(**{"risk_prediction": 1, "risk_probability": 0.85})
+        prediction = PredictionResponse(
+            **{
+                "risk_prediction": 1,
+                "risk_probability": 0.85,
+                "explanation_method": "shap",
+                "top_features": [],
+            }
+        )
         json_str = prediction.model_dump_json()
         assert "1" in json_str
         assert "0.85" in json_str
@@ -588,3 +771,34 @@ class TestSchemaIntegration:
         json_str = model_info.model_dump_json()
         assert "true" in json_str or "True" in json_str
         assert "/path/to/model.pkl" in json_str
+
+
+@pytest.mark.unit
+@pytest.mark.schemas
+class TestPromoteAndDiscardResponseSchema:
+    """Testes para schemas de promote/discard."""
+
+    def test_promote_response_accepts_valid_payload(self) -> None:
+        """PromoteResponse deve aceitar status promoted."""
+        response = PromoteResponse(
+            status="promoted",
+            message="Modelo promovido",
+            loaded_at="2026-02-26T15:00:00+00:00",
+            champion_run_id="run-123",
+        )
+        assert response.status == "promoted"
+
+    def test_promote_response_rejects_invalid_status(self) -> None:
+        """PromoteResponse deve rejeitar status fora do permitido."""
+        with pytest.raises(ValidationError):
+            PromoteResponse(
+                status="done",
+                message="ok",
+                loaded_at="2026-02-26T15:00:00+00:00",
+                champion_run_id="run-123",
+            )
+
+    def test_discard_response_rejects_invalid_status(self) -> None:
+        """DiscardResponse deve rejeitar status fora do permitido."""
+        with pytest.raises(ValidationError):
+            DiscardResponse(status="removed", message="ok")

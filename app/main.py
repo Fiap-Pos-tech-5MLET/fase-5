@@ -22,6 +22,7 @@ from app.routes.predict_route import router as predict_router
 from app.routes.train_route import router as train_router
 from app.utils.keep_alive import start_keep_alive
 from app.utils.model_loader import load_model
+from app.utils.structured_logging import log_with_request
 
 # Configure structured logging
 logging.basicConfig(
@@ -91,18 +92,20 @@ async def log_requests(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     duration_ms = (time.time() - start_time) * 1000
-    logger.info(
-        "%s %s -> %d (%.1fms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
+    log_with_request(
+        logger=logger,
+        level=logging.INFO,
+        event="http_request",
+        request=request,
+        requested_by=request.headers.get("x-requested-by", "unknown"),
+        status_code=response.status_code,
+        duration_ms=round(duration_ms, 2),
     )
     return response
 
 
 @app.get("/health")
-def health_check():
+async def health_check():
     """
     Health check endpoint para keep-alive (Render Free Tier).
 

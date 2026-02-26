@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Cross-platform cleanup: move large dirs into an archive folder for review."""
+
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 os.chdir(ROOT)
 
-ARCHIVE_DIR = f"archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+ARCHIVE_DIR = f"archive_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+
 
 def main():
     archive = os.path.join(ROOT, ARCHIVE_DIR)
@@ -26,5 +28,6 @@ def main():
     else:
         print(f"Archived into {archive}. Inspect before committing.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -172,6 +172,30 @@ O sistema é construído sobre uma **arquitetura modular e escalável**:
 └─────────────────┘     └──────────────────┘
 ```
 
+### 🧭 Arquitetura e Fluxo de Dados (Mermaid)
+
+```mermaid
+flowchart LR
+  A[Dados Educacionais 2022-2024] --> B[src/data_cleaning.py]
+  B --> C[src/feature_engineering.py]
+  C --> D[src/feature_store.py]
+  D --> E[scripts/train.py]
+  E --> F[(MLflow + Artifacts)]
+  E --> G[(models/model.pkl)]
+
+  H[FastAPI app/main.py] --> I[POST /predict]
+  I --> J[Pipeline de Pré-processamento]
+  J --> G
+  G --> K[Predição + XAI (SHAP/fallback)]
+
+  L[GET /model-info, /drift] --> H
+  M[Streamlit Dashboard] --> H
+  H --> N[Logs JSON Estruturados]
+
+  O[GitHub Actions CI/CD] --> P[Testes, Lint, Segurança, Build Docker]
+  P --> Q[Deploy Hook Render em merge na main]
+```
+
 ### 🎯 Componentes Principais
 
 1. **🌐 Nginx (Reverse Proxy)**: Ponto de entrada único na porta 80, roteia todo tráfego HTTP

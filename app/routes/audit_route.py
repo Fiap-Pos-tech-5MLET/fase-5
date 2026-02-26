@@ -9,11 +9,13 @@ import logging
 import os
 from typing import Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import ModelInfoResponse
 from app.utils.model_loader import get_current_model, get_model_info, get_model_paths
+from app.utils.structured_logging import log_with_request
 
 logger = logging.getLogger("audit_route")
 
@@ -21,7 +23,9 @@ router = APIRouter()
 
 
 @router.get("/")
-def health_check() -> Dict[str, bool]:
+async def health_check(
+    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
+) -> Dict[str, bool]:
     """
     Health check endpoint.
 
@@ -32,11 +36,21 @@ def health_check() -> Dict[str, bool]:
         Dict[str, bool]: Status basico e indicacao de modelo carregado.
     """
     model = get_current_model()
+    log_with_request(
+        logger=logger,
+        level=logging.INFO,
+        event="audit_health_check",
+        request=request,
+        requested_by=requested_by,
+        model_loaded=model is not None,
+    )
     return {"status": True, "model_loaded": model is not None}
 
 
 @router.get("/model-info", response_model=ModelInfoResponse)
-def model_info() -> ModelInfoResponse:
+async def model_info(
+    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
+) -> ModelInfoResponse:
     """
     Retorna metadados do modelo em produção, incluindo estratégia de
     retreinamento e cenários de produção documentados.
@@ -48,7 +62,7 @@ def model_info() -> ModelInfoResponse:
         ModelInfoResponse: Metadados completos do modelo em producao.
     """
     model = get_current_model()
-    info_basic = get_model_info()
+    info_basic = await run_in_threadpool(get_model_info)
 
     info = {
         "model_loaded": info_basic["model_loaded"],
@@ -124,11 +138,24 @@ def model_info() -> ModelInfoResponse:
         except (AttributeError, KeyError):
             pass
 
-    return ModelInfoResponse(**info)
+    response = ModelInfoResponse(**info)
+    log_with_request(
+        logger=logger,
+        level=logging.INFO,
+        event="audit_model_info",
+        request=request,
+        requested_by=requested_by,
+        model_loaded=response.model_loaded,
+        model_type=response.model_type,
+        n_features=response.n_features,
+    )
+    return response
 
 
 @router.get("/drift", response_class=HTMLResponse)
-def drift_report() -> HTMLResponse:
+async def drift_report(
+    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
+) -> HTMLResponse:
     """
     Serve o relatório de data drift como HTML.
 
@@ -145,13 +172,29 @@ def drift_report() -> HTMLResponse:
     report_path = os.path.join(models_dir, "artifacts", "data_drift_report.html")
 
     if not os.path.exists(report_path):
-        logger.warning("Drift report not found. Run `python scripts/monitoring.py` to generate.")
+        log_with_request(
+            logger=logger,
+            level=logging.WARNING,
+            event="audit_drift_report_missing",
+            request=request,
+            requested_by=requested_by,
+            report_path=report_path,
+        )
         raise HTTPException(
             status_code=404, detail="Drift report not found. Run monitoring.py first."
         )
 
-    with open(report_path, encoding="utf-8") as f:
-        html_content = f.read()
+    def _read_report() -> str:
+        with open(report_path, encoding="utf-8") as f:
+            return f.read()
 
-    logger.info("Drift report served successfully.")
+    html_content = await run_in_threadpool(_read_report)
+    log_with_request(
+        logger=logger,
+        level=logging.INFO,
+        event="audit_drift_report_served",
+        request=request,
+        requested_by=requested_by,
+        report_path=report_path,
+    )
     return HTMLResponse(content=html_content)

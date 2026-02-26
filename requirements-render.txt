@@ -17,6 +17,7 @@ plotly==5.24.1
 # MLOps leve
 mlflow==2.18.0
 evidently==0.4.40
+shap==0.48.0
 
 # Data Processing
 openpyxl==3.1.5
