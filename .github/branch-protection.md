@@ -6,19 +6,23 @@ Recomendações para configurar no GitHub (Settings > Branches):
 
 - Exigir Pull Request antes de merge.
 - Exigir aprovação de pelo menos 1 reviewer.
-- Exigir status checks obrigatórios do workflow `ci-cd-pipeline.yml`.
+- Exigir status checks obrigatórios do workflow `main-pipeline.yml`.
 - Bloquear push direto em `main`.
-- Permitir merge apenas de `release/*` e `hotfix/*` (validado no workflow).
+- Permitir merge apenas de `develop` (validado no workflow).
 
 ## Regra para `develop`
 
 - Exigir Pull Request antes de merge.
-- Exigir status checks obrigatórios do workflow `ci-cd-pipeline.yml`.
+- Exigir status checks obrigatórios do workflow `develop-pipeline.yml`.
 - Permitir merge apenas de `feature/*` e `bugfix/*` (validado no workflow).
+
+## Regra para `feature/*` e `bugfix/*`
+
+- Exigir status checks obrigatórios do workflow `feature-pipeline.yml`.
+- Não permitir merge direto em `main`.
 
 ## Fluxo GitFlow adotado
 
 1. `feature/*` ou `bugfix/*` -> PR para `develop`.
-2. `release/*` -> PR para `main` quando release aprovada.
-3. `hotfix/*` -> PR para `main` para correções críticas.
-4. Merge em `main` com sucesso no CI dispara deploy automático no Render.
+2. `develop` -> PR para `main` quando release aprovada.
+3. Merge em `main` com sucesso no CI dispara deploy automático no Render.
