@@ -8,12 +8,12 @@ aliases e transformações de dados.
 import pytest
 from pydantic import ValidationError
 
+from app.models.schemas.discard_response import DiscardResponse
 from app.models.schemas.model_info_response import ModelInfoResponse
 from app.models.schemas.model_metrics_response import ModelMetricsResponse
 from app.models.schemas.prediction_response import FeatureContribution, PredictionResponse
 from app.models.schemas.promote_response import PromoteResponse
 from app.models.schemas.retrain_request import RetrainRequest
-from app.models.schemas.discard_response import DiscardResponse
 from app.models.schemas.student_data import StudentData
 from app.models.schemas.student_input import StudentInput
 

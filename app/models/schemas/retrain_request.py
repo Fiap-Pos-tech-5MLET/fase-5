@@ -14,7 +14,9 @@ RequestedBy = Annotated[str, StringConstraints(min_length=3, max_length=120, str
 class RetrainRequest(BaseModel):
     """Parâmetros opcionais para retreinamento do modelo."""
 
-    requested_by: RequestedBy = Field(description="Usuário responsável por solicitar o retreinamento")
+    requested_by: RequestedBy = Field(
+        description="Usuário responsável por solicitar o retreinamento"
+    )
     n_estimators: int = Field(
         100,
         ge=10,

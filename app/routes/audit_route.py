@@ -24,8 +24,7 @@ router = APIRouter()
 
 @router.get("/")
 async def health_check(
-    request: Request,
-    requested_by: str = Header(default="unknown", alias="x-requested-by")
+    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
 ) -> Dict[str, bool]:
     """
     Health check endpoint.
@@ -50,8 +49,7 @@ async def health_check(
 
 @router.get("/model-info", response_model=ModelInfoResponse)
 async def model_info(
-    request: Request,
-    requested_by: str = Header(default="unknown", alias="x-requested-by")
+    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
 ) -> ModelInfoResponse:
     """
     Retorna metadados do modelo em produção, incluindo estratégia de
@@ -156,8 +154,7 @@ async def model_info(
 
 @router.get("/drift", response_class=HTMLResponse)
 async def drift_report(
-    request: Request,
-    requested_by: str = Header(default="unknown", alias="x-requested-by")
+    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
 ) -> HTMLResponse:
     """
     Serve o relatório de data drift como HTML.

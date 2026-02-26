@@ -16,9 +16,9 @@ from .student_input import StudentInput
 
 __all__ = [
     "DiscardResponse",
+    "FeatureContribution",
     "ModelInfoResponse",
     "ModelMetricsResponse",
-    "FeatureContribution",
     "PredictionResponse",
     "PromoteResponse",
     "RetrainRequest",

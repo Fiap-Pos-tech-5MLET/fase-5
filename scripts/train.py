@@ -53,9 +53,7 @@ from src.feature_store import persist_dataset_version, register_feature_view
 from src.model import save_model, train_model
 
 
-def plot_classification_report(
-    y_true: np.ndarray, y_pred: np.ndarray, output_path: str
-) -> None:
+def plot_classification_report(y_true: np.ndarray, y_pred: np.ndarray, output_path: str) -> None:
     """
     Gera e salva heatmap do classification report.
 
@@ -64,12 +62,8 @@ def plot_classification_report(
         y_pred: Valores preditos pelo modelo.
         output_path: Caminho para salvar a imagem.
     """
-    clf_report = classification_report(
-        y_true, y_pred, output_dict=True, zero_division=0
-    )
-    sns.heatmap(
-        pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, cmap="Blues", fmt=".2f"
-    )
+    clf_report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
+    sns.heatmap(pd.DataFrame(clf_report).iloc[:-1, :].T, annot=True, cmap="Blues", fmt=".2f")
     plt.title("Classification Report")
     plt.tight_layout()
     plt.savefig(output_path)
@@ -77,9 +71,7 @@ def plot_classification_report(
     logger.debug(f"Classification report salvo em: {output_path}")
 
 
-def plot_roc_curve(
-    estimator: Pipeline, X: pd.DataFrame, y: pd.Series, output_path: str
-) -> None:
+def plot_roc_curve(estimator: Pipeline, X: pd.DataFrame, y: pd.Series, output_path: str) -> None:
     """
     Gera e salva curva ROC.
 
@@ -101,10 +93,7 @@ def plot_roc_curve(
 
 
 def plot_feature_importance(
-    model: Pipeline,
-    feature_names: Optional[np.ndarray],
-    output_path: str,
-    top_n: int = 20
+    model: Pipeline, feature_names: Optional[np.ndarray], output_path: str, top_n: int = 20
 ) -> None:
     """
     Gera e salva gráfico de importância de features.
@@ -131,9 +120,7 @@ def plot_feature_importance(
 
     # Use feature names if available
     if feature_names is not None and len(feature_names) == len(importances):
-        plt.xticks(
-            range(n_show), [feature_names[i] for i in indices[:n_show]], rotation=90
-        )
+        plt.xticks(range(n_show), [feature_names[i] for i in indices[:n_show]], rotation=90)
     else:
         if feature_names is not None:
             logger.warning(
@@ -282,10 +269,7 @@ def main(
             else:
                 # Fallback if get_feature_names_out fails on ColumnTransformer (older sklearn versions)
                 all_features = np.array(
-                    [
-                        f"Feat_{i}"
-                        for i in range(model.named_steps["classifier"].n_features_in_)
-                    ]
+                    [f"Feat_{i}" for i in range(model.named_steps["classifier"].n_features_in_)]
                 )
 
             # Apply selection mask if SelectKBest was used
