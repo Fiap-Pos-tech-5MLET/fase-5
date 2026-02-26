@@ -56,6 +56,7 @@ def _import_dashboard(page_name: str) -> tuple[types.ModuleType, dict[str, Magic
         "app.dashboard.data",
         _build_stub_module(
             "app.dashboard.data",
+            get_model_cache_buster=MagicMock(return_value=-1),
             get_model_metrics=MagicMock(),
             load_dataset=MagicMock(),
             load_model=MagicMock(return_value=MagicMock()),

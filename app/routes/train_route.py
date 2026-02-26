@@ -18,6 +18,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
+try:
+    from mlflow.exceptions import MlflowException
+except (ImportError, ModuleNotFoundError, AttributeError):
+    class MlflowException(Exception):
+        """Fallback para ambientes sem pacote mlflow.exceptions disponível."""
+
 from app.models.schemas import (
     DiscardResponse,
     ModelMetricsResponse,
@@ -335,16 +341,20 @@ async def model_metrics() -> ModelMetricsResponse:
             params=None,
             artifacts=[],
         )
-    except ValueError as exc:
+    except (ValueError, MlflowException) as exc:
         logger.warning(
             "Failed to fetch from MLflow (run_id=%s): %s",
             champion_run_id,
             exc,
         )
         return ModelMetricsResponse(
-            source="error",
+            source="local",
             run_id=champion_run_id,
-            message=f"Erro ao consultar MLflow: {exc!s}",
+            message=(
+                "Run do MLflow não encontrada para o champion atual. "
+                "Retreinhe e promova novamente para atualizar o run_id. "
+                f"Detalhe: {exc!s}"
+            ),
             metrics=None,
             params=None,
             artifacts=[],
@@ -393,7 +403,7 @@ async def model_artifact(artifact_name: str) -> FileResponse:
                 return FileResponse(local_path, media_type="image/png")
         except ImportError as exc:
             logger.warning("MLflow import error: %s. Falling back to local.", exc)
-        except ValueError as exc:
+        except (ValueError, MlflowException) as exc:
             logger.warning(
                 "Failed to fetch artifact from MLflow: %s. Falling back to local.",
                 exc,

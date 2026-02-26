@@ -128,11 +128,13 @@ class TestPredictRoute:
         assert data["risk_prediction"] in [0, 1]
 
     @patch("app.routes.predict_route.get_current_model")
+    @patch("app.routes.predict_route.load_model")
     def test_predict_no_model_loaded_returns_503(
-        self, mock_get_model, api_client, valid_student_data
+        self, mock_load_model, mock_get_model, api_client, valid_student_data
     ) -> None:
         """POST /predict sem modelo retorna 503."""
         mock_get_model.return_value = None
+        mock_load_model.return_value = (None, None)
 
         response = api_client.post("/predict", json=valid_student_data)
 
