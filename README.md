@@ -120,24 +120,42 @@ Arquitetura modular para cobrir o ciclo completo de dados, treino, inferência e
 ### 🏗️ Arquitetura de Execução
 
 ```
-            ┌──────────────────────────────┐
-            │    🌐 NGINX (Entry Point)    │
-            │  Local: :80 | Render: :8080  │
-            └──────────────┬───────────────┘
-                      │
-      ┏━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┓
-      ▼                                                 ▼
-┌──────────────────────┐                         ┌──────────────────────┐
-│   ⚡ FastAPI API      │                         │   📊 Streamlit       │
-│   Interna: :8000      │                         │   Interna: :8501      │
-└───────────┬──────────┘                         └───────────┬──────────┘
-        │                                                │
-        └──────────────────────┬─────────────────────────┘
-                        ▼
-                  ┌─────────────────┐
-                  │  🤖 Modelo ML    │
-                  │  + Artefatos     │
-                  └─────────────────┘
+graph TD
+    %% Acesso Externo
+    User((Usuário / ONG)) --> |Acesso HTTPS (Porta 443/80)| Nginx[Nginx Reverse Proxy :80]
+    
+    %% Roteamento Nginx (Reverse Proxy)
+    subgraph Container Orquestration Docker Compose
+        Nginx --> |Rota: /api/*| FastAPI[FastAPI Backend :8000]
+        Nginx --> |Rota: /dashboard/*| Streamlit[Streamlit UI :8501]
+        Nginx --> |Rota: /mlflow/*| MLflow[MLflow Server :5000]
+    end
+    
+    %% Comunicação Interna e Lógica de Negócio
+    Streamlit -- "Chamadas REST (Predict/Train)" --> FastAPI
+    
+    %% Motor MLOps e Persistência
+    subgraph MLOps Engine
+        FastAPI -- "Lê/Grava" --> MLflowArtifacts[(MLflow Artifacts / mlruns)]
+        MLflow -- "Serve" --> MLflowArtifacts
+        FastAPI -- "XAI Explainer" --> SHAP[SHAP/LIME]
+    end
+    
+    %% Saídas e Monitoramento
+    FastAPI -- "Gera Logs" --> JSONLogs[(Logs Estruturados em JSON)]
+    
+    %% Estilização
+    classDef proxy fill:#ececff,stroke:#9370db,stroke-width:2px,rx:10,ry:10;
+    classDef api fill:#e6f3ff,stroke:#4169e1,stroke-width:2px;
+    classDef ui fill:#f0fff0,stroke:#2e8b57,stroke-width:2px;
+    classDef ops fill:#fff5ee,stroke:#ff8c00,stroke-width:2px;
+    classDef db fill:#f5f5f5,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
+    
+    class Nginx proxy;
+    class FastAPI api;
+    class Streamlit ui;
+    class MLflow,SHAP ops;
+    class MLflowArtifacts,JSONLogs db;
 ```
 
 **Roteamento principal via Nginx:**
@@ -355,7 +373,70 @@ Para mais detalhes, consulte [TESTING.md](TESTING.md).
 ## 🔄 CI/CD Pipeline
 
 O projeto adota pipelines GitHub Actions por branch, alinhados ao fluxo GitFlow.
-
+```mermaid
+graph TD
+    %% Atores
+    Dev((Desenvolvedor))
+    Lead((Tech Lead))
+    
+    %% Branches e Gatilhos
+    subgraph Git Repository
+        Feature[Branch: feature/*]
+        Develop[Branch: develop]
+        Main[Branch: main]
+    end
+    
+    %% Pipelines Actions
+    subgraph GitHub Actions Pipelines
+        Workflow1[Pipeline: Feature]
+        Workflow2[Pipeline: Develop]
+        Workflow3[Pipeline: Main]
+    end
+    
+    %% Ambientes
+    subgraph Ambientes
+        Render[Cloud: Render Production]
+    end
+    
+    %% Fluxo de Código e Gatilhos
+    Dev -->|git push| Feature
+    Feature -->|Abre PR| Workflow1
+    
+    %% Etapas Workflow Feature
+    subgraph Workflow1: Feature (Validations)
+        W1_1[Job: Linting] --> W1_2[Job: Testes Unitários]
+    end
+    
+    Workflow1 -->|Verde & Aprovação Manual| Develop
+    
+    Develop -->|Abre PR Release| Workflow2
+    
+    %% Etapas Workflow Develop (Homologação)
+    subgraph Workflow2: Develop (Release Candidate)
+        W2_1[Job: Testes Completos] --> W2_2[Job: Coverage Report]
+    end
+    
+    Workflow2 -->|Merge Manual Tech Lead| Main
+    Main -->|Trigger push| Workflow3
+    
+    %% Etapas Workflow Main (CD)
+    subgraph Workflow3: Main (Deploy)
+        W3_1[Job: Smoke Tests] --> W3_2[Job: Docker Build & Push]
+        W3_2 --> W3_3[Job: Deploy to Render]
+    end
+    
+    %% O Gatilho do Deploy
+    W3_3 -->|Webhook Hook (cURL)| Render
+    
+    %% Estilização
+    classDef branch fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef action fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef prod fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,stroke-dasharray: 5 5;
+    
+    class Feature,Develop,Main branch;
+    class Workflow1,Workflow2,Workflow3 action;
+    class Render prod;
+```
 ### Workflows ativos
 
 1. **Feature Pipeline** (`feature-pipeline.yml`)
