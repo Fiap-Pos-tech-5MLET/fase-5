@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - develop
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -14,9 +18,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  branch-policy:
+    name: 2.0 Validação de Origem do PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+
+    steps:
+      - name: Validar origem para PR em develop
+        run: |
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.head_ref }}"
+
+          echo "🔎 Validando política de origem para develop..."
+          echo "Base: ${BASE} | Head: ${HEAD}"
+
+          if [[ "${BASE}" != "develop" ]]; then
+            echo "❌ Este workflow valida apenas PRs para develop"
+            exit 1
+          fi
+
+          if [[ "${HEAD}" =~ ^feature/ || "${HEAD}" =~ ^bugfix/ ]]; then
+            echo "✅ Origem válida: ${HEAD} -> ${BASE}"
+          else
+            echo "❌ Origem inválida para develop. Use feature/* ou bugfix/*"
+            exit 1
+          fi
+
   quality:
     name: 2.1 Qualidade de Código (Ruff + MyPy)
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     timeout-minutes: 20
 
     steps:
@@ -103,6 +135,7 @@ jobs:
   tests:
     name: 2.2 Testes Completos com Coverage
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     # Paralelo ao Security: ambos dependem apenas de quality
     needs: quality
     timeout-minutes: 30
@@ -169,6 +202,7 @@ jobs:
   security:
     name: 2.3 Segurança (Bandit + Detect-Secrets)
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     # Paralelo ao Tests: ambos dependem apenas de quality
     needs: quality
     timeout-minutes: 15
@@ -242,6 +276,7 @@ jobs:
   auto-release-pr:
     name: 2.4 Criar PR de release (develop -> main)
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     needs: [tests, security]
     timeout-minutes: 10
 
@@ -305,8 +340,8 @@ jobs:
   report:
     name: 2.5 Relatório do Pipeline
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && always()
     needs: [quality, tests, security]
-    if: always()
     timeout-minutes: 5
 
     steps:

@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -14,9 +18,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  branch-policy:
+    name: 3.0 Validação de Origem do PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
+
+    steps:
+      - name: Validar origem para PR em main
+        run: |
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.head_ref }}"
+
+          echo "🔎 Validando política de origem para main..."
+          echo "Base: ${BASE} | Head: ${HEAD}"
+
+          if [[ "${BASE}" != "main" ]]; then
+            echo "❌ Este workflow valida apenas PRs para main"
+            exit 1
+          fi
+
+          if [[ "${HEAD}" == "develop" ]]; then
+            echo "✅ Origem válida: ${HEAD} -> ${BASE}"
+          else
+            echo "❌ Origem inválida para main. O PR deve vir de develop"
+            exit 1
+          fi
+
   smoke-tests:
     name: 3.1 Testes de Sanidade (Smoke Tests)
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     timeout-minutes: 15
 
     steps:
@@ -87,6 +119,7 @@ jobs:
   docker-build:
     name: 3.2 Build da Imagem Docker
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     needs: smoke-tests
     timeout-minutes: 20
 
@@ -126,6 +159,7 @@ jobs:
   deploy-render:
     name: 3.3 Deploy Contínuo no Render
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     needs: docker-build
     timeout-minutes: 10
 
@@ -162,8 +196,8 @@ jobs:
   report:
     name: 3.4 Relatório do Pipeline
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && always()
     needs: [smoke-tests, docker-build, deploy-render]
-    if: always()
     timeout-minutes: 5
 
     steps:
