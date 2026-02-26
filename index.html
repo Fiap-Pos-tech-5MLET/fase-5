@@ -184,18 +184,12 @@
             <a href="/api/docs" class="btn btn-api">
                 📚 API Swagger Docs
             </a>
-            <a href="#" id="dashboard-link" class="btn btn-app">
+            <a href="/dashboard/" class="btn btn-app">
                 📊 Dashboard Interativo
             </a>
         </div>
         
-        <script>
-            // Configura o link do Dashboard baseado no ambiente
-            const dashboardUrl = window.location.hostname === 'localhost' 
-                ? 'http://localhost:8501'
-                : '/dashboard';
-            document.getElementById('dashboard-link').href = dashboardUrl;
-        </script>
+        <!-- Script removido - URL relativa funciona em todos os ambientes -->
 
         <div class="info">
             <h3>✨ Funcionalidades Principais</h3>
