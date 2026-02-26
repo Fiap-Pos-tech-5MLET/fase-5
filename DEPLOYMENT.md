@@ -1,109 +1,58 @@
-# Deploy para Render - Container Único
+# Deploy (Render + Docker)
 
-## ?? Arquitetura
+Guia objetivo para reproduzir o deploy de produÃ§Ã£o.
 
-Este projeto utiliza um **container único** gerenciado pelo **Supervisor** para rodar todos os serviços:
+## 1) Arquitetura de ProduÃ§Ã£o
 
-```
-+-------------------------------------------------+
-¦  Render (Expõe porta 80)                        ¦
-¦  +-------------------------------------------+  ¦
-¦  ¦   Docker Container                        ¦  ¦
-¦  ¦   +-----------------------------------+   ¦  ¦
-¦  ¦   ¦   Supervisor (gerencia processos) ¦   ¦  ¦
-¦  ¦   ¦   +- Nginx (porta 80)             ¦   ¦  ¦
-¦  ¦   ¦   +- FastAPI (porta 8000)         ¦   ¦  ¦
-¦  ¦   ¦   +- Streamlit (porta 8501)       ¦   ¦  ¦
-¦  ¦   ¦   +- MLflow (porta 5000)          ¦   ¦  ¦
-¦  ¦   +-----------------------------------+   ¦  ¦
-¦  +-------------------------------------------+  ¦
-+-------------------------------------------------+
-```
+- Runtime: `Docker` (container Ãºnico)
+- Process manager: `supervisord`
+- Entry point: `nginx` na porta `8080`
+- ServiÃ§os internos:
+  - FastAPI: `127.0.0.1:8000`
+  - Streamlit: `127.0.0.1:8501`
 
-### Roteamento
+## 2) Rotas PÃºblicas
 
-- **`http://seu-app.onrender.com/`** ? Landing page (index.html)
-- **`http://seu-app.onrender.com/api/docs`** ? API Documentation (Swagger)
-- **`http://seu-app.onrender.com/dashboard/`** ? Streamlit Dashboard
-- **`http://seu-app.onrender.com/mlflow/`** ? MLflow Tracking UI
+- `/` â†’ Landing page
+- `/api/docs` â†’ Swagger
+- `/dashboard/` â†’ Dashboard Streamlit
+- `/health` â†’ Health check
 
-## ?? Como Fazer Deploy
+## 3) PrÃ©-requisitos no Render
 
-### Opção 1: Via render.yaml (Recomendada)
+- RepositÃ³rio conectado ao Render
+- Arquivo `render.yaml` versionado
+- Secret `RENDER_DEPLOY_HOOK_URL` configurado no GitHub (pipeline de `main`)
 
-1. **Commitar o código**:
-```bash
-git add .
-git commit -m "Deploy: Container único com Supervisor"
-git push origin main
-```
+## 4) Deploy (Caminho Feliz)
 
-2. **Criar Web Service no Render**:
-   - Acesse [render.com](https://render.com)
-   - Clique em **"New +" ? "Web Service"**
-   - Conecte seu repositório GitHub
-   - O Render detectará automaticamente o `render.yaml`
+1. Merge em `main` apÃ³s aprovaÃ§Ã£o no GitFlow.
+2. Pipeline `main-pipeline.yml` executa smoke tests + build Docker.
+3. Deploy hook do Render Ã© acionado automaticamente.
 
-3. **Aguardar Deploy** (5-10 minutos na primeira vez)
-
-## ?? Arquivos Modificados
-
-### 1. `Dockerfile`
-- Instalado Nginx e Supervisor
-- Criado configuração do Supervisor inline
-- Todos os serviços rodam no mesmo container
-- Porta 80 exposta (Nginx)
-- Health check via curl
-
-### 2. `nginx.conf`
-- Removidos `upstream` blocks
-- Proxy para `http://127.0.0.1:PORTA` (localhost)
-- Roteamento para API, Dashboard e MLflow
-
-### 3. `app/main.py`
-- Adicionado `root_path="/api"` quando ENVIRONMENT=production
-
-### 4. `app/dashboard/config.py`
-- API_URL usa `http://127.0.0.1:8000` em produção
-
-### 5. `.streamlit/config.toml`
-- `baseUrlPath = "/dashboard"` para rodar atrás do Nginx
-
-## ?? Testar Localmente
-
-### Com Docker (simula produção):
+## 5) ValidaÃ§Ã£o PÃ³s-Deploy
 
 ```bash
-# Construir imagem
-docker build -t datathon-app .
-
-# Rodar container
-docker run -p 80:80 --name datathon datathon-app
-
-# Testar endpoints
-curl http://localhost/              # Landing page
-curl http://localhost/api/docs      # API docs
+curl -fsSL https://SEU_APP.onrender.com/health
+curl -fsSL https://SEU_APP.onrender.com/api/docs > /dev/null
 ```
 
-## ?? Logs e Debugging
+Valide tambÃ©m manualmente:
+- `https://SEU_APP.onrender.com/`
+- `https://SEU_APP.onrender.com/dashboard/`
 
-### Ver logs do Render:
-1. Acesse seu serviço no Dashboard do Render
-2. Clique na aba **"Logs"**
-3. Logs mostrarão:
-   - Supervisor iniciando
-   - Nginx, API, Streamlit e MLflow rodando
+## 6) Rollback
 
-### Logs importantes:
+Rollback Ã© **GitOps-only**:
+- Reverter commit ou ajustar referÃªncia do champion (`app/models/champion_run_id.txt`) via PR.
+- Nunca corrigir produÃ§Ã£o manualmente fora da esteira.
 
-```
-INFO supervisord started
-INFO spawned: 'nginx' with pid XXX
-INFO spawned: 'api' with pid XXX
-INFO spawned: 'dashboard' with pid XXX
-INFO spawned: 'mlflow' with pid XXX
-```
+## 7) Troubleshooting RÃ¡pido
+
+- Erro em `/dashboard/`: verificar `nginx.conf` + `supervisord.conf` + logs do processo `dashboard`.
+- Erro em `/api/docs`: validar processo `api` e health check interno.
+- Build falhou no CI: reproduzir com `docker build -f Dockerfile .`.
 
 ---
 
-**Desenvolvido para Datathon Passos Mágicos - FIAP Pós-Tech 5MLET**
+ReferÃªncias: [README.md](README.md), [TESTING.md](TESTING.md), [CONTRIBUTING.md](CONTRIBUTING.md).
