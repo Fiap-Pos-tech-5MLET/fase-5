@@ -6,7 +6,7 @@ textColor = "#E2E8F0"
 font = "sans serif"
 
 [client]
-showErrorDetails = false
+showErrorDetails = true
 toolbarMode = "viewer"
 showSidebarNavigation = true
 showMenuItems = false
