@@ -1,7 +1,11 @@
 """
-Rota de predição de risco de defasagem escolar.
+Rota de predicao de risco de defasagem escolar.
 
-Endpoint principal da API para inferência do modelo.
+Este endpoint entrega inferencia do modelo champion em producao e resolve o
+problema central do projeto: antecipar risco de defasagem com dados reais,
+frequentemente incompletos. O pipeline aplica limpeza, preenchimento seguro
+de faltantes, engenharia de features e alinhamento de colunas com o modelo
+treinado para reduzir erros de schema e garantir consistencia.
 """
 
 import logging
@@ -20,23 +24,33 @@ router = APIRouter()
 
 
 @router.post("/predict", response_model=PredictionResponse)
-def predict(student: StudentData):
+def predict(student: StudentData) -> PredictionResponse:
     """
-    Realiza predição de risco de defasagem escolar.
+    Realiza predicao de risco de defasagem escolar.
+
+    Valor de negocio: permite triagem preventiva de alunos com maior risco,
+    apoiando decisoes de acompanhamento pedagogo antes do fechamento do ciclo.
 
     **Input:** JSON com `{"data": {...}}` contendo campos do aluno.
-    Todos os campos são opcionais — campos faltantes são preenchidos com defaults seguros.
+    Todos os campos sao opcionais — faltantes sao preenchidos com defaults seguros.
 
     **Output:** `risk_prediction` (0 ou 1) e `risk_probability` (0.0 a 1.0).
 
+    Fluxo tecnico:
+    1) limpeza e tratamento de faltantes
+    2) engenharia de features
+    3) remocao de colunas de leakage
+    4) alinhamento das features esperadas pelo modelo
+
     Args:
-        student: Dados do aluno (schema StudentData).
+        student (StudentData): Wrapper com dados do aluno no campo `data`.
 
     Returns:
-        PredictionResponse com predição e probabilidade.
+        PredictionResponse: Predicao binaria e probabilidade de risco.
 
     Raises:
-        HTTPException: 503 se modelo não estiver carregado, 400 se erro de processamento.
+        HTTPException: 503 se o modelo nao estiver carregado.
+        HTTPException: 400 se houver erro no preprocessamento.
     """
     model = get_current_model()
 
@@ -118,10 +132,10 @@ def predict(student: StudentData):
 
         logger.info("Prediction: risk=%d, probability=%.4f", int(prediction[0]), float(proba[0]))
 
-        return {
-            "risk_prediction": int(prediction[0]),
-            "risk_probability": float(proba[0]),
-        }
+        return PredictionResponse(
+            risk_prediction=int(prediction[0]),
+            risk_probability=float(proba[0]),
+        )
     except ValueError as exc:
         logger.error("Prediction error: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc

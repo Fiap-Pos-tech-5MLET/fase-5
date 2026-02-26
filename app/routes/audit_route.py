@@ -1,11 +1,13 @@
 """
 Rotas de auditoria e monitoramento.
 
-Endpoints para informações do modelo, drift detection e health check.
+Explicam o estado do modelo em producao e trazem transparencia tecnica
+para operacao: health check, metadados do modelo e relatorio de drift.
 """
 
 import logging
 import os
+from typing import Dict
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
@@ -19,25 +21,31 @@ router = APIRouter()
 
 
 @router.get("/")
-def health_check():
+def health_check() -> Dict[str, bool]:
     """
     Health check endpoint.
 
+    Usado por orquestradores e monitoramento para confirmar disponibilidade
+    da API e se o modelo esta carregado em memoria.
+
     Returns:
-        Dicionário com status e informação se modelo está carregado.
+        Dict[str, bool]: Status basico e indicacao de modelo carregado.
     """
     model = get_current_model()
-    return {"status": "ok", "model_loaded": model is not None}
+    return {"status": True, "model_loaded": model is not None}
 
 
 @router.get("/model-info", response_model=ModelInfoResponse)
-def model_info():
+def model_info() -> ModelInfoResponse:
     """
     Retorna metadados do modelo em produção, incluindo estratégia de
     retreinamento e cenários de produção documentados.
 
+    Valor: documenta governanca do modelo, criterios de retreino e
+    comportamento esperado em cenarios de dados reais.
+
     Returns:
-        ModelInfoResponse com metadados completos.
+        ModelInfoResponse: Metadados completos do modelo em producao.
     """
     model = get_current_model()
     info_basic = get_model_info()
@@ -116,19 +124,22 @@ def model_info():
         except (AttributeError, KeyError):
             pass
 
-    return info
+    return ModelInfoResponse(**info)
 
 
 @router.get("/drift", response_class=HTMLResponse)
-def drift_report():
+def drift_report() -> HTMLResponse:
     """
     Serve o relatório de data drift como HTML.
 
+    O relatorio e gerado por `scripts/monitoring.py` com Evidently e
+    compara distribuicoes entre dados de referencia e dados atuais.
+
     Returns:
-        HTMLResponse com relatório Evidently.
+        HTMLResponse: Relatorio Evidently em HTML.
 
     Raises:
-        HTTPException: 404 se relatório não existir.
+        HTTPException: 404 se relatorio nao existir.
     """
     models_dir, _, _ = get_model_paths()
     report_path = os.path.join(models_dir, "artifacts", "data_drift_report.html")
