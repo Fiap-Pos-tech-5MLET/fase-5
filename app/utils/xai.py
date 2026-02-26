@@ -8,7 +8,7 @@ determinístico baseado em importância global do modelo.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -27,8 +27,8 @@ def _to_dense(matrix: Any) -> np.ndarray:
         np.ndarray: Matriz densa em formato NumPy.
     """
     if hasattr(matrix, "toarray"):
-        return matrix.toarray()
-    return np.asarray(matrix)
+        return cast(np.ndarray, matrix.toarray())
+    return cast(np.ndarray, np.asarray(matrix))
 
 
 def _resolve_feature_names(model: Pipeline, transformed_size: int) -> list[str]:

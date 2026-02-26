@@ -14,7 +14,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
-from app.models.schemas import PredictionResponse, StudentData
+from app.models.schemas import FeatureContribution, PredictionResponse, StudentData
 from app.utils.model_loader import get_current_model
 from app.utils.structured_logging import log_with_request
 from app.utils.xai import explain_prediction
@@ -142,6 +142,7 @@ async def predict(student: StudentData, request: Request) -> PredictionResponse:
         prediction = model.predict(feature_matrix)
         proba = model.predict_proba(feature_matrix)[:, 1]
         top_features, explanation_method = explain_prediction(model, feature_matrix)
+        feature_contributions = [FeatureContribution(**feature) for feature in top_features]
 
         log_with_request(
             logger=logger,
@@ -159,7 +160,7 @@ async def predict(student: StudentData, request: Request) -> PredictionResponse:
             risk_prediction=int(prediction[0]),
             risk_probability=float(proba[0]),
             explanation_method=explanation_method,
-            top_features=top_features,
+            top_features=feature_contributions,
         )
 
     try:
