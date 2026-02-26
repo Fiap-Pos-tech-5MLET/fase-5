@@ -4,7 +4,6 @@ Testes para validar configuração do Dockerfile e deployment.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -99,7 +98,6 @@ class TestDeploymentConfig:
             content = f.read()
 
         assert 'root_path="/api"' in content, "root_path não está configurado no FastAPI"
-        assert "root_path=\"/api\"" in content, "root_path /api não está configurado no FastAPI"
 
     def test_docker_compose_exists_for_dev(self) -> None:
         """Verifica se docker-compose.yml existe para desenvolvimento."""
