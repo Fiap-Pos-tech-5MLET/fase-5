@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.models.schemas import RetrainRequest
-from app.routes.train_route import router
+from app.routes.train_route import MlflowException, router
 
 # ============================================================================
 # TEST FIXTURES
@@ -442,3 +442,40 @@ class TestDiscardModelLogging:
 
         assert response.status_code == 200
         mock_logger.info.assert_called()
+
+
+# ============================================================================
+# TEST MODEL METRICS ROUTE
+# ============================================================================
+
+
+@pytest.mark.integration
+@pytest.mark.api
+class TestModelMetricsRoute:
+    """Testes para a rota GET /model-metrics."""
+
+    @patch("app.routes.train_route.mlflow.get_run")
+    @patch("app.routes.train_route.get_model_paths")
+    @patch("app.routes.train_route.os.path.exists")
+    @patch("builtins.open")
+    def test_model_metrics_mlflow_run_not_found_returns_fallback(
+        self,
+        mock_open,
+        mock_exists,
+        mock_get_paths,
+        mock_get_run,
+        api_client,
+    ) -> None:
+        """Retorna fallback local quando run_id do champion não existe no MLflow."""
+        mock_get_paths.return_value = ("models", "models/model.pkl", "models/model_candidate.pkl")
+        mock_exists.side_effect = lambda path: path.endswith("champion_run_id.txt")
+        mock_open.return_value.__enter__.return_value.read.return_value = "missing_run_id"
+        mock_get_run.side_effect = MlflowException("Run 'missing_run_id' not found")
+
+        response = api_client.get("/model-metrics")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source"] == "local"
+        assert data["run_id"] == "missing_run_id"
+        assert "Run do MLflow não encontrada" in data["message"]

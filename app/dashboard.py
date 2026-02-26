@@ -23,7 +23,13 @@ from app.dashboard.config import (
     ROC_CURVE_PATH,
     configure_page,
 )
-from app.dashboard.data import get_model_metrics, load_dataset, load_model, predict_via_api
+from app.dashboard.data import (
+    get_model_cache_buster,
+    get_model_metrics,
+    load_dataset,
+    load_model,
+    predict_via_api,
+)
 from app.dashboard.pages.about import render_about_page
 from app.dashboard.pages.drift import render_drift_page
 from app.dashboard.pages.metrics import render_metrics_page
@@ -39,7 +45,7 @@ if "last_refresh" not in st.session_state:
     st.session_state["last_refresh"] = datetime.now().strftime("%d/%m/%Y %H:%M")
 
 
-model = load_model()
+model = load_model(get_model_cache_buster())
 page = render_sidebar(model, load_model, load_dataset)
 
 if page == "🔮 Predição":

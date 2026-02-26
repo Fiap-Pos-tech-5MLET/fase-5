@@ -4,6 +4,7 @@ Carregamento de dados e integração com API.
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, Optional, Tuple
 
 import joblib
@@ -18,17 +19,33 @@ from src.data_cleaning import clean_data, create_target, handle_missing_values, 
 from src.feature_engineering import create_features, select_features
 
 
+def get_model_cache_buster() -> int:
+    """
+    Retorna versão do arquivo de modelo para invalidar cache automaticamente.
+
+    Returns:
+        int: Timestamp em nanossegundos quando o arquivo existe; -1 caso contrário.
+    """
+    try:
+        return os.stat(MODEL_PATH).st_mtime_ns
+    except OSError:
+        return -1
+
+
 @st.cache_resource
-def load_model() -> Optional[Any]:
+def load_model(_cache_buster: int = -1) -> Optional[Any]:
     """
     Carrega o modelo treinado do disco.
+
+    Args:
+        _cache_buster (int): Chave para invalidar cache quando o arquivo muda.
 
     Returns:
         Optional[Any]: Modelo carregado ou None se não encontrado.
     """
     try:
         return joblib.load(MODEL_PATH)
-    except FileNotFoundError:
+    except (FileNotFoundError, OSError, ValueError, EOFError):
         return None
 
 

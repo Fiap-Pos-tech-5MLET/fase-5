@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import FeatureContribution, PredictionResponse, StudentData
-from app.utils.model_loader import get_current_model
+from app.utils.model_loader import get_current_model, load_model
 from app.utils.structured_logging import log_with_request
 from app.utils.xai import explain_prediction
 from src.data_cleaning import clean_data, handle_missing_values
@@ -56,6 +56,8 @@ async def predict(student: StudentData, request: Request) -> PredictionResponse:
         HTTPException: 400 se houver erro no preprocessamento.
     """
     model = get_current_model()
+    if model is None:
+        model, _ = load_model()
     requested_by = request.headers.get("x-requested-by", "unknown")
 
     if not model:
