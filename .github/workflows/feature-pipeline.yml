@@ -230,12 +230,24 @@ jobs:
             exit 0
           fi
 
+          cat > /tmp/feature_pr_body.md <<'EOF'
+          ## Objetivo
+
+          Integração automática da branch de trabalho para homologação em develop.
+
+          ## Checklist
+
+          - [ ] Lint e formatação aprovados
+          - [ ] Testes unitários rápidos aprovados
+          - [ ] Mudança revisada pelo time
+          EOF
+
           if ! gh pr create \
             --draft \
             --base develop \
             --head "${CURRENT_BRANCH}" \
             --title "🧪 Feature pronta para homologação: ${CURRENT_BRANCH}" \
-            --body "## Objetivo\n\nIntegração automática da branch de trabalho para homologação em **develop**.\n\n## Checklist\n- [ ] Lint/formatação aprovados\n- [ ] Testes unitários rápidos aprovados\n- [ ] Mudança revisada pelo time" 2>&1 | tee /tmp/gh-pr-create.log; then
+            --body-file /tmp/feature_pr_body.md 2>&1 | tee /tmp/gh-pr-create.log; then
             {
               echo "### ❌ Erro ao criar PR com gh"
               echo '```text'
