@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'ops:rollback' && github.event.issue.state == 'open' && contains('OWNER,MEMBER,COLLABORATOR', github.event.issue.author_association)
     timeout-minutes: 15
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
 
     steps:
       - name: Checkout da main
@@ -63,9 +65,7 @@ jobs:
           echo "new_sha=${NEW_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Reacionar deploy no Render (opcional)
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
         run: curl -s -S -X POST "${RENDER_DEPLOY_HOOK_URL}" > /dev/null
 
       - name: Comentar resultado na issue
