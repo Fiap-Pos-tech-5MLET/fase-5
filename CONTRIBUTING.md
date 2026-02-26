@@ -5,15 +5,16 @@ Obrigado pelo interesse em contribuir para o projeto **Tech Challenge Fase 5 - A
 Este projeto faz parte do **Tech Challenge da Pós-Graduação em Machine Learning Engineering da FIAP (Pos Tech)**, focado em análise e predição do desenvolvimento educacional de crianças e jovens atendidos pela Associação Passos Mágicos.
 Este documento estabelece as diretrizes detalhadas para garantir que o projeto se mantenha organizado, seguro, testado e com alta qualidade de código.
 
-## � Índice
+## 📌 Índice
 
-1.  [�🚀 Como Começar](#-como-começar)
+1.  [🚀 Como Começar](#-como-começar)
 2.  [🛠 Padrões de Código](#-padrões-de-código)
 3.  [🔒 Segurança e Boas Práticas](#-segurança-e-boas-práticas)
-4.  [🧠 Desenvolvimento com PyTorch](#-desenvolvimento-com-pytorch)
-5.  [✅ Testes](#-testes)
-6.  [📦 Workflow de Submissão](#-workflow-de-submissão)
-7.  [⌨️ Comandos do Makefile](#️-comandos-do-makefile)
+4.  [🚑 Gestão de Incidentes e Rollback](#4-gestão-de-incidentes-e-rollback-gitops)
+5.  [🧠 Desenvolvimento com PyTorch](#-desenvolvimento-com-pytorch)
+6.  [✅ Testes](#-testes)
+7.  [📦 Workflow de Submissão](#-workflow-de-submissão)
+8.  [⌨️ Comandos do Makefile](#️-comandos-do-makefile)
 
 ---
 
@@ -134,6 +135,12 @@ logger.error(f"Erro ao carregar dados: {e}")
 *   Use `try/except` com exceções específicas (`ValueError`, `FileNotFoundError`).
 *   Evite `except Exception:` genérico, pois mascara erros inesperados.
 
+### 4. Gestão de Incidentes e Rollback (GitOps)
+*   Em incidente de produção, o rollback deve ser feito **exclusivamente via GitOps**.
+*   Procedimento padrão: ajustar o arquivo `app/models/champion_run_id.txt` para o `run_id` estável e abrir PR.
+*   Após merge, deixar a esteira de CI/CD executar promoção/deploy automaticamente.
+*   **Não realizar rollback manual direto em servidor** para evitar dessincronização entre repositório, artefatos e produção.
+
 ---
 
 ## 🧠 Desenvolvimento com PyTorch
@@ -176,7 +183,7 @@ pytest tests/test_lstm_model.py
 
 ---
 
-## � Workflow de Submissão
+## 📦 Workflow de Submissão
 
 1.  **Crie sua branch** a partir de `develop`:
     `git checkout -b feature/minha-nova-feature`
