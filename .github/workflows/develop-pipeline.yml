@@ -1,7 +1,6 @@
-name: Develop Pipeline
+name: 2. Develop Pipeline
 
 on:
-  # Executa homologação completa quando mudanças chegam na develop
   push:
     branches:
       - develop
@@ -16,7 +15,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Qualidade de Código (Lint rigoroso + MyPy)
+    name: 2.1 Qualidade de Código (Ruff + MyPy)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -40,20 +39,47 @@ jobs:
           echo "📦 Instalando dependências de qualidade..."
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff black mypy
+          pip install ruff mypy
           echo "✅ Dependências instaladas"
 
-      - name: Verificar formatação com Black
-        id: black-check
-        run: black --check app/ src/ tests/ scripts/
+      - name: Verificar formatação com Ruff
+        id: ruff-format
+        run: |
+          if ! ruff format --check app/ src/ tests/ scripts/ 2>&1 | tee /tmp/ruff-format.log; then
+            {
+              echo "### ❌ Erro em Ruff Format"
+              echo '```text'
+              tail -n 120 /tmp/ruff-format.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Verificar lint com Ruff
         id: ruff-check
-        run: ruff check app/ src/ tests/ scripts/
+        run: |
+          if ! ruff check app/ src/ tests/ scripts/ 2>&1 | tee /tmp/ruff-check.log; then
+            {
+              echo "### ❌ Erro em Ruff Check"
+              echo '```text'
+              tail -n 120 /tmp/ruff-check.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Verificar tipos com MyPy
         id: mypy-check
-        run: mypy src/ app/utils/ app/routes/ scripts/ --ignore-missing-imports
+        run: |
+          if ! mypy src/ app/utils/ app/routes/ scripts/ --ignore-missing-imports 2>&1 | tee /tmp/mypy.log; then
+            {
+              echo "### ❌ Erro em MyPy"
+              echo '```text'
+              tail -n 120 /tmp/mypy.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Resumo da etapa Qualidade
         if: always()
@@ -69,14 +95,15 @@ jobs:
             echo "### Detalhamento"
             echo "- setup-python: ${{ steps.setup-python.outcome }}"
             echo "- install-deps: ${{ steps.install-deps.outcome }}"
-            echo "- black-check: ${{ steps.black-check.outcome }}"
+            echo "- ruff-format: ${{ steps.ruff-format.outcome }}"
             echo "- ruff-check: ${{ steps.ruff-check.outcome }}"
             echo "- mypy-check: ${{ steps.mypy-check.outcome }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   tests:
-    name: Testes Completos com Coverage
+    name: 2.2 Testes Completos com Coverage
     runs-on: ubuntu-latest
+    # Paralelo ao Security: ambos dependem apenas de quality
     needs: quality
     timeout-minutes: 30
 
@@ -103,16 +130,24 @@ jobs:
           pip install pytest pytest-cov
           echo "✅ Dependências instaladas"
 
-      - name: Executar suíte completa com cobertura
+      - name: Executar suíte completa com coverage
         id: pytest-coverage
         run: |
-          echo "🧪 Executando testes completos com cobertura..."
-          pytest tests/ \
+          echo "🧪 Executando testes completos com coverage..."
+          if ! pytest tests/ \
             --cov=app \
             --cov=src \
             --cov-report=term-missing \
-            --cov-report=xml
-          echo "✅ Testes e cobertura concluídos"
+            --cov-report=xml 2>&1 | tee /tmp/pytest-coverage.log; then
+            {
+              echo "### ❌ Erro em Pytest + Coverage"
+              echo '```text'
+              tail -n 120 /tmp/pytest-coverage.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "✅ Testes e coverage concluídos"
 
       - name: Resumo da etapa Testes
         if: always()
@@ -132,8 +167,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   security:
-    name: Segurança (Bandit + Detect-Secrets)
+    name: 2.3 Segurança (Bandit + Detect-Secrets)
     runs-on: ubuntu-latest
+    # Paralelo ao Tests: ambos dependem apenas de quality
     needs: quality
     timeout-minutes: 15
 
@@ -161,11 +197,29 @@ jobs:
 
       - name: Executar Bandit
         id: bandit-check
-        run: bandit -r app/ src/
+        run: |
+          if ! bandit -r app/ src/ 2>&1 | tee /tmp/bandit.log; then
+            {
+              echo "### ❌ Erro em Bandit"
+              echo '```text'
+              tail -n 120 /tmp/bandit.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Executar Detect-Secrets
         id: detect-secrets-check
-        run: detect-secrets scan --all-files > .secrets.scan
+        run: |
+          if ! detect-secrets scan --all-files > .secrets.scan 2>/tmp/detect-secrets.log; then
+            {
+              echo "### ❌ Erro em Detect-Secrets"
+              echo '```text'
+              tail -n 120 /tmp/detect-secrets.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Resumo da etapa Segurança
         if: always()
@@ -186,7 +240,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   auto-release-pr:
-    name: Criar PR de release (develop -> main)
+    name: 2.4 Criar PR de release (develop -> main)
     runs-on: ubuntu-latest
     needs: [tests, security]
     timeout-minutes: 10
@@ -203,25 +257,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🔄 Verificando PR de release develop -> main..."
-          EXISTING_PR=$(gh pr list \
-            --base main \
-            --head develop \
-            --state open \
-            --json number \
-            --jq '.[0].number')
+          if ! gh pr list --base main --head develop --state open --json number --jq '.[0].number' > /tmp/existing_release_pr.txt 2>/tmp/gh-pr-list.log; then
+            {
+              echo "### ❌ Erro ao listar PRs de release com gh"
+              echo '```text'
+              tail -n 120 /tmp/gh-pr-list.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
+          EXISTING_PR=$(cat /tmp/existing_release_pr.txt)
           if [ -n "${EXISTING_PR}" ] && [ "${EXISTING_PR}" != "null" ]; then
             echo "✅ PR develop -> main já existe: #${EXISTING_PR}"
             exit 0
           fi
 
-          echo "🚀 Criando PR automático de release..."
-          gh pr create \
+          if ! gh pr create \
             --base main \
             --head develop \
             --title "🚀 Release: Atualização de Produção" \
-            --body "## Release para Produção\n\nEste PR foi criado automaticamente após validações completas na branch **develop**.\n\n## Checklist de Revisão\n- [ ] Lint rigoroso e type-check aprovados\n- [ ] Testes completos e cobertura revisada\n- [ ] Verificações de segurança aprovadas\n- [ ] Release aprovada para merge em main"
+            --body "## Release para Produção\n\nEste PR foi criado automaticamente após validações completas na branch **develop**.\n\n## Checklist de Revisão\n- [ ] Lint rigoroso e type-check aprovados\n- [ ] Testes completos e coverage revisada\n- [ ] Verificações de segurança aprovadas\n- [ ] Release aprovada para merge em main" 2>&1 | tee /tmp/gh-pr-create.log; then
+            {
+              echo "### ❌ Erro ao criar PR de release com gh"
+              echo '```text'
+              tail -n 120 /tmp/gh-pr-create.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
           echo "✅ PR de release criado com sucesso"
 
       - name: Resumo da etapa Automação de Release
@@ -238,9 +303,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   report:
-    name: Relatório do Pipeline
+    name: 2.5 Relatório do Pipeline
     runs-on: ubuntu-latest
-    needs: [quality, tests, security, auto-release-pr]
+    needs: [quality, tests, security]
     if: always()
     timeout-minutes: 5
 
@@ -251,29 +316,42 @@ jobs:
           QUALITY_STATUS="${{ needs.quality.result }}"
           TESTS_STATUS="${{ needs.tests.result }}"
           SECURITY_STATUS="${{ needs.security.result }}"
-          RELEASE_PR_STATUS="${{ needs.auto-release-pr.result }}"
+
+          FAILED_STAGES=""
+          if [[ "${QUALITY_STATUS}" != "success" ]]; then FAILED_STAGES="${FAILED_STAGES} Qualidade"; fi
+          if [[ "${TESTS_STATUS}" != "success" ]]; then FAILED_STAGES="${FAILED_STAGES} Testes"; fi
+          if [[ "${SECURITY_STATUS}" != "success" ]]; then FAILED_STAGES="${FAILED_STAGES} Segurança"; fi
 
           {
             echo "# 📊 Relatório do Pipeline - Develop"
             echo ""
-            echo "- **Branch**: \\`${{ github.ref_name }}\\`"
-            echo "- **Commit**: \\`${{ github.sha }}\\`"
+            echo "- **Branch**: \`${{ github.ref_name }}\`"
+            echo "- **Commit**: \`${{ github.sha }}\`"
             echo "- **Autor**: ${{ github.actor }}"
             echo ""
-            echo "## 📋 Resumo de Etapas"
+            echo "## 📦 Caixa 1 — Qualidade"
+            echo "- **Status**: ${QUALITY_STATUS}"
+            echo ""
+            echo "## 📦 Caixa 2 — Testes"
+            echo "- **Status**: ${TESTS_STATUS}"
+            echo ""
+            echo "## 📦 Caixa 3 — Segurança"
+            echo "- **Status**: ${SECURITY_STATUS}"
+            echo ""
+            echo "## 📋 Matriz de Status"
             echo "| Etapa | Status |"
             echo "|-------|--------|"
-            echo "| Qualidade (Black/Ruff/MyPy) | ${QUALITY_STATUS} |"
+            echo "| Qualidade (Ruff/MyPy) | ${QUALITY_STATUS} |"
             echo "| Testes com Coverage | ${TESTS_STATUS} |"
             echo "| Segurança (Bandit/Detect-Secrets) | ${SECURITY_STATUS} |"
-            echo "| Automação PR Release | ${RELEASE_PR_STATUS} |"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "${QUALITY_STATUS}" != "success" || "${TESTS_STATUS}" != "success" || "${SECURITY_STATUS}" != "success" || "${RELEASE_PR_STATUS}" != "success" ]]; then
+          if [[ "${QUALITY_STATUS}" != "success" || "${TESTS_STATUS}" != "success" || "${SECURITY_STATUS}" != "success" ]]; then
             {
               echo "## ❌ Falhas detectadas"
-              echo "- Verifique as etapas com status diferente de \\`success\\` para identificar onde ocorreu o erro."
+              echo "- **Etapas com falha**:${FAILED_STAGES}"
+              echo "- O erro detalhado foi publicado no summary do próprio job (bloco com stack/log)."
               echo "- O erro detalhado está no log do job correspondente."
             } >> "$GITHUB_STEP_SUMMARY"
           else

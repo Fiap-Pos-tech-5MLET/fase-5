@@ -1,4 +1,4 @@
-name: Main Pipeline
+name: 3. Main Pipeline
 
 on:
   # Executa garantia final quando a release é mergeada na main
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   smoke-tests:
-    name: Testes de Sanidade (Smoke Tests)
+    name: 3.1 Testes de Sanidade (Smoke Tests)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -45,7 +45,7 @@ jobs:
         id: smoke-check
         run: |
           echo "🚦 Executando smoke tests da API..."
-          python - <<'PY'
+          if ! python - <<'PY' 2>&1 | tee /tmp/smoke-check.log
           from fastapi.testclient import TestClient
           from app.main import app
 
@@ -57,6 +57,15 @@ jobs:
           assert docs.status_code == 200, f'Docs falhou: {docs.status_code}'
           print('Smoke tests OK')
           PY
+          then
+            {
+              echo "### ❌ Erro em Smoke Tests"
+              echo '```text'
+              tail -n 120 /tmp/smoke-check.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Resumo da etapa Smoke Tests
         if: always()
@@ -76,7 +85,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   docker-build:
-    name: Build da Imagem Docker
+    name: 3.2 Build da Imagem Docker
     runs-on: ubuntu-latest
     needs: smoke-tests
     timeout-minutes: 20
@@ -90,7 +99,16 @@ jobs:
 
       - name: Build da imagem Docker
         id: docker-build
-        run: docker build -f Dockerfile.render -t fase5-api:main .
+        run: |
+          if ! docker build -f Dockerfile.render -t fase5-api:main . 2>&1 | tee /tmp/docker-build.log; then
+            {
+              echo "### ❌ Erro no Build Docker"
+              echo '```text'
+              tail -n 120 /tmp/docker-build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Resumo da etapa Build Docker
         if: always()
@@ -106,7 +124,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-render:
-    name: Deploy Contínuo no Render
+    name: 3.3 Deploy Contínuo no Render
     runs-on: ubuntu-latest
     needs: docker-build
     timeout-minutes: 10
@@ -117,7 +135,16 @@ jobs:
 
       - name: Acionar Deploy Hook do Render
         id: render-deploy
-        run: curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+        run: |
+          if ! curl -s -S -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" 2>&1 | tee /tmp/render-deploy.log; then
+            {
+              echo "### ❌ Erro no Deploy Hook do Render"
+              echo '```text'
+              tail -n 120 /tmp/render-deploy.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Resumo da etapa Deploy
         if: always()
@@ -133,7 +160,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   report:
-    name: Relatório do Pipeline
+    name: 3.4 Relatório do Pipeline
     runs-on: ubuntu-latest
     needs: [smoke-tests, docker-build, deploy-render]
     if: always()
