@@ -78,8 +78,9 @@ def render_drift_page(drift_report_path: str) -> None:
                         "Recarregue a página para ver o novo relatório."
                     )
                     st.rerun()
-                except (ImportError, RuntimeError, ValueError) as exc:
+                except (ImportError, OSError, RuntimeError, ValueError) as exc:
                     st.error(f"Erro ao gerar relatório: {exc}")
+                    st.exception(exc)
 
     else:
         st.warning("⚠️ Relatório de drift não encontrado.")
@@ -91,5 +92,6 @@ def render_drift_page(drift_report_path: str) -> None:
                     generate_drift_report()
                     st.success("✅ Relatório gerado com sucesso!")
                     st.rerun()
-                except (ImportError, RuntimeError, ValueError) as exc:
+                except (ImportError, OSError, RuntimeError, ValueError) as exc:
                     st.error(f"Erro ao gerar relatório: {exc}")
+                    st.exception(exc)
