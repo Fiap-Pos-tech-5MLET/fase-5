@@ -2,12 +2,12 @@
 """Cross-platform cleanup: move large dirs into an archive folder for review."""
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 os.chdir(ROOT)
 
-ARCHIVE_DIR = f"archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+ARCHIVE_DIR = f"archive_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
 def main():
     archive = os.path.join(ROOT, ARCHIVE_DIR)

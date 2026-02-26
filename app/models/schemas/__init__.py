@@ -8,7 +8,7 @@ garantindo type safety e documentação automática via OpenAPI.
 from .discard_response import DiscardResponse
 from .model_info_response import ModelInfoResponse
 from .model_metrics_response import ModelMetricsResponse
-from .prediction_response import PredictionResponse
+from .prediction_response import FeatureContribution, PredictionResponse
 from .promote_response import PromoteResponse
 from .retrain_request import RetrainRequest
 from .student_data import StudentData
@@ -18,6 +18,7 @@ __all__ = [
     "DiscardResponse",
     "ModelInfoResponse",
     "ModelMetricsResponse",
+    "FeatureContribution",
     "PredictionResponse",
     "PromoteResponse",
     "RetrainRequest",

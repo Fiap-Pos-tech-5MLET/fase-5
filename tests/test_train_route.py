@@ -30,6 +30,7 @@ def api_client() -> TestClient:
 def valid_retrain_params() -> dict:
     """Parâmetros válidos de retreinamento."""
     return {
+        "requested_by": "lucas_admin",
         "n_estimators": 100,
         "max_depth": 15,
         "min_samples_split": 2,
@@ -117,6 +118,7 @@ class TestTrainRetrain:
         mock_run_training.return_value = (mock_metrics, "run_456")
 
         custom_params = {
+            "requested_by": "lucas_admin",
             "n_estimators": 200,
             "max_depth": 20,
             "min_samples_split": 5,
@@ -145,6 +147,7 @@ class TestTrainRetrain:
 
         # n_estimators negativo deve ser rejeitado por Pydantic
         invalid_params = {
+            "requested_by": "lucas_admin",
             "n_estimators": -50,
             "max_depth": 10,
             "min_samples_split": 2,
@@ -153,9 +156,7 @@ class TestTrainRetrain:
         }
 
         response = api_client.post("/retrain", json=invalid_params)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["hyperparameters"]["n_estimators"] == -50
+        assert response.status_code == 422
 
     @patch("app.routes.train_route.get_model_paths")
     @patch("app.routes.train_route.run_training")
@@ -171,6 +172,7 @@ class TestTrainRetrain:
         mock_run_training.return_value = (mock_metrics, "run_789")
 
         params = {
+            "requested_by": "lucas_admin",
             "n_estimators": 100,
             "max_depth": 15,
             "min_samples_split": 2,
@@ -201,6 +203,20 @@ class TestTrainRetrain:
         response = api_client.post("/retrain", json=valid_retrain_params)
 
         assert response.status_code == 500
+
+    def test_retrain_missing_requested_by_returns_422(self, api_client) -> None:
+        """Retreinamento sem autoria deve ser rejeitado por validação."""
+        payload = {
+            "n_estimators": 100,
+            "max_depth": 15,
+            "min_samples_split": 2,
+            "k": 10,
+            "test_size": 0.2,
+        }
+
+        response = api_client.post("/retrain", json=payload)
+
+        assert response.status_code == 422
 
     @patch("app.routes.train_route.get_model_paths")
     @patch("app.routes.train_route.run_training")

@@ -11,10 +11,13 @@ treinado para reduzir erros de schema e garantir consistencia.
 import logging
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import PredictionResponse, StudentData
 from app.utils.model_loader import get_current_model
+from app.utils.structured_logging import log_with_request
+from app.utils.xai import explain_prediction
 from src.data_cleaning import clean_data, handle_missing_values
 from src.feature_engineering import create_features
 
@@ -24,7 +27,7 @@ router = APIRouter()
 
 
 @router.post("/predict", response_model=PredictionResponse)
-def predict(student: StudentData) -> PredictionResponse:
+async def predict(student: StudentData, request: Request) -> PredictionResponse:
     """
     Realiza predicao de risco de defasagem escolar.
 
@@ -53,11 +56,20 @@ def predict(student: StudentData) -> PredictionResponse:
         HTTPException: 400 se houver erro no preprocessamento.
     """
     model = get_current_model()
+    requested_by = request.headers.get("x-requested-by", "unknown")
 
     if not model:
+        log_with_request(
+            logger=logger,
+            level=logging.WARNING,
+            event="prediction_unavailable",
+            request=request,
+            requested_by=requested_by,
+            status="model_not_loaded",
+        )
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    try:
+    def _predict_sync() -> PredictionResponse:
         # Convert dict to DataFrame
         df = pd.DataFrame([student.data])
 
@@ -129,13 +141,37 @@ def predict(student: StudentData) -> PredictionResponse:
 
         prediction = model.predict(feature_matrix)
         proba = model.predict_proba(feature_matrix)[:, 1]
+        top_features, explanation_method = explain_prediction(model, feature_matrix)
 
-        logger.info("Prediction: risk=%d, probability=%.4f", int(prediction[0]), float(proba[0]))
+        log_with_request(
+            logger=logger,
+            level=logging.INFO,
+            event="prediction_inference",
+            request=request,
+            requested_by=requested_by,
+            status="success",
+            risk_prediction=int(prediction[0]),
+            risk_probability=float(proba[0]),
+            explanation_method=explanation_method,
+        )
 
         return PredictionResponse(
             risk_prediction=int(prediction[0]),
             risk_probability=float(proba[0]),
+            explanation_method=explanation_method,
+            top_features=top_features,
         )
+
+    try:
+        return await run_in_threadpool(_predict_sync)
     except ValueError as exc:
-        logger.error("Prediction error: %s", exc)
+        log_with_request(
+            logger=logger,
+            level=logging.ERROR,
+            event="prediction_inference",
+            request=request,
+            requested_by=requested_by,
+            status="failed",
+            error=str(exc),
+        )
         raise HTTPException(status_code=400, detail=str(exc)) from exc

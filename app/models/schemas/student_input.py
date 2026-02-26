@@ -22,29 +22,50 @@ class StudentInput(BaseModel):
     # --- Campos Demográficos ---
     FASE: Optional[str] = Field(None, description="Fase do aluno (ex: '1A', '2B', '7')")
     TURMA: Optional[str] = Field(None, description="Turma do aluno (ex: 'A', 'B')")
-    IDADE: Optional[float] = Field(None, description="Idade do aluno em anos")
+    IDADE: Optional[float] = Field(None, ge=0, le=120, description="Idade do aluno em anos")
     GENERO: Optional[str] = Field(None, alias="GÊNERO", description="Gênero do aluno")
     DATA_DE_NASC: Optional[str] = Field(None, description="Data de nascimento")
-    ANO_INGRESSO: Optional[float] = Field(None, description="Ano de ingresso na associação")
+    ANO_INGRESSO: Optional[float] = Field(
+        None,
+        ge=1990,
+        le=2100,
+        description="Ano de ingresso na associação",
+    )
     INSTITUICAO_DE_ENSINO: Optional[str] = Field(
         None, alias="INSTITUIÇÃO_DE_ENSINO", description="Escola do aluno"
     )
 
     # --- Histórico de Performance (INDE) ---
-    INDE_22: Optional[float] = Field(None, description="Índice de Desenvolvimento Educacional 2022")
-    INDE_23: Optional[float] = Field(None, description="Índice de Desenvolvimento Educacional 2023")
+    INDE_22: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Índice de Desenvolvimento Educacional 2022",
+    )
+    INDE_23: Optional[float] = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Índice de Desenvolvimento Educacional 2023",
+    )
 
     # --- Histórico de Pedra ---
-    PEDRA_20: Optional[float] = Field(None, description="Pedra classificatória 2020")
-    PEDRA_21: Optional[float] = Field(None, description="Pedra classificatória 2021")
-    PEDRA_22: Optional[float] = Field(None, description="Pedra classificatória 2022")
-    PEDRA_23: Optional[float] = Field(None, description="Pedra classificatória 2023")
+    PEDRA_20: Optional[float] = Field(None, ge=0, le=100, description="Pedra classificatória 2020")
+    PEDRA_21: Optional[float] = Field(None, ge=0, le=100, description="Pedra classificatória 2021")
+    PEDRA_22: Optional[float] = Field(None, ge=0, le=100, description="Pedra classificatória 2022")
+    PEDRA_23: Optional[float] = Field(None, ge=0, le=100, description="Pedra classificatória 2023")
 
     # --- Avaliações ---
-    CG: Optional[float] = Field(None, description="Conceito Geral")
-    CF: Optional[float] = Field(None, description="Conceito Final")
-    CT: Optional[float] = Field(None, description="Conceito Total")
-    N_AV: Optional[float] = Field(None, alias="Nº_AV", description="Número de avaliações")
+    CG: Optional[float] = Field(None, ge=0, le=100, description="Conceito Geral")
+    CF: Optional[float] = Field(None, ge=0, le=100, description="Conceito Final")
+    CT: Optional[float] = Field(None, ge=0, le=100, description="Conceito Total")
+    N_AV: Optional[float] = Field(
+        None,
+        alias="Nº_AV",
+        ge=0,
+        le=20,
+        description="Número de avaliações",
+    )
     AVALIADOR1: Optional[str] = Field(None, description="Avaliador 1")
     AVALIADOR2: Optional[str] = Field(None, description="Avaliador 2")
     AVALIADOR3: Optional[str] = Field(None, description="Avaliador 3")
