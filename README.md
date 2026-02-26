@@ -380,21 +380,21 @@ graph TD
     Lead((Tech Lead))
     
     %% Branches e Gatilhos
-    subgraph Git Repository
+    subgraph Git_Repository [Git Repository]
         Feature[Branch: feature/*]
         Develop[Branch: develop]
         Main[Branch: main]
     end
     
     %% Pipelines Actions
-    subgraph GitHub Actions Pipelines
+    subgraph GitHub_Actions_Pipelines [GitHub Actions Pipelines]
         Workflow1[Pipeline: Feature]
         Workflow2[Pipeline: Develop]
         Workflow3[Pipeline: Main]
     end
     
     %% Ambientes
-    subgraph Ambientes
+    subgraph Ambientes [Ambientes]
         Render[Cloud: Render Production]
     end
     
@@ -403,7 +403,7 @@ graph TD
     Feature -->|Abre PR| Workflow1
     
     %% Etapas Workflow Feature
-    subgraph Workflow1: Feature (Validations)
+    subgraph Pipeline_Feature [Feature Validations]
         W1_1[Job: Linting] --> W1_2[Job: Testes Unitários]
     end
     
@@ -412,7 +412,7 @@ graph TD
     Develop -->|Abre PR Release| Workflow2
     
     %% Etapas Workflow Develop (Homologação)
-    subgraph Workflow2: Develop (Release Candidate)
+    subgraph Pipeline_Develop [Develop Release Candidate]
         W2_1[Job: Testes Completos] --> W2_2[Job: Coverage Report]
     end
     
@@ -420,13 +420,13 @@ graph TD
     Main -->|Trigger push| Workflow3
     
     %% Etapas Workflow Main (CD)
-    subgraph Workflow3: Main (Deploy)
+    subgraph Pipeline_Main [Main Deploy]
         W3_1[Job: Smoke Tests] --> W3_2[Job: Docker Build & Push]
         W3_2 --> W3_3[Job: Deploy to Render]
     end
     
     %% O Gatilho do Deploy
-    W3_3 -->|Webhook Hook (cURL)| Render
+    W3_3 -->|Webhook Hook cURL| Render
     
     %% Estilização
     classDef branch fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
