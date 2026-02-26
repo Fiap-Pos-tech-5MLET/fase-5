@@ -169,7 +169,7 @@ jobs:
       - name: Build da imagem Docker
         id: docker-build
         run: |
-          if ! docker build -f Dockerfile.render -t fase5-api:feature . 2>&1 | tee /tmp/docker-build-feature.log; then
+          if ! docker build -f Dockerfile -t fase5-api:feature . 2>&1 | tee /tmp/docker-build-feature.log; then
             {
               echo "### ❌ Erro no Build Docker (Feature)"
               echo '```text'
