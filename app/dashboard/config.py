@@ -9,24 +9,52 @@ from typing import Final
 
 import streamlit as st
 
-PROJECT_ROOT: Final[str] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _pick_path(candidates: list[str]) -> str:
+    """Seleciona o primeiro caminho existente; fallback para o primeiro candidato válido."""
+    sanitized = [path for path in candidates if path]
+    for path in sanitized:
+        if os.path.exists(path):
+            return path
+    return sanitized[0]
 
-MODEL_PATH: Final[str] = os.path.join(os.path.dirname(__file__), "models", "model.pkl")
-DATA_PATH: Final[str] = os.path.join(
-    PROJECT_ROOT, "data", "raw", "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+
+DASHBOARD_DIR: Final[str] = os.path.dirname(os.path.abspath(__file__))
+APP_DIR: Final[str] = os.path.dirname(DASHBOARD_DIR)
+WORKSPACE_DIR: Final[str] = os.path.dirname(APP_DIR)
+
+PROJECT_ROOT: Final[str] = APP_DIR
+
+MODEL_PATH: Final[str] = _pick_path(
+    [
+        os.getenv("DASHBOARD_MODEL_PATH", ""),
+        os.getenv("MODEL_PATH", ""),
+        os.path.join(APP_DIR, "models", "model.pkl"),
+        os.path.join(WORKSPACE_DIR, "models", "model.pkl"),
+    ]
 )
-DRIFT_REPORT_PATH: Final[str] = os.path.join(
-    os.path.dirname(__file__), "models", "artifacts", "data_drift_report.html"
+
+DATA_PATH: Final[str] = _pick_path(
+    [
+        os.getenv("DASHBOARD_DATA_PATH", ""),
+        os.getenv("DATASET_PATH", ""),
+        os.path.join(WORKSPACE_DIR, "data", "raw", "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"),
+        os.path.join(APP_DIR, "data", "raw", "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"),
+    ]
 )
-ROC_CURVE_PATH: Final[str] = os.path.join(
-    os.path.dirname(__file__), "models", "artifacts", "roc_curve.png"
+
+ARTIFACTS_DIR: Final[str] = _pick_path(
+    [
+        os.getenv("ARTIFACTS_DIR", ""),
+        os.path.join(APP_DIR, "models", "artifacts"),
+        os.path.join(WORKSPACE_DIR, "models", "artifacts"),
+        os.path.join(APP_DIR, "artifacts"),
+    ]
 )
-FEATURE_IMP_PATH: Final[str] = os.path.join(
-    os.path.dirname(__file__), "models", "artifacts", "feature_importance.png"
-)
-CLASS_REPORT_PATH: Final[str] = os.path.join(
-    os.path.dirname(__file__), "models", "artifacts", "classification_report.png"
-)
+
+DRIFT_REPORT_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "data_drift_report.html")
+ROC_CURVE_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "roc_curve.png")
+FEATURE_IMP_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "feature_importance.png")
+CLASS_REPORT_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "classification_report.png")
 
 # API URL - usar localhost no container único, senão nome do serviço
 API_URL: Final[str] = os.environ.get(
