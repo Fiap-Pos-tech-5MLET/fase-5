@@ -1,211 +1,94 @@
-.PHONY: help install install-dev test test-fast test-specific test-watch coverage coverage-html coverage-check lint format type-check security quality quick-quality clean clean-all run-api run-streamlit train train-quick docker-build docker-run docker-push ci pre-commit docs docs-clean requirements-update check-deps info
+.PHONY: help install install-dev test test-fast coverage coverage-html coverage-check lint format type-check security quality quick-quality clean run-api run-streamlit train docker-build docker-run ci pre-commit
 
-# Variables
-PYTHON := python3
+PYTHON := python
 PIP := pip
-PROJECT_NAME := passos-magicos-ml-api
-DOCKER_IMAGE := $(PROJECT_NAME):latest
+DOCKER_IMAGE := passos-magicos-ml-api:latest
 
 help:
-	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║   Associação Passos Mágicos ML API - Make Commands            ║"
-	@echo "╚════════════════════════════════════════════════════════════════╝"
-	@echo ""
 	@echo "Development Setup:"
-	@echo "  make install          - Install all dependencies"
-	@echo "  make install-dev      - Install development dependencies"
+	@echo "  make install          - Instala dependências de produção"
+	@echo "  make install-dev      - Instala dependências + ferramentas de qualidade"
 	@echo ""
 	@echo "Testing & Quality:"
-	@echo "  make test             - Run all unit tests"
-	@echo "  make coverage         - Run tests with coverage report"
-	@echo "  make coverage-html    - Generate HTML coverage report"
-	@echo "  make lint             - Run all linters (pylint, flake8)"
-	@echo "  make format           - Format code with black and isort"
-	@echo "  make type-check       - Run mypy type checking"
-	@echo "  make security         - Run security checks (bandit)"
-	@echo "  make quality          - Run all quality checks"
+	@echo "  make test             - Executa testes"
+	@echo "  make coverage         - Executa testes com cobertura"
+	@echo "  make coverage-html    - Gera relatório HTML de cobertura"
+	@echo "  make format           - Formata com Ruff"
+	@echo "  make lint             - Lint com Ruff"
+	@echo "  make type-check       - Type checking com MyPy"
+	@echo "  make security         - Segurança com Bandit + detect-secrets"
+	@echo "  make quality          - Pipeline local completo"
 	@echo ""
-	@echo "Code Cleanup:"
-	@echo "  make clean            - Remove generated files and cache"
-	@echo "  make clean-all        - Remove all generated files and venv"
+	@echo "Run:"
+	@echo "  make run-api          - Sobe API FastAPI"
+	@echo "  make run-streamlit    - Sobe dashboard Streamlit"
+	@echo "  make train            - Executa treinamento"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-build     - Build Docker image"
-	@echo "  make docker-run       - Run Docker container"
-	@echo ""
-	@echo "Utilities:"
-	@echo "  make run-api          - Run API server"
-	@echo "  make run-streamlit    - Run Streamlit dashboard"
-	@echo "  make train            - Train the LSTM model"
-	@echo ""
+	@echo "  make docker-build     - Build da imagem Docker"
+	@echo "  make docker-run       - Executa container local"
 
-# Installation
 install:
-	@echo "Installing dependencies..."
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
-	@echo "✓ Dependencies installed"
 
 install-dev: install
-	@echo "Installing development dependencies..."
-	$(PIP) install -r requirements-dev.txt
-	@echo "✓ Development dependencies installed"
+	$(PIP) install ruff mypy pytest pytest-cov bandit detect-secrets pre-commit
 
-# Testing
 test:
-	@echo "Running unit tests..."
 	pytest tests/ -v --tb=short
-	@echo "✓ Tests completed"
 
 test-fast:
-	@echo "Running tests in parallel..."
-	pytest tests/ -v -n auto
+	pytest tests/ -q --maxfail=1
 
-test-specific:
-	@echo "Running specific test file..."
-	pytest tests/test_lstm_model.py -v
-
-test-watch:
-	@echo "Running tests in watch mode..."
-	pytest-watch tests/
-
-# Coverage
 coverage:
-	@echo "Running tests with coverage..."
-	pytest tests/ \
-		--cov=src \
-		--cov=app \
-		--cov-report=term-missing \
-		--cov-report=xml \
-		-v
-	@echo "✓ Coverage report generated"
+	pytest tests/ --cov=src --cov=app --cov-report=term-missing --cov-report=xml -v
 
-coverage-html: coverage
-	@echo "Generating HTML coverage report..."
-	coverage html
-	@echo "✓ Open htmlcov/index.html in browser"
+coverage-html:
+	pytest tests/ --cov=src --cov=app --cov-report=html -v
 
 coverage-check:
-	@echo "Checking coverage threshold (85%)..."
 	coverage report --fail-under=85
-	@echo "✓ Coverage meets threshold"
-
-# Linting & Formatting
-lint:
-	@echo "Running linters..."
-	@echo "→ Pylint..."
-	pylint src/ app/ --exit-zero
-	@echo "→ Flake8..."
-	flake8 src/ app/ tests/ --max-line-length=100 --exit-zero
-	@echo "✓ Linting completed"
 
 format:
-	@echo "Formatting code..."
-	@echo "→ Black..."
-	black src/ app/ tests/
-	@echo "→ isort..."
-	isort src/ app/ tests/
-	@echo "✓ Code formatted"
+	ruff format app/ src/ tests/ scripts/
+
+lint:
+	ruff check app/ src/ tests/ scripts/
 
 type-check:
-	@echo "Running type checking with mypy..."
-	mypy src/ app/ --no-error-summary --exit-zero
-	@echo "✓ Type checking completed"
+	mypy src/ app/utils/ app/routes/ scripts/ --ignore-missing-imports
 
 security:
-	@echo "Running security checks..."
-	bandit -r src/ app/ -v
-	@echo "✓ Security scan completed"
+	bandit -r app/ src/
+	detect-secrets scan --all-files > .secrets.scan
 
-# Quality
-quality: lint type-check test coverage security
-	@echo "✓ All quality checks passed"
+quality: format lint type-check test security
 
 quick-quality: lint type-check test
-	@echo "✓ Quick quality checks passed"
 
-# Cleanup
 clean:
-	@echo "Cleaning up..."
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name ".coverage" -delete
-	rm -rf .pytest_cache/ .mypy_cache/ .coverage htmlcov/ dist/ build/ *.egg-info
-	@echo "✓ Clean completed"
+	$(PYTHON) -c "import pathlib, shutil; [shutil.rmtree(p, ignore_errors=True) for p in ['.pytest_cache','.mypy_cache','.ruff_cache','htmlcov','dist','build'] if pathlib.Path(p).exists()]"
+	$(PYTHON) -c "import pathlib; [p.unlink() for p in pathlib.Path('.').rglob('*.pyc')]"
 
-clean-all: clean
-	@echo "Removing virtual environment..."
-	rm -rf venv/
-	@echo "✓ Full clean completed"
-
-# API & Training
 run-api:
-	@echo "Starting API server..."
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 run-streamlit:
-	@echo "Starting Streamlit dashboard..."
-	streamlit run streamlit_app.py
+	streamlit run app/dashboard.py --server.port=8501 --server.address=127.0.0.1
 
 train:
-	@echo "Training LSTM model..."
-	$(PYTHON) -m src.train
-	@echo "✓ Training completed"
+	$(PYTHON) scripts/train.py
 
-train-quick:
-	@echo "Running quick training test..."
-	$(PYTHON) -c "from src.train import run_training_pipeline; run_training_pipeline(epochs=2)"
-
-# Docker
 docker-build:
-	@echo "Building Docker image..."
-	docker build -t $(DOCKER_IMAGE) .
-	@echo "✓ Docker image built: $(DOCKER_IMAGE)"
+	docker build -f Dockerfile -t $(DOCKER_IMAGE) .
 
 docker-run:
-	@echo "Running Docker container..."
-	docker run -p 8000:8000 $(DOCKER_IMAGE)
+	docker run -p 8080:8080 $(DOCKER_IMAGE)
 
-docker-push:
-	@echo "Pushing Docker image..."
-	docker push $(DOCKER_IMAGE)
+ci: quality
 
-# CI/CD
-ci: install-dev quality
-	@echo "✓ CI pipeline completed successfully"
-
-pre-commit: format lint type-check test
-	@echo "✓ Pre-commit checks passed"
-
-# Documentation
-docs:
-	@echo "Building documentation..."
-	cd docs && make html
-	@echo "✓ Documentation built: docs/_build/html/index.html"
-
-docs-clean:
-	@echo "Cleaning documentation..."
-	cd docs && make clean
-
-# Utilities
-requirements-update:
-	@echo "Updating requirements..."
-	$(PIP) install --upgrade -r requirements.txt
-	$(PIP) install --upgrade -r requirements-dev.txt
-
-check-deps:
-	@echo "Checking for security vulnerabilities..."
-	$(PIP) install safety
-	safety check --json
-
-info:
-	@echo "Project Information:"
-	@echo "  Python version: $(PYTHON) --version"
-	@echo "  Project: $(PROJECT_NAME)"
-	@echo "  Docker image: $(DOCKER_IMAGE)"
-	@echo ""
-	@echo "Current directory: $(PWD)"
-	@echo "Virtual environment: $${VIRTUAL_ENV}"
+pre-commit:
+	pre-commit run --all-files
 
 .DEFAULT_GOAL := help

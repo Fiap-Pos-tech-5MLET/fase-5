@@ -12,11 +12,10 @@ showSidebarNavigation = true
 showMenuItems = false
 
 [logger]
-level = "warning"
+level = "error"
 
 [browser]
 gatherUsageStats = false
-serverAddress = "0.0.0.0"
 
 [server]
 port = 8501
@@ -30,20 +29,8 @@ runOnSave = false
 fileWatcherType = "none"
 enableStaticServing = false
 enableWebsocketCompression = true
-# Previne que o Streamlit inclua porta nas URLs geradas
 address = "127.0.0.1"
-serverPort = 8501
 
 [runner]
 magicEnabled = false
 fastReruns = true
-
-[client.toolbarMode]
-value = "viewer"
-
-[logger]
-level = "error"
-
-[ui]
-hideTopBar = false
-hideSidebarNav = false

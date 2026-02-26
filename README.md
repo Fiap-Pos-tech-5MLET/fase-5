@@ -119,25 +119,42 @@ Arquitetura modular para cobrir o ciclo completo de dados, treino, inferência e
 
 ### 🏗️ Arquitetura de Execução
 
-```
-            ┌──────────────────────────────┐
-            │    🌐 NGINX (Entry Point)    │
-            │  Local: :80 | Render: :8080  │
-            └──────────────┬───────────────┘
-                      │
-      ┏━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━┓
-      ▼                                                 ▼
-┌──────────────────────┐                         ┌──────────────────────┐
-│   ⚡ FastAPI API      │                         │   📊 Streamlit       │
-│   Interna: :8000      │                         │   Interna: :8501      │
-└───────────┬──────────┘                         └───────────┬──────────┘
-        │                                                │
-        └──────────────────────┬─────────────────────────┘
-                        ▼
-                  ┌─────────────────┐
-                  │  🤖 Modelo ML    │
-                  │  + Artefatos     │
-                  └─────────────────┘
+```mermaid
+flowchart TD
+    %% Acesso Externo com ícone e círculo menor
+    User@{ shape: circle, label: "👤 Usuários ONG"} -->|Acesso HTTPS| Nginx[Nginx Reverse Proxy :8080]
+    
+    %% Roteamento Nginx e Orquestração
+    subgraph Docker [Produção: Container Único]
+        Nginx -->|Raiz /| Landing[Landing Page Estática]
+        Nginx -->|Rota /api| FastAPI[FastAPI Backend :8000]
+        Nginx -->|Rota /dashboard| Streamlit[Streamlit UI :8501]
+    end
+    
+    %% Comunicação Interna 
+    Streamlit -->|Chamadas REST| FastAPI
+    
+    %% Motor MLOps e Persistência
+    subgraph MLOps [MLOps Engine]
+        FastAPI -->|Injeção de Modelo| ModelPKL[(app/models/model.pkl)]
+        FastAPI -->|XAI Explainer| SHAP[SHAP / LIME]
+    end
+    
+    %% Saídas e Monitoramento
+    FastAPI -->|Auditoria| JSONLogs[(Logs JSON)]
+    
+    %% Estilização de Cores e Contrastes
+    classDef proxy fill:#5c2d91,stroke:#333,stroke-width:2px,color:#fff;
+    classDef api fill:#0078d4,stroke:#333,stroke-width:2px,color:#fff;
+    classDef ui fill:#107c10,stroke:#333,stroke-width:2px,color:#fff;
+    classDef ops fill:#d83b01,stroke:#333,stroke-width:2px,color:#fff;
+    classDef db fill:#f3f2f1,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
+    
+    class Nginx proxy;
+    class FastAPI api;
+    class Streamlit,Landing ui;
+    class SHAP ops;
+    class ModelPKL,JSONLogs db;
 ```
 
 **Roteamento principal via Nginx:**
@@ -150,19 +167,37 @@ Arquitetura modular para cobrir o ciclo completo de dados, treino, inferência e
 
 ```mermaid
 flowchart LR
-  A[Dados Educacionais 2022-2024] --> B[src/data_cleaning.py]
-  B --> C[src/feature_engineering.py]
-  C --> D[scripts/train.py]
-  D --> E[(MLflow + Artifacts)]
-  D --> F[(app/models/model.pkl)]
+    %% Fontes de Dados
+    Data[(Dataset Excel)] --> Load[1. Carga: load_data]
+    
+    %% Etapas de Processamento (Conforme src/)
+    subgraph Prep [Preparação e Treino]
+        direction TB
+        Load --> Clean[2. Limpeza: clean_data]
+        Clean --> Target[3. Target: create_target]
+        Target --> Missing[4. Imputação: handle_missing_values]
+        Missing --> Feature[5. Engenharia: create_features]
+        Feature --> Train[6. Treino: scripts/train.py]
+    end
 
-  G[FastAPI app/main.py] --> H[POST /predict]
-  H --> I[Pré-processamento]
-  I --> F
-  F --> J[Predição + Explicação]
+    %% Artefatos
+    Train --> Champion[(app/models/model.pkl)]
+    Train --> MLflow[(MLflow Artifacts)]
 
-  K[GET /model-info e /drift] --> G
-  L[Dashboard Streamlit] --> G
+    %% Ciclo de Predição (Conforme predict_route.py)
+    subgraph Predict [Fluxo de Inferência]
+        direction TB
+        Input[Input Aluno] --> Align[Alinhamento de Features]
+        Align --> Champion
+        Champion --> Result[Predição + XAI]
+    end
+
+    %% Estilização
+    classDef steps fill:#f9f9f9,stroke:#333,stroke-width:1px;
+    classDef model fill:#fff4dd,stroke:#d4a017,stroke-width:2px;
+    
+    class Prep,Predict steps;
+    class Champion,MLflow model;
 ```
 
 ### 🎯 Componentes Principais
@@ -355,7 +390,59 @@ Para mais detalhes, consulte [TESTING.md](TESTING.md).
 ## 🔄 CI/CD Pipeline
 
 O projeto adota pipelines GitHub Actions por branch, alinhados ao fluxo GitFlow.
+```mermaid
+flowchart LR
+    %% ==========================================
+    %% Estilização (Cores)
+    %% ==========================================
+    classDef event fill:#f5f5f5,stroke:#424242,stroke-width:2px,color:#000;
+    classDef feat fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
+    classDef dev fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000;
+    classDef prod fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000;
 
+    %% ==========================================
+    %% FASE 1: FEATURE PIPELINE
+    %% ==========================================
+    Start([Push feature/*]):::event --> P1_1
+
+    subgraph P1 [1. Pipeline Feature]
+        P1_1(Linting Ruff):::feat --> P1_2(Testes Pytest):::feat
+        P1_1 --> P1_3(Build Docker):::feat
+        P1_2 --> P1_4(Automação PR):::feat
+        P1_3 --> P1_4
+    end
+
+    P1_4 --> APR1([Merge develop]):::event
+
+    %% ==========================================
+    %% FASE 2: DEVELOP PIPELINE
+    %% ==========================================
+    APR1 --> P2_1
+
+    subgraph P2 [2. Pipeline Develop]
+        P2_1(Validar Origem PR):::dev --> P2_2(Qualidade: Ruff + MyPy):::dev
+        P2_2 --> P2_3(Testes + Coverage):::dev
+        P2_2 --> P2_4(Segurança: Bandit + Secrets):::dev
+        P2_3 --> P2_5(Build Docker):::dev
+        P2_4 --> P2_5
+        P2_5 --> P2_6(Automação PR Release):::dev
+    end
+
+    P2_6 --> APR2([Merge main]):::event
+
+    %% ==========================================
+    %% FASE 3: MAIN PIPELINE
+    %% ==========================================
+    APR2 --> P3_1
+
+    subgraph P3 [3. Pipeline Main]
+        P3_1(Validar Origem PR):::prod --> P3_2(Smoke Tests):::prod
+        P3_2 --> P3_3(Build Docker):::prod
+        P3_3 --> P3_4(Deploy Contínuo Render):::prod
+    end
+
+    P3_4 --> F([API Atualizada em Produção]):::event
+```
 ### Workflows ativos
 
 1. **Feature Pipeline** (`feature-pipeline.yml`)
