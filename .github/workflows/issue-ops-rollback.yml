@@ -1,0 +1,84 @@
+name: 4. IssueOps Rollback
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: issueops-rollback-main
+  cancel-in-progress: false
+
+jobs:
+  rollback-from-issue:
+    name: 4.1 Rollback via Issue Label
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'ops:rollback' && github.event.issue.state == 'open' && contains('OWNER,MEMBER,COLLABORATOR', github.event.issue.author_association)
+    timeout-minutes: 15
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+
+    steps:
+      - name: Checkout da main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Definir commit alvo (issue body ou HEAD da main)
+        id: target
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          git fetch origin main --prune
+          TARGET_SHA=$(echo "${ISSUE_BODY}" | sed -nE 's/^commit:[[:space:]]*([0-9a-fA-F]{7,40})$/\1/p' | head -n 1)
+
+          if [ -z "${TARGET_SHA}" ]; then
+            TARGET_SHA=$(git rev-parse origin/main)
+          fi
+
+          echo "target_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
+          echo "🎯 Commit alvo para rollback: ${TARGET_SHA}"
+
+      - name: Executar rollback (git revert)
+        id: revert
+        run: |
+          TARGET_SHA="${{ steps.target.outputs.target_sha }}"
+          PARENTS=$(git rev-list --parents -n 1 "${TARGET_SHA}" | awk '{print NF-1}')
+
+          if [[ "${PARENTS}" -gt 1 ]]; then
+            git revert -m 1 --no-edit "${TARGET_SHA}"
+          else
+            git revert --no-edit "${TARGET_SHA}"
+          fi
+
+          git push origin HEAD:main
+          NEW_SHA=$(git rev-parse HEAD)
+          echo "new_sha=${NEW_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Reacionar deploy no Render (opcional)
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: curl -s -S -X POST "${RENDER_DEPLOY_HOOK_URL}" > /dev/null
+
+      - name: Comentar resultado na issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          TARGET_SHA: ${{ steps.target.outputs.target_sha }}
+          NEW_SHA: ${{ steps.revert.outputs.new_sha }}
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            gh issue comment "${ISSUE_NUMBER}" --body "✅ Rollback executado com sucesso.\n\n- Commit revertido: \`${TARGET_SHA}\`\n- Novo commit em \`main\`: \`${NEW_SHA}\`\n- Status: **success**"
+          else
+            gh issue comment "${ISSUE_NUMBER}" --body "❌ Falha ao executar rollback automático.\n\n- Commit alvo: \`${TARGET_SHA}\`\n- Status: **failure**\n\nVerifique os logs do workflow *IssueOps Rollback*."
+          fi
+

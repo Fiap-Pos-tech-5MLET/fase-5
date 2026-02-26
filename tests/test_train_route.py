@@ -19,11 +19,14 @@ from app.routes.train_route import router
 
 
 @pytest.fixture
-def api_client() -> TestClient:
+def api_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """TestClient para a API FastAPI com rotas de treinamento."""
+    monkeypatch.setenv("API_KEY", "test-api-key")
     app = FastAPI()
     app.include_router(router)
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    client.headers.update({"X-API-KEY": "test-api-key"})
+    return client
 
 
 @pytest.fixture
@@ -82,6 +85,17 @@ class TestTrainRetrain:
         assert data["promoted"] is False
         assert "candidate_path" in data
         mock_run_training.assert_called_once()
+
+    def test_retrain_without_api_key_returns_401(self, monkeypatch, valid_retrain_params) -> None:
+        """Bloqueia retreinamento sem API key válida."""
+        monkeypatch.setenv("API_KEY", "test-api-key")
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        response = client.post("/retrain", json=valid_retrain_params)
+
+        assert response.status_code == 401
 
     @patch("app.routes.train_route.get_model_paths")
     @patch("app.routes.train_route.run_training")

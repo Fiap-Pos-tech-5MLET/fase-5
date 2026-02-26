@@ -14,7 +14,7 @@ import shutil
 from typing import Annotated, Any, Dict
 
 import mlflow
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
@@ -25,6 +25,7 @@ from app.models.schemas import (
     RetrainRequest,
 )
 from app.utils.model_loader import get_model_paths, reload_model
+from app.utils.security import validate_api_key
 from app.utils.structured_logging import log_with_request
 from scripts.train import main as run_training
 
@@ -37,6 +38,7 @@ router = APIRouter()
 async def retrain(
     params: Annotated[RetrainRequest, Body(...)],
     request: Request,
+    _authenticated: Annotated[None, Depends(validate_api_key)],
 ) -> Dict[str, Any]:
     """
     Treina um modelo candidato (challenger) SEM sobrescrever o modelo em produção (champion).
@@ -153,7 +155,9 @@ async def retrain(
 
 
 @router.post("/promote", response_model=PromoteResponse)
-async def promote() -> PromoteResponse:
+async def promote(
+    _authenticated: Annotated[None, Depends(validate_api_key)],
+) -> PromoteResponse:
     """
     Promove o modelo candidato (challenger) para produção (champion).
 
@@ -223,7 +227,9 @@ async def promote() -> PromoteResponse:
 
 
 @router.post("/discard", response_model=DiscardResponse)
-async def discard() -> DiscardResponse:
+async def discard(
+    _authenticated: Annotated[None, Depends(validate_api_key)],
+) -> DiscardResponse:
     """
     Descarta o modelo candidato (challenger) e mantém o modelo atual (champion).
 
