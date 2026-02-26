@@ -1,71 +1,60 @@
-# Excluir artefatos e dados que não precisam ir ao contexto de build
-.git
-venv
-env
-.venv
-.pytest_cache
-__pycache__
-htmlcov
-docs
-notebooks
-data
-dev
-tests
-*.pyc
-*.pyo
-*.pyd
-*.swp
-*.egg-info
-dist
-build
-*.log
-.env
-instances
-/.vscode
-# Git
-.git
-.gitignore
+# VCS / metadata
+.git/
+.github/
 
-# Python
-__pycache__
+# Local environments / caches
+.venv/
+.venv-*/
+venv/
+env/
+__pycache__/
 *.pyc
 *.pyo
-.venv
-venv
-*.egg-info
-.pytest_cache
-.ruff_cache
-.mypy_cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Coverage / reports
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
+# Local IDE/editor
+.vscode/
+.idea/
 
-# MLflow local data (mounted via volume)
+# Local runtime/config secrets
+.env
+.env.*
+.secrets.scan
+
+# Data and experiments generated locally
 mlruns/
+mlartifacts/
+archive_*/
+data/raw/*
+data/processed/*
+data/interim/*
+data/external/*
+app/artifacts/*.pkl
+app/artifacts/*.joblib
+app/artifacts/*.h5
+app/artifacts/*.pth
+app/models/*.pkl
+app/models/*.joblib
 
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-# Documentation
-*.md
-!README.md
-docs/
-
-# Notebooks
+# Non-runtime project assets
 notebooks/
+k8s/
+dev/
+docs/
+tests/
+*.md
 
-# OS
+# OS artifacts
 .DS_Store
 Thumbs.db
-
-# Gemini/Agent
-.gemini/
-.agent/
