@@ -167,12 +167,17 @@ def render_retrain_page(
         )
         st.markdown(summary_html, unsafe_allow_html=True)
 
-    requested_by = st.text_input(
+    requested_by_input = st.text_input(
         "Solicitado por (nome ou e-mail)",
         value="",
         max_chars=120,
         help="Obrigatório para auditoria de governança do retreinamento.",
-    ).strip()
+    )
+    requested_by = (
+        requested_by_input.strip()
+        if isinstance(requested_by_input, str)
+        else str(requested_by_input).strip()
+    )
 
     st.markdown("")
 
