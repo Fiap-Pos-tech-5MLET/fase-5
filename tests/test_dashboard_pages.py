@@ -182,6 +182,7 @@ def test_render_drift_page_missing_report_error(tmp_path, monkeypatch) -> None:
     drift_page.render_drift_page(str(missing_path))
 
     st.error.assert_called()
+    st.exception.assert_called_once()
 
 
 def test_render_drift_page_generate_error(tmp_path, monkeypatch) -> None:
@@ -201,6 +202,7 @@ def test_render_drift_page_generate_error(tmp_path, monkeypatch) -> None:
     drift_page.render_drift_page(str(report_path))
 
     st.error.assert_called()
+    st.exception.assert_called_once()
 
 
 def test_render_metrics_page_mlflow(monkeypatch) -> None:

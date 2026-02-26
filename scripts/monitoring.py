@@ -10,11 +10,9 @@ Este script utiliza Evidently para:
 import logging
 import os
 import sys
-from typing import Tuple
+from importlib import import_module
+from typing import Any
 
-import pandas as pd
-from evidently import Report
-from evidently.presets import DataDriftPreset
 from sklearn.model_selection import train_test_split
 
 # Configure logging
@@ -36,6 +34,37 @@ from src.data_cleaning import (
 from src.feature_engineering import create_features, select_features
 
 
+def _load_evidently_classes() -> tuple[Any, Any]:
+    """Carrega classes do Evidently com fallback entre versões.
+
+    Returns:
+        tuple[Any, Any]: Tupla contendo (Report, DataDriftPreset).
+
+    Raises:
+        ImportError: Se o Evidently não estiver instalado ou incompatível.
+    """
+    try:
+        report_module = import_module("evidently.report")
+        metric_module = import_module("evidently.metric_preset")
+        Report = getattr(report_module, "Report")
+        DataDriftPreset = getattr(metric_module, "DataDriftPreset")
+
+        return Report, DataDriftPreset
+    except ImportError:
+        try:
+            evidently_module = import_module("evidently")
+            presets_module = import_module("evidently.presets")
+            Report = getattr(evidently_module, "Report")
+            DataDriftPreset = getattr(presets_module, "DataDriftPreset")
+
+            return Report, DataDriftPreset
+        except ImportError as exc:
+            raise ImportError(
+                "Não foi possível importar Evidently. "
+                "Verifique a instalação e a versão do pacote 'evidently'."
+            ) from exc
+
+
 def generate_drift_report() -> None:
     """
     Gera relatório de data drift comparando dados de referência vs atuais.
@@ -52,6 +81,8 @@ def generate_drift_report() -> None:
 
     logger.info("Loading and preparing data for monitoring...")
     try:
+        Report, DataDriftPreset = _load_evidently_classes()
+
         df = load_data(DATA_PATH)
         df = clean_data(df)
         df = create_target(df)
@@ -68,8 +99,8 @@ def generate_drift_report() -> None:
         # and Current would be the new batch of data from production.
         reference_data, current_data = train_test_split(full_data, test_size=0.2, random_state=42)
 
-        logger.info(f"Reference data shape: {reference_data.shape}")
-        logger.info(f"Current data shape: {current_data.shape}")
+        logger.info("Reference data shape: %s", reference_data.shape)
+        logger.info("Current data shape: %s", current_data.shape)
 
         # Generate Report
         logger.info("Calculating drift metrics...")
@@ -92,10 +123,11 @@ def generate_drift_report() -> None:
         else:
             logger.error("Could not find save_html method.")
 
-        logger.info(f"Report saved to {REPORT_PATH}")
+        logger.info("Report saved to %s", REPORT_PATH)
 
-    except Exception as e:
-        logger.error(f"Error generating report: {e}")
+    except (FileNotFoundError, ImportError, OSError, RuntimeError, ValueError):
+        logger.exception("Error generating report")
+        raise
 
 
 if __name__ == "__main__":
