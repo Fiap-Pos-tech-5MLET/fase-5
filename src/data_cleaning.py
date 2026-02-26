@@ -7,6 +7,7 @@ os dados da Associação Passos Mágicos para análise e modelagem.
 
 import logging
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -276,3 +277,70 @@ def handle_missing_values(df: pd.DataFrame, numeric_strategy: str = "zero") -> p
         logger.warning("Ainda existem %d valores ausentes após tratamento", missing_after)
 
     return df
+
+
+def validate_data_quality(
+    df: pd.DataFrame,
+    inde_column: str = "INDE_2024",
+    defasagem_column: str = "DEFASAGEM",
+    defasagem_max_null_ratio: float = 0.25,
+) -> None:
+    """Executa validações de qualidade de dados com Great Expectations.
+
+    Regras aplicadas antes do treino:
+    - `INDE_2024` não pode ter valores negativos.
+    - Taxa de nulos em `DEFASAGEM` não pode exceder o limite configurado.
+
+    Args:
+        df (pd.DataFrame): Dataset de entrada para validação.
+        inde_column (str): Nome da coluna INDE a validar.
+        defasagem_column (str): Nome da coluna de defasagem.
+        defasagem_max_null_ratio (float): Limite máximo aceitável de nulos em DEFASAGEM.
+
+    Raises:
+        ValueError: Quando uma regra de qualidade falha.
+        ImportError: Quando Great Expectations não está disponível.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"Esperado pd.DataFrame, recebido {type(df)}")
+
+    if df.empty:
+        raise ValueError("DataFrame não pode estar vazio para validação de qualidade")
+
+    try:
+        import great_expectations as ge
+    except ImportError as exc:
+        raise ImportError(
+            "Great Expectations não está instalado. "
+            "Instale a dependência para validar qualidade de dados."
+        ) from exc
+
+    ge_df: Any = ge.from_pandas(df)
+
+    if inde_column in df.columns:
+        inde_expectation = ge_df.expect_column_values_to_be_between(
+            inde_column,
+            min_value=0,
+            max_value=None,
+            allow_cross_type_comparisons=True,
+            mostly=1.0,
+        )
+        if not inde_expectation["success"]:
+            raise ValueError(
+                f"Data quality check falhou: coluna {inde_column} contém valores negativos."
+            )
+
+    if defasagem_column in df.columns:
+        defasagem_expectation = ge_df.expect_column_values_to_not_be_null(
+            defasagem_column,
+            mostly=1.0 - defasagem_max_null_ratio,
+        )
+        if not defasagem_expectation["success"]:
+            null_ratio = float(df[defasagem_column].isna().mean())
+            raise ValueError(
+                "Data quality check falhou: taxa de nulos em "
+                f"{defasagem_column} ({null_ratio:.2%}) acima do limite "
+                f"de {defasagem_max_null_ratio:.2%}."
+            )
+
+    logger.info("Data quality checks aprovados com Great Expectations")

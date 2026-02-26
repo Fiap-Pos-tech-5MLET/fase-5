@@ -47,6 +47,7 @@ from src.data_cleaning import (
     create_target,
     handle_missing_values,
     load_data,
+    validate_data_quality,
 )
 from src.feature_engineering import create_features, select_features
 from src.feature_store import persist_dataset_version, register_feature_view
@@ -184,6 +185,9 @@ def main(
 
         logger.info("Cleaning data...")
         df = clean_data(df)
+
+        logger.info("Validating data quality with Great Expectations...")
+        validate_data_quality(df)
 
         logger.info("Creating target...")
         df = create_target(df)

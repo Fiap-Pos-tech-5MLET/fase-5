@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: main-${{ github.ref }}
@@ -191,11 +191,136 @@ jobs:
             echo "- **Etapa crítica**: render-deploy = ${{ steps.render-deploy.outcome }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  post-deploy-smoke:
+    name: 3.4 Smoke Pós-Deploy (Predict)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    needs: deploy-render
+    timeout-minutes: 10
+
+    steps:
+      - name: Registrar início da etapa
+        run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Validar endpoint /predict em produção
+        id: prod-smoke
+        env:
+          RENDER_PUBLIC_URL: ${{ secrets.RENDER_PUBLIC_URL }}
+        run: |
+          BASE_URL="${RENDER_PUBLIC_URL}"
+          if [ -z "${BASE_URL}" ]; then
+            BASE_URL="https://datathon-machine-learning-engineering.onrender.com"
+          fi
+
+          echo "🌐 Base URL de produção: ${BASE_URL}"
+
+          for i in {1..20}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/health" || true)
+            if [[ "${STATUS}" == "200" ]]; then
+              echo "✅ Healthcheck OK após deploy"
+              break
+            fi
+            if [[ "${i}" == "20" ]]; then
+              echo "❌ Healthcheck não ficou saudável a tempo"
+              exit 1
+            fi
+            sleep 15
+          done
+
+          cat > /tmp/predict_payload.json <<'EOF'
+          {
+            "data": {
+              "IDADE": 16,
+              "FASE": "Fase 1 (3° e 4° ano)",
+              "INDE_22": 6.5,
+              "INDE_23": 7.1,
+              "ANO_INGRESSO": 2022,
+              "GÊNERO": "Feminino"
+            }
+          }
+          EOF
+
+          HTTP_CODE=$(curl -s -o /tmp/predict_response.json -w "%{http_code}" \
+            -X POST "${BASE_URL}/api/predict" \
+            -H "Content-Type: application/json" \
+            -H "x-requested-by: ci_smoke_main" \
+            --data @/tmp/predict_payload.json || true)
+
+          echo "Predict HTTP status: ${HTTP_CODE}"
+          cat /tmp/predict_response.json
+
+          if [[ "${HTTP_CODE}" =~ ^5 ]]; then
+            echo "❌ Predict retornou erro 5xx em produção"
+            exit 1
+          fi
+
+      - name: Resumo da etapa Smoke Pós-Deploy
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - STAGE_START))
+          {
+            echo "## 🔬 Etapa: Smoke Pós-Deploy"
+            echo ""
+            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Duração**: ${DURATION}s"
+            echo "- **Etapa crítica**: prod-smoke = ${{ steps.prod-smoke.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  auto-rollback:
+    name: 3.5 Rollback Automático
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && needs.post-deploy-smoke.result == 'failure'
+    needs: [deploy-render, post-deploy-smoke]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout da main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configurar Git para rollback
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Reverter commit atual da main
+        id: rollback-commit
+        run: |
+          TARGET_SHA="${{ github.sha }}"
+          PARENTS=$(git rev-list --parents -n 1 "${TARGET_SHA}" | awk '{print NF-1}')
+
+          if [[ "${PARENTS}" -gt 1 ]]; then
+            git revert -m 1 --no-edit "${TARGET_SHA}"
+          else
+            git revert --no-edit "${TARGET_SHA}"
+          fi
+
+      - name: Publicar rollback na main
+        run: git push origin HEAD:main
+
+      - name: Reacionar deploy no Render com commit de rollback
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -s -S -X POST "${RENDER_DEPLOY_HOOK_URL}" > /dev/null
+
+      - name: Resumo do rollback
+        if: always()
+        run: |
+          {
+            echo "## ♻️ Rollback automático executado"
+            echo "- Smoke pós-deploy falhou no endpoint /api/predict (erro 5xx)."
+            echo "- Commit atual foi revertido em main e novo deploy foi acionado."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   report:
-    name: 3.4 Relatório do Pipeline
+    name: 3.6 Relatório do Pipeline
     runs-on: ubuntu-latest
     if: always()
-    needs: [smoke-tests, docker-build, deploy-render]
+    needs: [smoke-tests, docker-build, deploy-render, post-deploy-smoke, auto-rollback]
     timeout-minutes: 5
 
     steps:
@@ -205,6 +330,8 @@ jobs:
           SMOKE_STATUS="${{ needs.smoke-tests.result }}"
           DOCKER_STATUS="${{ needs.docker-build.result }}"
           DEPLOY_STATUS="${{ needs.deploy-render.result }}"
+          PROD_SMOKE_STATUS="${{ needs.post-deploy-smoke.result }}"
+          ROLLBACK_STATUS="${{ needs.auto-rollback.result }}"
 
           {
             echo "# 📊 Relatório do Pipeline - Main"
@@ -219,10 +346,12 @@ jobs:
             echo "| Smoke Tests | ${SMOKE_STATUS} |"
             echo "| Build Docker | ${DOCKER_STATUS} |"
             echo "| Deploy Render | ${DEPLOY_STATUS} |"
+            echo "| Smoke Pós-Deploy | ${PROD_SMOKE_STATUS} |"
+            echo "| Rollback Automático | ${ROLLBACK_STATUS} |"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "${SMOKE_STATUS}" != "success" || "${DOCKER_STATUS}" != "success" || "${DEPLOY_STATUS}" != "success" ]]; then
+          if [[ "${SMOKE_STATUS}" != "success" || "${DOCKER_STATUS}" != "success" || "${DEPLOY_STATUS}" != "success" || "${PROD_SMOKE_STATUS}" == "failure" ]]; then
             {
               echo "## ❌ Falhas detectadas"
               echo "- Verifique a etapa com status diferente de \\`success\\` para saber onde ocorreu o erro."
