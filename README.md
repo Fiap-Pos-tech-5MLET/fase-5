@@ -320,13 +320,17 @@ Crie o arquivo `.env` na raiz do projeto (use `.env.example` como base):
 ```bash
 PROJECT_NAME="Tech Challenge Fase 5 - Associação Passos Mágicos"
 ENVIRONMENT=development
-DATASET_PATH=data/raw/passos_magicos_2022_2024.csv
+API_URL=http://127.0.0.1:8000
 MODEL_PATH=app/models/model.pkl
+DATASET_PATH=app/data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx
+ARTIFACTS_DIR=app/artifacts
+MLFLOW_TRACKING_URI=file:./mlruns
+API_KEY=troque_para_uma_chave_forte_em_producao
 ```
 
 #### 3. Prepare os dados
 
-Coloque o dataset em `data/raw/` com o nome esperado pelo pipeline.
+Coloque o dataset em `app/data/raw/` com o nome esperado pelo pipeline.
 
 #### 4. Treine o modelo inicial
 
