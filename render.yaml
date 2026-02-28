@@ -16,7 +16,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: API_URL
-        value: http://127.0.0.1:8080/api
+        value: https://datathon-machine-learning-engineering.onrender.com/api
       - key: MODEL_PATH
         value: /app/app/models/model.pkl
       - key: DATASET_PATH
