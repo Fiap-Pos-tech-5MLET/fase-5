@@ -472,6 +472,7 @@ def test_render_retrain_page_with_retrain(monkeypatch) -> None:
     st.number_input.side_effect = [100, 2]
     st.selectbox.side_effect = ["Sem limite", "Todas"]
     st.slider.return_value = 20
+    st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
 
     response = DummyResponse(
@@ -508,6 +509,7 @@ def test_render_retrain_page_with_error(monkeypatch) -> None:
     st.number_input.side_effect = [100, 2]
     st.selectbox.side_effect = ["Sem limite", "Todas"]
     st.slider.return_value = 20
+    st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
 
     response = DummyResponse(status_code=500, json_data={"detail": "error"})
@@ -533,6 +535,7 @@ def test_render_retrain_page_promote_and_discard(monkeypatch) -> None:
     st.number_input.side_effect = [100, 2]
     st.selectbox.side_effect = ["Sem limite", "Todas"]
     st.slider.return_value = 20
+    st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
 
     response = DummyResponse(status_code=200, json_data={})
@@ -564,6 +567,7 @@ def test_render_retrain_page_promote_error(monkeypatch) -> None:
     st.number_input.side_effect = [100, 2]
     st.selectbox.side_effect = ["Sem limite", "Todas"]
     st.slider.return_value = 20
+    st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
 
     def _raise(*_args: Any, **_kwargs: Any) -> None:
@@ -591,6 +595,7 @@ def test_render_retrain_page_discard_error(monkeypatch) -> None:
     st.number_input.side_effect = [100, 2]
     st.selectbox.side_effect = ["Sem limite", "Todas"]
     st.slider.return_value = 20
+    st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
 
     def _raise(*_args: Any, **_kwargs: Any) -> None:
@@ -616,6 +621,7 @@ def test_render_retrain_page_model_none(monkeypatch) -> None:
     st.number_input.side_effect = [100, 2]
     st.selectbox.side_effect = ["Sem limite", "Todas"]
     st.slider.return_value = 20
+    st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
 
     retrain_page.render_retrain_page(

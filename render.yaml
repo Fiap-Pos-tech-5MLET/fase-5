@@ -12,8 +12,14 @@ services:
         value: "8080"
       - key: ENVIRONMENT
         value: production
-      - key: STREAMLIT_SERVER_FILE_WATCHER_TYPE
-        value: "none"
+      - key: MODEL_PATH
+        value: /app/app/models/model.pkl
+      - key: DATASET_PATH
+        value: /app/app/data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx
+      - key: ARTIFACTS_DIR
+        value: /app/app/artifacts
+      - key: KEEP_ALIVE_INTERVAL
+        value: 600
       - key: MLFLOW_TRACKING_URI
         value: file:./mlruns
     healthCheckPath: /health

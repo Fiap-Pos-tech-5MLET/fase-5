@@ -179,6 +179,15 @@ def render_retrain_page(
         else str(requested_by_input).strip()
     )
 
+    api_key_input = st.text_input(
+        "API Key (X-API-KEY)",
+        value=st.session_state.get("dashboard_api_key", ""),
+        type="password",
+        help="Obrigatória para chamar /retrain, /promote e /discard.",
+    )
+    api_key = api_key_input.strip() if isinstance(api_key_input, str) else ""
+    st.session_state["dashboard_api_key"] = api_key
+
     st.markdown("")
 
     col_btn, col_warn = st.columns([1, 2])
@@ -197,6 +206,9 @@ def render_retrain_page(
 
         if len(requested_by) < 3:
             st.error("❌ Informe ao menos 3 caracteres no campo 'Solicitado por'.")
+            return
+        if not api_key:
+            st.error("❌ Informe a API Key para executar o retreinamento.")
             return
 
         progress_bar = st.progress(0, text="Iniciando pipeline...")
@@ -221,6 +233,7 @@ def render_retrain_page(
             response = requests.post(
                 f"{api_url}/retrain",
                 json=retrain_payload,
+                headers={"X-API-KEY": api_key},
                 timeout=120,
             )
 
@@ -389,7 +402,15 @@ def render_retrain_page(
             ):
                 with st.spinner("Promovendo modelo..."):
                     try:
-                        resp = requests.post(f"{api_url}/promote", timeout=30)
+                        if not api_key:
+                            st.error("❌ Informe a API Key para promover o modelo candidato.")
+                            return
+
+                        resp = requests.post(
+                            f"{api_url}/promote",
+                            headers={"X-API-KEY": api_key},
+                            timeout=30,
+                        )
                         resp.raise_for_status()
 
                         load_model_func.clear()
@@ -414,7 +435,15 @@ def render_retrain_page(
             ):
                 with st.spinner("Descartando modelo candidato..."):
                     try:
-                        resp = requests.post(f"{api_url}/discard", timeout=30)
+                        if not api_key:
+                            st.error("❌ Informe a API Key para descartar o modelo candidato.")
+                            return
+
+                        resp = requests.post(
+                            f"{api_url}/discard",
+                            headers={"X-API-KEY": api_key},
+                            timeout=30,
+                        )
                         resp.raise_for_status()
 
                         st.session_state["candidate_ready"] = False
