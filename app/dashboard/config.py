@@ -56,11 +56,8 @@ ROC_CURVE_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "roc_curve.png")
 FEATURE_IMP_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "feature_importance.png")
 CLASS_REPORT_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "classification_report.png")
 
-# API URL - usar localhost no container único, senão nome do serviço
-API_URL: Final[str] = os.environ.get(
-    "API_URL",
-    "http://127.0.0.1:8000" if os.getenv("ENVIRONMENT") == "production" else "http://api:8000",
-)
+# API URL explícita por ambiente (Render/local)
+API_URL: Final[str] = os.environ.get("API_URL", "http://127.0.0.1:8000")
 
 
 def configure_page() -> None:

@@ -72,6 +72,21 @@ class TestDeploymentConfig:
         assert "env: docker" in content, "render.yaml não está configurado para Docker"
         assert "type: web" in content, "render.yaml não tem tipo web"
 
+    def test_render_yaml_has_required_runtime_envs(self) -> None:
+        """Verifica se render.yaml define variáveis críticas de runtime."""
+        with open("render.yaml", encoding="utf-8") as f:
+            content = f.read()
+
+        required_env_keys = [
+            "key: MODEL_PATH",
+            "key: DATASET_PATH",
+            "key: ARTIFACTS_DIR",
+            "key: MLFLOW_TRACKING_URI",
+        ]
+
+        for env_key in required_env_keys:
+            assert env_key in content, f"Variável obrigatória ausente no render.yaml: {env_key}"
+
     def test_deployment_md_exists(self) -> None:
         """Verifica se documentação de deployment existe."""
         deployment_doc = Path("DEPLOYMENT.md")

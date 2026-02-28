@@ -1,17 +1,22 @@
 services:
   - type: web
-    name: datathon-passos-magicos
+    name: Datathon - Machine Learning Engineering
+    repo: https://github.com/Fiap-Pos-tech-5MLET/fase-5
+    branch: main
     runtime: docker
     env: docker
     plan: free
-    region: oregon
     dockerfilePath: ./Dockerfile
     dockerContext: ./
+    region: virginia
+    autoDeployTrigger: "off"
     envVars:
       - key: PORT
         value: "8080"
       - key: ENVIRONMENT
         value: production
+      - key: API_URL
+        value: https://datathon-machine-learning-engineering.onrender.com/api
       - key: MODEL_PATH
         value: /app/app/models/model.pkl
       - key: DATASET_PATH
@@ -22,4 +27,6 @@ services:
         value: 600
       - key: MLFLOW_TRACKING_URI
         value: file:./mlruns
+      - key: API_KEY
+        sync: false
     healthCheckPath: /health

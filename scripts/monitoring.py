@@ -65,25 +65,26 @@ def _load_evidently_classes() -> tuple[Any, Any]:
             ) from exc
 
 
-def generate_drift_report() -> None:
+def generate_drift_report(data_path: str, report_path: str) -> None:
     """
     Gera relatório de data drift comparando dados de referência vs atuais.
-
     Utiliza Evidently DataDriftPreset para detectar mudanças significativas
     na distribuição das features entre treino e produção.
+    
+    Args:
+        data_path (str): Caminho para o arquivo de dados.
+        report_path (str): Diretório onde salvar o relatório HTML.
 
     Raises:
         FileNotFoundError: Se arquivo de dados não for encontrado.
         ValueError: Se dados processados estiverem vazios.
     """
-    DATA_PATH = "data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
-    REPORT_PATH = "models/artifacts/data_drift_report.html"
-
+    # Usa report_path diretamente, sem concatenação
     logger.info("Loading and preparing data for monitoring...")
     try:
         Report, DataDriftPreset = _load_evidently_classes()
 
-        df = load_data(DATA_PATH)
+        df = load_data(data_path)
         df = clean_data(df)
         df = create_target(df)
         df = handle_missing_values(df)
@@ -114,16 +115,16 @@ def generate_drift_report() -> None:
         snapshot = report.run(reference_data=reference_data, current_data=current_data)
 
         # Save
-        os.makedirs(os.path.dirname(REPORT_PATH), exist_ok=True)
+        os.makedirs(os.path.dirname(report_path), exist_ok=True)
         # Try both ways to be safe across versions, or rely on debug result
         if hasattr(snapshot, "save_html"):
-            snapshot.save_html(REPORT_PATH)
+            snapshot.save_html(report_path)
         elif hasattr(report, "save_html"):
-            report.save_html(REPORT_PATH)
+            report.save_html(report_path)
         else:
             logger.error("Could not find save_html method.")
 
-        logger.info("Report saved to %s", REPORT_PATH)
+        logger.info("Report saved to %s", report_path)
 
     except (FileNotFoundError, ImportError, OSError, RuntimeError, ValueError):
         logger.exception("Error generating report")
@@ -131,4 +132,6 @@ def generate_drift_report() -> None:
 
 
 if __name__ == "__main__":
-    generate_drift_report()
+    # Importa paths da config centralizada
+    from app.config import RAW_DATA_PATH, DRIFT_REPORT_PATH
+    generate_drift_report(RAW_DATA_PATH, DRIFT_REPORT_PATH)
