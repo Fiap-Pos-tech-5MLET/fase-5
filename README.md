@@ -224,6 +224,7 @@ Estrutura atual (resumo dos diretórios e arquivos mais relevantes):
 fase-5/
 ├── .github/
 │   ├── copilot-instructions.md
+│   ├── copilot-operational-runbook.md
 │   └── workflows/
 │       ├── feature-pipeline.yml
 │       ├── develop-pipeline.yml
@@ -501,8 +502,10 @@ O projeto usa **GitHub Copilot** com instruções customizadas para padronizaç�
 - ✅ Convenções de nomenclatura e organização de código
 - ✅ Regras de segurança (inputs, segredos, erros)
 - ✅ Boas práticas de testes e cobertura
+- ✅ Protocolo de validação por tipo de mudança (código, scripts, docs e testes)
 
-As diretrizes estão em [.github/copilot-instructions.md](.github/copilot-instructions.md).
+As diretrizes estão em [.github/copilot-instructions.md](.github/copilot-instructions.md) e
+no runbook operacional [.github/copilot-operational-runbook.md](.github/copilot-operational-runbook.md).
 
 ---
 
@@ -659,6 +662,7 @@ Este projeto está licenciado sob a **Licença MIT**. Consulte o arquivo [LICENS
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Guia de contribuição
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Guia de deploy
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — Diretrizes de code review com IA
+- **[.github/copilot-operational-runbook.md](.github/copilot-operational-runbook.md)** — Runbook de validação e troubleshooting operacional
 
 ---
 

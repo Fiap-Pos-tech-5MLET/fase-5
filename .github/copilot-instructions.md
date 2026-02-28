@@ -1,372 +1,158 @@
-# Instruções de Code Review para Copilot
+# Instruções do Copilot — Projeto Fase 5 (Datathon Passos Mágicos)
 
-## Objetivo Geral
-Garantir qualidade, segurança, performance, clareza e limpeza de código através de revisões automáticas com 100% de cobertura.
+## 1) Objetivo
 
----
-
-## 1. PADRÕES DE QUALIDADE
-
-### 1.1 Type Hints e Anotações
-- **OBRIGATÓRIO**: Todos os parâmetros e retornos devem ter type hints
-- **PADRÃO**: Usar `from typing import` para tipos complexos (Dict, List, Tuple, Optional, Union)
-- **VERIFICAR**: Compatibilidade com Python 3.9+
-- **EXEMPLO CORRETO**:
-```python
-def process_data(
-    data: List[float],
-    threshold: float = 0.5
-) -> Dict[str, Any]:
-    """Processa dados com threshold."""
-    pass
-```
-
-### 1.2 Docstrings
-- **PADRÃO**: Google Style docstrings em português
-- **CONTEÚDO OBRIGATÓRIO**:
-  - Descrição clara da função/classe
-  - Args: com tipos e descrição
-  - Returns: com tipo e descrição
-  - Raises: exceções que podem ser levantadas
-- **EXEMPLO CORRETO**:
-```python
-def train_model(
-    data: np.ndarray,
-    epochs: int = 10
-) -> Dict[str, float]:
-    """
-    Treina o modelo LSTM com os dados fornecidos.
-    
-    Args:
-        data (np.ndarray): Dados de treinamento com shape (n_samples, seq_length, features).
-        epochs (int): Número de épocas. Padrão: 10
-    
-    Returns:
-        Dict[str, float]: Dicionário com histórico de perda por época.
-    
-    Raises:
-        ValueError: Se data estiver vazia ou epochs <= 0.
-    """
-    pass
-```
-
-### 1.3 Nomes e Convenções
-- **VARIÁVEIS**: snake_case (ex: `model_weights`, `learning_rate`)
-- **CLASSES**: PascalCase (ex: `LSTMModel`, `ModelTrainer`)
-- **CONSTANTES**: UPPER_SNAKE_CASE (ex: `MAX_EPOCHS`, `BATCH_SIZE`)
-- **PRIVADAS**: Prefixo underscore (ex: `_internal_method`)
-- **DESCRITIVOS**: Nomes claros que indicam propósito
-
-### 1.4 Comprimento de Linhas
-- **MÁXIMO**: 100 caracteres
-- **EXCEÇÕES**: URLs, paths, strings longas (comentar por quê)
+Garantir que sugestões e revisões do Copilot preservem:
+- estabilidade de deploy (Render + Docker + Nginx + Supervisor),
+- segurança de rotas sensíveis,
+- consistência entre código, workflows e documentação,
+- qualidade técnica com foco pragmático para entrega acadêmica.
 
 ---
 
-## 2. SEGURANÇA
+## 2) Stack real do projeto
 
-### 2.1 Tratamento de Erros
-- **OBRIGATÓRIO**: Try/except com exceções específicas
-- **PROIBIDO**: Bare `except:` ou `except Exception:`
-- **PADRÃO**:
-```python
-try:
-    result = expensive_operation()
-except FileNotFoundError as e:
-    logger.error(f"Arquivo não encontrado: {e}")
-    raise
-except ValueError as e:
-    logger.warning(f"Valor inválido: {e}")
-    return None
-```
+- Backend: FastAPI (`app/main.py`) com `root_path="/api"`.
+- Dashboard: Streamlit (`app/dashboard.py`) servido via Nginx em `/dashboard`.
+- Runtime produção: container único com Nginx + FastAPI + Streamlit + Supervisord.
+- MLOps: champion/challenger com MLflow (`/retrain`, `/promote`, `/discard`).
+- CI/CD: GitHub Actions em fluxo GitFlow (`feature/*` → `develop` → `main`).
 
-### 2.2 Validação de Entrada
-- **OBRIGATÓRIO**: Validar todos os inputs de usuário
-- **VERIFICAR**: Ranges, tipos, valores nulos
-- **EXEMPLO**:
-```python
-def save_model(model: torch.nn.Module, path: str) -> None:
-    """Salva o modelo."""
-    if not path:
-        raise ValueError("Path não pode estar vazio")
-    if not isinstance(model, torch.nn.Module):
-        raise TypeError("model deve ser nn.Module")
-```
-
-### 2.3 Secrets e Credenciais
-- **PROIBIDO**: Hardcoded secrets, passwords, API keys
-- **OBRIGATÓRIO**: Usar variáveis de ambiente ou .env
-- **VERIFICAR**: Arquivo `.gitignore` contém `.env`
-
-### 2.4 Dependências
-- **VERIFICAR**: Bibliotecas desatualizadas com vulnerabilidades
-- **PADRÃO**: Usar versões pinadas no requirements.txt
-- **EXEMPLO**:
-```
-torch==2.1.0
-numpy==1.24.0
-scikit-learn==1.3.0
-```
+> Não introduzir padrões que contradigam a arquitetura atual (ex.: separar serviços sem solicitação explícita).
 
 ---
 
-## 3. PERFORMANCE
+## 3) Regras obrigatórias para mudanças de código
 
-### 3.1 Operações Vectorizadas
-- **PREFERIR**: NumPy/PyTorch operations over loops
-- **EVITAR**: Loops Python em operações numéricas
-- **EXEMPLO RUIM**: `[x * 2 for x in array]`
-- **EXEMPLO BOM**: `array * 2`
+### 3.1 API e rotas
+- Preservar `root_path="/api"` no FastAPI.
+- Não remover endpoints de governança de modelo (`/retrain`, `/promote`, `/discard`).
+- Rotas sensíveis devem continuar protegidas por `X-API-KEY` (`validate_api_key`).
 
-### 3.2 Gerenciamento de Memória
-- **VERIFICAR**: Leaks de memória em loops
-- **USAR**: Context managers (`with` statement)
-- **EXEMPLO**:
-```python
-with torch.no_grad():
-    predictions = model(data)
-# Libera memória do gradiente
-```
+### 3.2 Dashboard ↔ API
+- Toda chamada do dashboard para backend deve usar `API_URL`.
+- Em produção, `API_URL` deve incluir `/api` (ex.: `http://127.0.0.1:8080/api`).
+- Evitar fallback silencioso que mascare erro de configuração de ambiente.
 
-### 3.3 Operações em GPU
-- **PADRÃO**: Mover tensores para device corretamente
-- **VERIFICAR**: Mixing CPU/GPU tensors
-- **EXEMPLO**:
-```python
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = model.to(device)
-data = data.to(device)
-```
+### 3.3 Segurança
+- Proibido hardcode de segredos.
+- `API_KEY` deve vir de variável de ambiente.
+- Evitar `except Exception:` e `bare except:`.
 
-### 3.4 Caching e Lazy Evaluation
-- **USAR**: `@lru_cache` para funções puras
-- **VERIFICAR**: Computações desnecessárias repetidas
+### 3.4 Qualidade e estilo
+- Type hints e docstrings em português (Google style) para código novo/alterado.
+- Nomes descritivos em snake_case/PascalCase conforme contexto.
+- Não criar complexidade desnecessária para resolver problemas operacionais simples.
 
 ---
 
-## 4. CLAREZA DO CÓDIGO
+## 4) Regras de deploy e configuração
 
-### 4.1 Estrutura e Organização
-- **ORDEM**: Imports → Constants → Classes → Functions → Main
-- **MODULES**: Um responsabilidade por arquivo
-- **VERIFICAR**: Máximo 500 linhas por arquivo (considerar refactor)
+### 4.1 Fonte de verdade de configuração
+- `render.yaml` é o contrato IaC do projeto.
+- Em Render sem Blueprint (comum no plano free), tratar `render.yaml` como referência e replicar env vars manualmente em **Service → Environment**.
 
-### 4.2 Comentários
-- **POR QUÊ**: Explicar decisões de design, não o óbvio
-- **EVITAR**: Comentários que duplicam o código
-- **EXEMPLO BOM**: `# Reshape necessário pois LSTM espera (batch, seq, features)`
-- **EXEMPLO RUIM**: `# Incrementa x em 1` (para `x += 1`)
+### 4.2 Variáveis operacionais esperadas
+- `ENVIRONMENT`
+- `API_URL`
+- `MODEL_PATH`
+- `DATASET_PATH`
+- `ARTIFACTS_DIR`
+- `KEEP_ALIVE_INTERVAL`
+- `MLFLOW_TRACKING_URI`
+- `API_KEY` (segredo)
 
-### 4.3 Funções Pequenas
-- **MÁXIMO**: 20 linhas por função (complexas: máximo 30)
-- **PADRÃO**: Função = uma responsabilidade
-- **VERIFICAR**: Funções testáveis isoladamente
-
-### 4.4 Magic Numbers
-- **PROIBIDO**: Números sem contexto no código
-- **OBRIGATÓRIO**: Definir como constantes nomeadas
-- **EXEMPLO**:
-```python
-# Ruim
-model = LSTMModel(50, 100)
-
-# Bom
-HIDDEN_SIZE = 50
-OUTPUT_SIZE = 100
-model = LSTMModel(HIDDEN_SIZE, OUTPUT_SIZE)
-```
+### 4.3 Cuidados para evitar regressão em produção
+- Não alterar paths internos Nginx/FastAPI/Streamlit sem validar `nginx.conf` + `supervisord.conf`.
+- Manter coerência entre `render.yaml`, `.env.example`, `README.md` e `DEPLOYMENT.md`.
 
 ---
 
-## 5. LIMPEZA DO CÓDIGO
+## 5) Regras de CI/CD (GitHub Actions)
 
-### 5.1 Imports
-- **ORDEM**: Standard library → Third-party → Local
-- **REGRA**: Imports não utilizados devem ser removidos
-- **VERIFICAR**: Imports duplicados
-- **EXEMPLO**:
-```python
-import os
-import sys
-from typing import List
+- `feature-pipeline.yml`: qualidade rápida + testes rápidos + build Docker + PR automático.
+- `develop-pipeline.yml`: qualidade completa, testes com coverage, segurança, build Docker.
+- `main-pipeline.yml`: valida `render.yaml`, smoke tests, build Docker, deploy Render, smoke pós-deploy e rollback automático.
+- `issue-ops-rollback.yml`: rollback via label `ops:rollback` em issue.
 
-import torch
-import numpy as np
-
-from src.models import LSTMModel
-```
-
-### 5.2 Variáveis Não Utilizadas
-- **PROIBIDO**: Variáveis declaradas e nunca usadas
-- **VERIFICAR**: Parametros não usados em funções
-- **SOLUÇÃO**: Usar `_` para ignorar explicitamente
-```python
-for _, batch in enumerate(dataloader):  # Ignora índice
-    pass
-```
-
-### 5.3 Código Duplicado
-- **REGRA DRY**: Don't Repeat Yourself
-- **VERIFICAR**: Blocos de código similares
-- **SOLUÇÃO**: Extrair para função reutilizável
-
-### 5.4 Formatação
-- **PADRÃO**: Black formatter ou autopep8
-- **VERIFICAR**: Espaçamento, indentação (4 spaces)
-- **LINHAS EM BRANCO**: Máximo 2 consecutivas
-
-### 5.5 Trailing Whitespace
-- **PROIBIDO**: Espaços/tabs no final de linhas
-- **FERRAMENTAS**: Pre-commit hooks
+Ao editar workflows:
+- evitar gatilhos duplicados,
+- manter guardrails de segurança,
+- não remover validações de deploy sem justificativa explícita.
 
 ---
 
-## 6. TESTES
+## 6) Testes e validação local
 
-### 6.1 Cobertura
-- **MÍNIMO**: 90% code coverage (ideal: 100%)
-- **FERRAMENTA**: pytest-cov
-- **COMANDO**: `pytest --cov=src tests/`
+### 6.1 Antes de concluir mudanças
+- Rodar testes focados no escopo alterado.
+- Se alterar deploy/configuração, validar `tests/test_deployment_config.py`.
+- Se alterar dashboard/config API, validar testes de dashboard.
 
-### 6.2 Nomenclatura de Testes
-- **PADRÃO**: `test_<função>_<cenário>`
-- **EXEMPLO**: `test_calculate_metrics_with_perfect_prediction`
+### 6.2 Protocolo mínimo de validação por tipo de mudança
 
-### 6.3 Estrutura AAA
-```python
-def test_something():
-    # Arrange - prepara dados
-    data = prepare_test_data()
-    
-    # Act - executa função
-    result = function_under_test(data)
-    
-    # Assert - verifica resultado
-    assert result == expected_value
-```
+Use esta matriz para validar se código, scripts, docs e testes ficaram coerentes:
 
-### 6.4 Testes Devem Ser
-- **INDEPENDENTES**: Não depender de ordem de execução
-- **DETERMINÍSTICOS**: Mesmo resultado sempre
-- **RÁPIDOS**: Completar em < 1 segundo
-- **ISOLADOS**: Usar mocks/fixtures para dependências externas
+- **Mudança em `app/routes/*`, `app/main.py` ou segurança**:
+  - confirmar contratos de rota e `root_path="/api"`,
+  - confirmar proteção `X-API-KEY` em `/retrain`, `/promote`, `/discard`,
+  - executar testes de API relacionados.
 
----
+- **Mudança em `app/dashboard/*`**:
+  - confirmar uso de `API_URL` em chamadas HTTP,
+  - validar que mensagens de erro não mascaram problema de configuração,
+  - executar testes de dashboard (`tests/test_dashboard_*.py`).
 
-## 7. DOCUMENTAÇÃO
+- **Mudança em `scripts/*` ou pipeline de dados/treino**:
+  - validar paths com env vars esperadas (`MODEL_PATH`, `DATASET_PATH`, `ARTIFACTS_DIR`),
+  - evitar caminhos hardcoded sem fallback controlado,
+  - executar testes focados de script/rota impactada.
 
-### 7.1 README
-- **CONTEÚDO**: Descrição, instalação, uso, exemplos
-- **ATUALIZADO**: Sincronizado com código atual
+- **Mudança em deploy/workflows/configuração** (`render.yaml`, `nginx.conf`, `supervisord.conf`, `.github/workflows/*`):
+  - confirmar consistência com `README.md`, `DEPLOYMENT.md` e `.env.example`,
+  - executar `tests/test_deployment_config.py`,
+  - validar gatilhos/guardrails dos workflows sem duplicidade.
 
-### 7.2 Exemplos
-- **CÓDIGO**: Exemplos funcionais no `main` ou docstrings
-- **ATUALIZADOS**: Testados e funcionando
-
-### 7.3 CHANGELOG
-- **PADRÃO**: Keep a Changelog (keepachangelog.com)
-- **SEÇÕES**: Added, Changed, Deprecated, Removed, Fixed, Security
+### 6.3 Cobertura
+- O projeto usa `--cov-fail-under=85` em `pytest.ini`.
+- Para testes focados de configuração local, pode usar `--no-cov` quando o objetivo for validar regressão funcional pontual.
 
 ---
 
-## 8. CHECKLIST DE REVIEW
+## 7) Documentação e Mermaid
 
-### Antes de Merge
-- [ ] Todos os testes passam (`pytest`)
-- [ ] Coverage >= 90% (`pytest --cov`)
-- [ ] Sem warnings de linter (`pylint`, `flake8`)
-- [ ] Code formatted (`black --check`)
-- [ ] Type hints presentes (`mypy`)
-- [ ] Docstrings completas
-- [ ] Sem secrets/credentials
-- [ ] Performance aceitável
-- [ ] Documentação atualizada
-- [ ] CHANGELOG atualizado
-
-### Commands
-```bash
-# Executar todos os testes
-pytest tests/ -v
-
-# Coverage completo
-pytest tests/ --cov=src --cov-report=html
-
-# Linting
-pylint src/ tests/
-flake8 src/ tests/
-
-# Type checking
-mypy src/
-
-# Formatação
-black src/ tests/
-```
+- Toda mudança relevante em deploy/env/workflow deve atualizar docs correspondentes:
+  - `README.md`
+  - `DEPLOYMENT.md`
+  - `.env.example`
+  - `render.yaml`
+- Se houver diagrama Mermaid relacionado, atualizar texto + diagrama juntos.
 
 ---
 
-## 9. BOAS PRÁTICAS ESPECÍFICAS DO PROJETO
+## 8) Anti-padrões a evitar neste projeto
 
-### 9.1 Modelos PyTorch
-- **SEMPRE**: Incluir device management
-- **VERIFICAR**: Modes (train/eval)
-- **EXEMPLO**:
-```python
-model.train()  # Para treinamento
-model.eval()   # Para avaliação
-with torch.no_grad():  # Sem gradientes em avaliação
-    predictions = model(data)
-```
-
-### 9.2 Data Loading
-- **USAR**: torch.utils.data.DataLoader
-- **VERIFICAR**: Batch sizes, shuffling, num_workers
-- **EXEMPLO**:
-```python
-loader = DataLoader(
-    dataset,
-    batch_size=32,
-    shuffle=True,
-    num_workers=4
-)
-```
-
-### 9.3 Logging
-- **NÃO USAR**: `print()` em produção
-- **USAR**: `logging` module
-- **EXEMPLO**:
-```python
-import logging
-logger = logging.getLogger(__name__)
-logger.info(f"Treinamento iniciado para {epochs} épocas")
-```
-
-### 9.4 MLflow Integration
-- **VERIFICAR**: Todos os experimentos logados
-- **PADRÃO**: Parameters, metrics e artifacts
-- **EXEMPLO**:
-```python
-mlflow.log_params({"epochs": 50, "lr": 0.001})
-mlflow.log_metrics({"loss": 0.5})
-mlflow.log_artifact("model.pth")
-```
+- Reintroduzir instruções genéricas de PyTorch/LSTM não usadas no código atual.
+- Presumir que Render aplicará `render.yaml` automaticamente em serviço manual legado.
+- Corrigir problema operacional com workaround no código sem antes explicitar causa raiz.
+- Alterar contratos de API/dashboard sem atualizar testes e docs.
 
 ---
 
-## 10. ROTINA DE REVIEW
+## 9) Checklist objetivo para PR
 
-1. **Executar testes automaticamente** na CI/CD
-2. **Verificar coverage** - deve estar >= 90%
-3. **Rodar linters** - sem warnings
-4. **Type checking** - sem erros
-5. **Code review manual** - seguindo checklist acima
-6. **Performance** - benchmarks se relevante
-7. **Documentação** - atualizada e clara
-8. **Security** - sem vulnerabilidades conhecidas
+- [ ] Mudança resolve causa raiz sem quebrar fluxos existentes.
+- [ ] Rotas sensíveis continuam com `X-API-KEY`.
+- [ ] Deploy/configs coerentes (`render.yaml`, `.env.example`, docs).
+- [ ] Testes focados do escopo alterado passaram.
+- [ ] Mermaid (quando aplicável) atualizado e válido.
+- [ ] Se houve alteração em código/scripts, existe teste novo/ajustado cobrindo o comportamento alterado.
+- [ ] Se houve alteração de comportamento, README/DEPLOYMENT foram revisados e atualizados quando necessário.
 
 ---
 
-## Referências
-- [PEP 8 - Style Guide for Python](https://www.python.org/dev/peps/pep-0008/)
-- [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)
-- [PyTorch Best Practices](https://pytorch.org/docs/stable/notes/programming_practices.html)
-- [The Twelve-Factor App](https://12factor.net/)
+## 10) Runbook complementar
+
+Para diretrizes operacionais detalhadas (Render free, troubleshooting de 502/404, validação pós-deploy), consulte:
+
+- `.github/copilot-operational-runbook.md`
