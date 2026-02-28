@@ -56,6 +56,11 @@ def load_model() -> Tuple[Optional[Any], Optional[str]]:
         _model_loaded_at = None
         logger.warning("Model not found at %s", model_path)
         return None, None
+    except (OSError, EOFError, ValueError, TypeError) as exc:
+        _loaded_model = None
+        _model_loaded_at = None
+        logger.exception("Failed to load model at %s: %s", model_path, exc)
+        return None, None
 
 
 def reload_model() -> Tuple[Optional[Any], Optional[str]]:
