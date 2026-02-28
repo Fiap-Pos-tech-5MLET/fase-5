@@ -6,7 +6,6 @@ services:
     runtime: docker
     env: docker
     plan: free
-    region: oregon
     dockerfilePath: ./Dockerfile
     dockerContext: ./
     region: virginia
