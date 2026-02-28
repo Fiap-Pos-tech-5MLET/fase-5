@@ -2,7 +2,7 @@ services:
   - type: web
     name: Datathon - Machine Learning Engineering
     repo: https://github.com/Fiap-Pos-tech-5MLET/fase-5
-    branch: feature/lucas_machado
+    branch: main
     runtime: docker
     env: docker
     plan: free
