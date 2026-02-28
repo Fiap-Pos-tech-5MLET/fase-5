@@ -37,6 +37,7 @@ from app.dashboard.pages.prediction import render_prediction_page
 from app.dashboard.pages.retrain import render_retrain_page
 from app.dashboard.sidebar import render_sidebar
 from app.dashboard.styles import apply_custom_css
+from app.config import RAW_DATA_PATH
 
 configure_page()
 apply_custom_css()
@@ -61,7 +62,7 @@ elif page == "📊 Métricas do Modelo":
         CLASS_REPORT_PATH,
     )
 elif page == "🔄 Monitoramento de Drift":
-    render_drift_page(DRIFT_REPORT_PATH)
+    render_drift_page(RAW_DATA_PATH, DRIFT_REPORT_PATH)
 elif page == "⚙️ Retreinamento":
     render_retrain_page(model, API_URL, load_dataset, get_model_metrics, load_model)
 elif page == "ℹ️ Sobre o Projeto":
