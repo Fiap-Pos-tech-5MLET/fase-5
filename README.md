@@ -106,6 +106,7 @@ Com base no dataset de desenvolvimento educacional dos anos **2022, 2023 e 2024*
 |------------|-----------|----------------------|
 | 🐳 **Docker** | Containerização | Imagem única para execução em produção |
 | 🐙 **Docker Compose** | Orquestração local | Execução local simplificada |
+| 🏗️ **Render IaC (`render.yaml`)** | Infra as Code | Contrato de deploy e variáveis operacionais |
 | 🔄 **GitHub Actions** | CI/CD | Pipelines por branch (feature/develop/main) |
 | 🤖 **GitHub Copilot** | IA | Apoio em revisão de código e padronização |
 
@@ -422,8 +423,9 @@ flowchart LR
     P2_6 --> APR2([Merge main]):::event
     APR2 --> P3_1
     subgraph P3 [3. Pipeline Main]
-    P3_1(Validar Origem PR):::prod --> P3_2(Smoke Tests):::prod
-        P3_2 --> P3_3(Build Docker):::prod
+    P3_1(Validar Origem PR):::prod --> P3_1a(Validar render.yaml):::prod
+    P3_1a --> P3_2(Smoke Tests):::prod
+      P3_2 --> P3_3(Build Docker):::prod
     P3_3 --> P3_4(Deploy Render):::prod
     P3_4 --> P3_5(Post-Deploy Smoke):::prod
     P3_5 --> P3_6(Auto Rollback em Falha):::prod
@@ -444,7 +446,7 @@ flowchart LR
 
 3. **Main Pipeline** (`main-pipeline.yml`)
   - Executa apenas em `push` na branch `main`
-  - Faz smoke tests, build Docker e deploy no Render via deploy hook
+  - Valida `render.yaml`, executa smoke tests, build Docker e deploy no Render via deploy hook
   - Executa smoke pós-deploy e rollback automático em falhas
 
 4. **IssueOps Rollback** (`issue-ops-rollback.yml`)
