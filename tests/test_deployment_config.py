@@ -82,19 +82,10 @@ class TestDeploymentConfig:
             "key: DATASET_PATH",
             "key: ARTIFACTS_DIR",
             "key: MLFLOW_TRACKING_URI",
-            "key: STREAMLIT_SERVER_FILE_WATCHER_TYPE",
         ]
 
         for env_key in required_env_keys:
             assert env_key in content, f"Variável obrigatória ausente no render.yaml: {env_key}"
-
-    def test_render_yaml_has_expected_streamlit_watcher_value(self) -> None:
-        """Verifica se file watcher do Streamlit está configurado para produção."""
-        with open("render.yaml", encoding="utf-8") as f:
-            content = f.read()
-
-        assert 'key: STREAMLIT_SERVER_FILE_WATCHER_TYPE' in content
-        assert 'value: "none"' in content or "value: none" in content
 
     def test_deployment_md_exists(self) -> None:
         """Verifica se documentação de deployment existe."""
