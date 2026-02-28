@@ -106,6 +106,7 @@ Com base no dataset de desenvolvimento educacional dos anos **2022, 2023 e 2024*
 |------------|-----------|----------------------|
 | 🐳 **Docker** | Containerização | Imagem única para execução em produção |
 | 🐙 **Docker Compose** | Orquestração local | Execução local simplificada |
+| 🏗️ **Render IaC (`render.yaml`)** | Infra as Code | Contrato de deploy e variáveis operacionais |
 | 🔄 **GitHub Actions** | CI/CD | Pipelines por branch (feature/develop/main) |
 | 🤖 **GitHub Copilot** | IA | Apoio em revisão de código e padronização |
 
@@ -223,6 +224,7 @@ Estrutura atual (resumo dos diretórios e arquivos mais relevantes):
 fase-5/
 ├── .github/
 │   ├── copilot-instructions.md
+│   ├── copilot-operational-runbook.md
 │   └── workflows/
 │       ├── feature-pipeline.yml
 │       ├── develop-pipeline.yml
@@ -315,18 +317,28 @@ pip install -r requirements.txt
 
 #### 2. Configure variáveis de ambiente
 
-Crie o arquivo `.env` na raiz do projeto (use `.env.example` como base):
+Para a **Opção B (execução local manual)**, crie o arquivo `.env` na raiz do projeto
+(use `.env.example` como base):
 
 ```bash
-PROJECT_NAME="Tech Challenge Fase 5 - Associação Passos Mágicos"
 ENVIRONMENT=development
-DATASET_PATH=data/raw/passos_magicos_2022_2024.csv
+API_URL=http://127.0.0.1:8000
 MODEL_PATH=app/models/model.pkl
+DATASET_PATH=app/data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx
+ARTIFACTS_DIR=app/artifacts
+KEEP_ALIVE_INTERVAL=600
+MLFLOW_TRACKING_URI=file:./mlruns
+API_KEY=troque_para_uma_chave_forte_em_producao
 ```
+
+Observações rápidas:
+- Em Docker Compose, os padrões do projeto já cobrem a maior parte dos cenários locais.
+- Em produção no Render (serviço manual sem Blueprint), configure as variáveis no painel
+  **Service → Environment**.
 
 #### 3. Prepare os dados
 
-Coloque o dataset em `data/raw/` com o nome esperado pelo pipeline.
+Coloque o dataset em `app/data/raw/` com o nome esperado pelo pipeline.
 
 #### 4. Treine o modelo inicial
 
@@ -418,8 +430,9 @@ flowchart LR
     P2_6 --> APR2([Merge main]):::event
     APR2 --> P3_1
     subgraph P3 [3. Pipeline Main]
-    P3_1(Validar Origem PR):::prod --> P3_2(Smoke Tests):::prod
-        P3_2 --> P3_3(Build Docker):::prod
+    P3_1(Validar Origem PR):::prod --> P3_1a(Validar render.yaml):::prod
+    P3_1a --> P3_2(Smoke Tests):::prod
+      P3_2 --> P3_3(Build Docker):::prod
     P3_3 --> P3_4(Deploy Render):::prod
     P3_4 --> P3_5(Post-Deploy Smoke):::prod
     P3_5 --> P3_6(Auto Rollback em Falha):::prod
@@ -440,7 +453,7 @@ flowchart LR
 
 3. **Main Pipeline** (`main-pipeline.yml`)
   - Executa apenas em `push` na branch `main`
-  - Faz smoke tests, build Docker e deploy no Render via deploy hook
+  - Valida `render.yaml`, executa smoke tests, build Docker e deploy no Render via deploy hook
   - Executa smoke pós-deploy e rollback automático em falhas
 
 4. **IssueOps Rollback** (`issue-ops-rollback.yml`)
@@ -489,8 +502,10 @@ O projeto usa **GitHub Copilot** com instruções customizadas para padronizaç�
 - ✅ Convenções de nomenclatura e organização de código
 - ✅ Regras de segurança (inputs, segredos, erros)
 - ✅ Boas práticas de testes e cobertura
+- ✅ Protocolo de validação por tipo de mudança (código, scripts, docs e testes)
 
-As diretrizes estão em [.github/copilot-instructions.md](.github/copilot-instructions.md).
+As diretrizes estão em [.github/copilot-instructions.md](.github/copilot-instructions.md) e
+no runbook operacional [.github/copilot-operational-runbook.md](.github/copilot-operational-runbook.md).
 
 ---
 
@@ -647,6 +662,7 @@ Este projeto está licenciado sob a **Licença MIT**. Consulte o arquivo [LICENS
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Guia de contribuição
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Guia de deploy
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — Diretrizes de code review com IA
+- **[.github/copilot-operational-runbook.md](.github/copilot-operational-runbook.md)** — Runbook de validação e troubleshooting operacional
 
 ---
 

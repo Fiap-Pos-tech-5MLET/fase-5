@@ -11,11 +11,12 @@ import streamlit as st
 from scripts.monitoring import generate_drift_report
 
 
-def render_drift_page(drift_report_path: str) -> None:
+def render_drift_page(data_path: str, drift_report_path: str) -> None:
     """
     Renderiza a página de monitoramento de data drift.
 
     Args:
+        data_path (str): Caminho do arquivo de dados.
         drift_report_path (str): Caminho do relatório de drift.
 
     Returns:
@@ -72,7 +73,7 @@ def render_drift_page(drift_report_path: str) -> None:
         if st.button("🔄 Regenerar Relatório de Drift", type="primary"):
             with st.spinner("Gerando relatório de drift..."):
                 try:
-                    generate_drift_report()
+                    generate_drift_report(data_path, drift_report_path)
                     st.success(
                         "✅ Relatório regenerado com sucesso! "
                         "Recarregue a página para ver o novo relatório."
@@ -89,7 +90,7 @@ def render_drift_page(drift_report_path: str) -> None:
         if st.button("📊 Gerar Relatório de Drift", type="primary"):
             with st.spinner("Gerando relatório de drift..."):
                 try:
-                    generate_drift_report()
+                    generate_drift_report(data_path, drift_report_path)
                     st.success("✅ Relatório gerado com sucesso!")
                     st.rerun()
                 except (ImportError, OSError, RuntimeError, ValueError) as exc:

@@ -26,6 +26,41 @@ jobs:
       - name: Registrar início da etapa
         run: echo "STAGE_START=$(date +%s)" >> "$GITHUB_ENV"
 
+      - name: Validar configuração de deploy (render.yaml)
+        id: deploy-config-check
+        run: |
+          if ! python - <<'PY' 2>&1 | tee /tmp/deploy-config-check.log
+          from pathlib import Path
+
+          content = Path('render.yaml').read_text(encoding='utf-8')
+          required_entries = [
+              'env: docker',
+              'type: web',
+              'key: MODEL_PATH',
+              'key: DATASET_PATH',
+              'key: ARTIFACTS_DIR',
+              'key: MLFLOW_TRACKING_URI',
+          ]
+
+          missing = [entry for entry in required_entries if entry not in content]
+          if missing:
+              print('Entradas obrigatórias ausentes em render.yaml:')
+              for item in missing:
+                  print(f'- {item}')
+              raise SystemExit(1)
+
+          print('render.yaml validado com sucesso.')
+          PY
+          then
+            {
+              echo "### ❌ Falha na validação de deploy"
+              echo '```text'
+              tail -n 120 /tmp/deploy-config-check.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - name: Configurar Python
         id: setup-python
         uses: actions/setup-python@v5
@@ -79,6 +114,7 @@ jobs:
             echo "- **Duração**: ${DURATION}s"
             echo ""
             echo "### Detalhamento"
+            echo "- deploy-config-check: ${{ steps.deploy-config-check.outcome }}"
             echo "- setup-python: ${{ steps.setup-python.outcome }}"
             echo "- install-deps: ${{ steps.install-deps.outcome }}"
             echo "- smoke-check: ${{ steps.smoke-check.outcome }}"

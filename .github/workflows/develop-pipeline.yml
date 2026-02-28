@@ -221,6 +221,34 @@ jobs:
             exit 1
           fi
 
+          if ! python - <<'PY' 2>&1 | tee /tmp/detect-secrets-validate.log
+          import json
+
+          with open('.secrets.scan', encoding='utf-8') as f:
+              report = json.load(f)
+
+          results = report.get('results', {})
+          findings = sum(len(v) for v in results.values())
+
+          if findings > 0:
+              print(f'Foram detectados {findings} possíveis segredos no repositório.')
+              for file_path, items in results.items():
+                  if items:
+                      print(f'- {file_path}: {len(items)} ocorrência(s)')
+              raise SystemExit(1)
+
+          print('Nenhum segredo detectado.')
+          PY
+          then
+            {
+              echo "### ❌ Detect-Secrets encontrou possíveis segredos"
+              echo '```text'
+              tail -n 120 /tmp/detect-secrets-validate.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - name: Resumo da etapa Segurança
         if: always()
         run: |
