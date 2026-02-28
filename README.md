@@ -316,18 +316,24 @@ pip install -r requirements.txt
 
 #### 2. Configure variáveis de ambiente
 
-Crie o arquivo `.env` na raiz do projeto (use `.env.example` como base):
+Para a **Opção B (execução local manual)**, crie o arquivo `.env` na raiz do projeto
+(use `.env.example` como base):
 
 ```bash
-PROJECT_NAME="Tech Challenge Fase 5 - Associação Passos Mágicos"
 ENVIRONMENT=development
 API_URL=http://127.0.0.1:8000
 MODEL_PATH=app/models/model.pkl
 DATASET_PATH=app/data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx
 ARTIFACTS_DIR=app/artifacts
+KEEP_ALIVE_INTERVAL=600
 MLFLOW_TRACKING_URI=file:./mlruns
 API_KEY=troque_para_uma_chave_forte_em_producao
 ```
+
+Observações rápidas:
+- Em Docker Compose, os padrões do projeto já cobrem a maior parte dos cenários locais.
+- Em produção no Render (serviço manual sem Blueprint), configure as variáveis no painel
+  **Service → Environment**.
 
 #### 3. Prepare os dados
 
