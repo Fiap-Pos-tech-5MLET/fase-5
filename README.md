@@ -218,47 +218,107 @@ flowchart LR
 
 ## 🗂️ Estrutura de Diretórios
 
-Estrutura atual (resumo dos diretórios e arquivos mais relevantes):
+Estrutura atual detalhada (principais diretórios e arquivos):
 
 ```text
 fase-5/
-├── .github/
-│   ├── copilot-instructions.md
-│   ├── copilot-operational-runbook.md
-│   └── workflows/
-│       ├── feature-pipeline.yml
-│       ├── develop-pipeline.yml
-│       ├── main-pipeline.yml
-│       └── issue-ops-rollback.yml
-├── app/
-│   ├── main.py
-│   ├── dashboard.py
-│   ├── routes/
-│   ├── models/
-│   ├── dashboard/
-│   └── utils/
-├── src/
-│   ├── data_cleaning.py
-│   ├── feature_engineering.py
-│   └── model.py
-├── scripts/
-│   ├── train.py
-│   └── monitoring.py
-├── tests/
-├── notebooks/
-├── docker-compose.yml
-├── Dockerfile
-├── nginx.conf
-├── supervisord.conf
-├── render.yaml
-├── requirements.txt
-├── pyproject.toml
-├── pytest.ini
-├── Makefile
-├── DEPLOYMENT.md
-├── TESTING.md
-├── TESTING_STRATEGY.md
-└── README.md
+├── .github/                           # Workflows CI/CD e instruções para IA
+│   ├── copilot-instructions.md        # Diretrizes de code review
+│   ├── copilot-operational-runbook.md # Runbook operacional
+│   └── workflows/                     # Pipelines GitHub Actions
+│       ├── feature-pipeline.yml       # Pipeline para branches feature/*
+│       ├── develop-pipeline.yml       # Pipeline para branch develop
+│       ├── main-pipeline.yml          # Pipeline para branch main (produção)
+│       └── issue-ops-rollback.yml     # Workflow de rollback emergencial
+│
+├── app/                               # Aplicação principal (API + Dashboard)
+│   ├── main.py                        # FastAPI application (root_path="/api")
+│   ├── dashboard.py                   # Entry point do dashboard Streamlit
+│   ├── config.py                      # Configurações da aplicação
+│   ├── routes/                        # Rotas da API
+│   │   ├── predict_route.py           # Endpoint de predição
+│   │   ├── train_route.py             # Endpoints de retreinamento (champion/challenger)
+│   │   └── audit_route.py             # Endpoints de auditoria e monitoramento
+│   ├── models/                        # Artefatos de modelos treinados
+│   │   ├── model.pkl                  # Modelo champion em produção
+│   │   ├── champion_run_id.txt        # Run ID do modelo em produção
+│   │   └── candidate_run_id.txt       # Run ID do modelo candidato
+│   ├── dashboard/                     # Módulos do dashboard Streamlit
+│   │   ├── config.py                  # Configuração do dashboard
+│   │   ├── data.py                    # Funções de carregamento de dados
+│   │   ├── sidebar.py                 # Barra lateral do dashboard
+│   │   ├── styles.py                  # Estilos CSS customizados
+│   │   └── pages/                     # Páginas do dashboard
+│   │       ├── prediction.py          # Página de predição
+│   │       ├── metrics.py             # Página de métricas
+│   │       ├── drift.py               # Página de análise de drift
+│   │       ├── retrain.py             # Página de retreinamento
+│   │       └── about.py               # Página sobre o projeto
+│   ├── utils/                         # Utilitários
+│   │   ├── model_loader.py            # Carregamento e validação de modelos
+│   │   ├── security.py                # Validação de API key
+│   │   ├── structured_logging.py      # Logging estruturado em JSON
+│   │   ├── xai.py                     # Explicabilidade (SHAP/LIME)
+│   │   └── keep_alive.py              # Keep-alive para Render free tier
+│   ├── data/                          # Dados brutos e processados
+│   └── artifacts/                     # Artefatos de treinamento
+│
+├── src/                               # Pipeline de dados e ML
+│   ├── data_cleaning.py               # Limpeza e preparação de dados
+│   ├── feature_engineering.py         # Engenharia de features
+│   ├── feature_store.py               # Armazenamento de features
+│   └── model.py                       # Definição e treinamento de modelos
+│
+├── scripts/                           # Scripts de automação
+│   ├── train.py                       # Script principal de treinamento
+│   └── monitoring.py                  # Scripts de monitoramento
+│
+├── tests/                             # Suite completa de testes (85%+ cobertura)
+│   ├── conftest.py                    # Fixtures e configuração pytest
+│   ├── test_app_config.py             # Testes de configuração da app
+│   ├── test_main.py                   # Testes da aplicação FastAPI
+│   ├── test_predict_route.py          # Testes do endpoint de predição
+│   ├── test_train_route.py            # Testes dos endpoints de retreinamento
+│   ├── test_audit_route.py            # Testes dos endpoints de auditoria
+│   ├── test_schemas.py                # Testes de validação de schemas
+│   ├── test_model_loader.py           # Testes do carregador de modelos
+│   ├── test_security.py               # Testes de segurança (API key)
+│   ├── test_structured_logging.py     # Testes de logging
+│   ├── test_xai_utils.py              # Testes de explicabilidade
+│   ├── test_keep_alive.py             # Testes de keep-alive
+│   ├── test_data_cleaning.py          # Testes de limpeza de dados
+│   ├── test_feature_engineering.py    # Testes de feature engineering
+│   ├── test_feature_store.py          # Testes de feature store
+│   ├── test_model.py                  # Testes de treinamento de modelo
+│   ├── test_dashboard*.py             # Testes do dashboard (múltiplos arquivos)
+│   └── test_deployment_config.py      # Testes de configuração de deploy
+│
+├── notebooks/                         # Notebooks Jupyter para análises
+│   ├── data_preprocessing_passos_magicos.ipynb
+│   └── DATATHON-PASSOS-MÁGICOS.ipynb
+│
+├── k8s/                               # Manifestos Kubernetes (opcional)
+│   ├── api-deployment.yaml
+│   ├── api-service.yaml
+│   └── README.md
+│
+├── htmlcov/                           # Relatórios de cobertura HTML
+│
+├── docker-compose.yml                 # Orquestração local (desenvolvimento)
+├── Dockerfile                         # Imagem Docker de produção
+├── nginx.conf                         # Configuração do reverse proxy
+├── supervisord.conf                   # Orquestração de processos no container
+├── render.yaml                        # IaC para deploy no Render
+├── requirements.txt                   # Dependências Python
+├── pyproject.toml                     # Configuração de ferramentas Python
+├── pytest.ini                         # Configuração do pytest
+├── Makefile                           # Comandos de automação
+├── DEPLOYMENT.md                      # Guia de deploy
+├── TESTING.md                         # Guia de testes
+├── TESTING_STRATEGY.md                # Estratégia de testes
+├── IMPLEMENTATION_SUMMARY.md          # Resumo de implementação
+├── CONTRIBUTING.md                    # Guia de contribuição
+└── README.md                          # Este arquivo
 ```
 
 ---
@@ -372,32 +432,175 @@ Dashboard local: `http://127.0.0.1:8501`
 
 ## ✅ Testes e Validações
 
-O projeto utiliza testes automatizados e validações de qualidade com meta mínima de **85%** de cobertura.
+O projeto utiliza uma estratégia abrangente de testes automatizados com **meta mínima de 85%** de cobertura, garantindo qualidade e confiabilidade do código.
 
-### Executar testes
+### 📊 Cobertura de Código
+
+Os testes cobrem os seguintes diretórios principais:
+
+- **`src/`** — Pipeline de dados e ML (data cleaning, feature engineering, feature store, modelo)
+- **`app/`** — Aplicação completa (API FastAPI, Dashboard Streamlit, rotas, utilitários)
+
+### 🧪 Tipos de Testes
+
+A suite de testes está organizada por categorias:
+
+#### 1. Testes de API e Rotas
+- **`test_main.py`** — Aplicação FastAPI principal
+- **`test_predict_route.py`** — Endpoint de predição e XAI
+- **`test_train_route.py`** — Endpoints de retreinamento (champion/challenger)
+- **`test_audit_route.py`** — Endpoints de auditoria e monitoramento
+- **`test_schemas.py`** — Validação de schemas Pydantic
+
+#### 2. Testes de Pipeline de Dados e ML
+- **`test_data_cleaning.py`** — Limpeza e preparação de dados
+- **`test_feature_engineering.py`** — Engenharia de features
+- **`test_feature_store.py`** — Armazenamento de features
+- **`test_model.py`** — Treinamento e validação de modelos
+
+#### 3. Testes de Dashboard
+- **`test_dashboard.py`** — Testes gerais do dashboard
+- **`test_dashboard_config.py`** — Configuração do dashboard
+- **`test_dashboard_data.py`** — Funções de carregamento de dados
+- **`test_dashboard_pages.py`** — Páginas do dashboard
+- **`test_dashboard_sidebar.py`** — Barra lateral
+- **`test_dashboard_styles.py`** — Estilos customizados
+- **`test_dashboard_entry.py`** — Entry point e roteamento
+- **`test_dashboard_rendering.py`** — Renderização de componentes
+
+#### 4. Testes de Utilitários
+- **`test_model_loader.py`** — Carregamento e validação de modelos
+- **`test_xai_utils.py`** — Explicabilidade (SHAP/LIME)
+- **`test_structured_logging.py`** — Logging estruturado
+- **`test_keep_alive.py`** — Keep-alive para Render
+
+#### 5. Testes de Configuração e Infraestrutura
+- **`test_app_config.py`** — Configurações da aplicação
+- **`test_deployment_config.py`** — Validação de configuração de deploy (render.yaml)
+
+### 🏷️ Markers de Testes
+
+Os testes estão organizados com markers pytest para execução seletiva:
 
 ```bash
-# Todos os testes
-pytest tests/ -v
+# Apenas testes unitários
+pytest -m unit
 
-# Cobertura
-pytest tests/ --cov=src --cov=app --cov-report=term-missing -v
+# Apenas testes de integração
+pytest -m integration
 
-# Relatório HTML
-pytest tests/ --cov=src --cov=app --cov-report=html
+# Testes específicos de API
+pytest -m api
+
+# Testes de pipeline de dados
+pytest -m "data_loading or data_cleaning or feature_engineering"
+
+# Testes do dashboard
+pytest -m dashboard
 ```
 
-### Verificação de qualidade
+**Markers disponíveis:**
+- `unit` — Testes unitários para funções/classes individuais
+- `integration` — Testes de integração para funcionalidades combinadas
+- `api` — Testes de endpoints da API
+- `schemas` — Testes de validação de schemas Pydantic
+- `dashboard` — Testes do dashboard Streamlit
+- `data_loading` — Testes de carregamento de dados
+- `data_cleaning` — Testes de limpeza de dados
+- `feature_engineering` — Testes de feature engineering
+- `model_training` — Testes de treinamento de modelo
+- `slow` — Testes que demandam mais tempo
+- `gpu` — Testes que requerem GPU (se aplicável)
+
+### 🚀 Executar Testes
+
+#### Execução básica
 
 ```bash
+# Todos os testes com output verbose
+pytest tests/ -v
+
+# Testes com cobertura
+pytest tests/ --cov=src --cov=app --cov-report=term-missing -v
+
+# Relatório HTML de cobertura (gerado em htmlcov/)
+pytest tests/ --cov=src --cov=app --cov-report=html
+
+# Executar teste específico
+pytest tests/test_predict_route.py -v
+
+# Executar testes com palavra-chave
+pytest -k "test_predict" -v
+```
+
+#### Execução com markers
+
+```bash
+# Apenas testes unitários
+pytest -m unit -v
+
+# Apenas testes de API
+pytest -m api -v
+
+# Testes rápidos (excluindo lentos)
+pytest -m "not slow" -v
+```
+
+### 🔍 Verificação de Qualidade
+
+O projeto utiliza múltiplas ferramentas para garantir qualidade de código:
+
+```bash
+# Formatação automática com Ruff
 make format
+
+# Linting (análise estática)
 make lint
+
+# Verificação de tipos com MyPy
 make type-check
+
+# Análise de segurança (Bandit + detect-secrets)
 make security
+
+# Verificação completa de qualidade
 make quality
 ```
 
-Para mais detalhes, consulte [TESTING.md](TESTING.md).
+### 📈 Relatórios de Cobertura
+
+Após executar os testes com cobertura, os relatórios ficam disponíveis em:
+
+- **Terminal:** resumo com linhas não cobertas
+- **HTML:** relatório detalhado em `htmlcov/index.html` (abrir no navegador)
+
+```bash
+# Gerar e abrir relatório HTML
+pytest tests/ --cov=src --cov=app --cov-report=html
+# Windows
+start htmlcov/index.html
+# Linux/macOS
+open htmlcov/index.html
+```
+
+### 🧩 Fixtures e Configuração
+
+O arquivo **`tests/conftest.py`** contém:
+
+- Mocks de bibliotecas pesadas (MLflow, Streamlit, Plotly)
+- Configuração de paths do projeto
+- Fixtures compartilhadas entre testes
+- Configuração de markers pytest
+- Seed para reprodutibilidade de testes
+
+Esta abordagem garante que os testes executem rapidamente sem dependências externas pesadas.
+
+### 📚 Documentação Adicional
+
+Para informações mais detalhadas sobre estratégias e boas práticas de testes:
+
+- **[TESTING.md](TESTING.md)** — Guia completo de testes e cobertura
+- **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** — Estratégia e arquitetura de testes
 
 ---
 

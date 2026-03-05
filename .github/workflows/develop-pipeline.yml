@@ -137,6 +137,7 @@ jobs:
           if ! pytest tests/ \
             --cov=app \
             --cov=src \
+            --cov=scripts \
             --cov-report=term-missing \
             --cov-report=xml 2>&1 | tee /tmp/pytest-coverage.log; then
             {
