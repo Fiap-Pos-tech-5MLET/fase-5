@@ -160,9 +160,9 @@ def main(
     Returns:
         Tuple[Dict[str, Any], str]: Métricas de avaliação e run_id do MLflow.
     """
-    DATA_PATH = data_path or "data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
-    MODEL_PATH = model_path or "models/model.pkl"
-    ARTIFACTS_DIR = artifacts_dir or "models/artifacts"
+    DATA_PATH = data_path or "app/data/raw/BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+    MODEL_PATH = model_path or "app/models/model.pkl"
+    ARTIFACTS_DIR = artifacts_dir or "app/models/artifacts"
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
