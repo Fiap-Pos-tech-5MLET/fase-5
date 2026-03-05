@@ -5,18 +5,18 @@ Testa funções de feature engineering específicas do domínio educacional,
 incluindo normalização de fases e criação de flags de condição.
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from scripts.notebook_feature_engineering import (
-    obter_nova_turma,
+    aplicar_transformacoes_fase_turma,
+    criar_coluna_em_fase,
+    criar_coluna_veterano,
     obter_nova_fase,
     obter_nova_fase_24,
+    obter_nova_turma,
     obter_nova_turma_24,
-    criar_coluna_veterano,
-    criar_coluna_em_fase,
-    aplicar_transformacoes_fase_turma,
 )
 
 

@@ -169,7 +169,7 @@ def perform_cross_validation(
     skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=random_state)
 
     # Armazenamento de métricas
-    metricas = {
+    metricas: Dict[str, List[Any]] = {
         "accuracy": [],
         "precision": [],
         "recall": [],

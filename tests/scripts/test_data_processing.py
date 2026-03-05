@@ -8,20 +8,21 @@ Testa funções de processamento e limpeza de dados, incluindo:
 - Operações de conjuntos
 """
 
-import pytest
-import pandas as pd
-import numpy as np
 from datetime import datetime
 
+import numpy as np
+import pandas as pd
+import pytest
+
 from scripts.data_processing import (
-    padronizar_colunas_ano,
     adicionar_colunas_vazias,
     analise_nulos,
     calcular_idade_2023,
-    obter_elementos_comuns,
-    renomear_colunas_ano,
-    filtrar_colunas_relevantes,
     consolidar_dataframes,
+    filtrar_colunas_relevantes,
+    obter_elementos_comuns,
+    padronizar_colunas_ano,
+    renomear_colunas_ano,
 )
 
 

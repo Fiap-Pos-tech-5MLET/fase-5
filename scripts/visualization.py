@@ -65,7 +65,7 @@ def plot_exact_counter(
     )
 
     # Anotações com valor e porcentagem
-    for bar, count, pct in zip(bars, contagens["count"], contagens["percentage"]):
+    for bar, count, pct in zip(bars, contagens["count"], contagens["percentage"], strict=False):
         height = bar.get_height()
         ax.text(
             bar.get_x() + bar.get_width() / 2.0,
@@ -117,10 +117,7 @@ def analyse_corr(
         >>> plt.close(fig)  # Fecha para não exibir em testes
     """
     # Seleciona colunas
-    if colunas is None:
-        df_corr = df.select_dtypes(include=[np.number])
-    else:
-        df_corr = df[colunas]
+    df_corr = df.select_dtypes(include=[np.number]) if colunas is None else df[colunas]
 
     # Calcula correlação
     corr_matrix = df_corr.corr()
@@ -205,7 +202,7 @@ def plot_distribuicao_target(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    wedges, texts, autotexts = ax.pie(
+    _wedges, _texts, autotexts = ax.pie(
         contagens.values,
         labels=labels,
         autopct="%1.1f%%",
@@ -215,7 +212,7 @@ def plot_distribuicao_target(
     )
 
     # Adiciona contagem absoluta
-    for i, (autotext, count) in enumerate(zip(autotexts, contagens.values)):
+    for i, (autotext, count) in enumerate(zip(autotexts, contagens.values, strict=False)):
         autotext.set_text(f"{autotext.get_text()}\n(n={count})")
 
     ax.set_title(titulo, fontsize=14, fontweight="bold", pad=20)
@@ -262,7 +259,7 @@ def plot_feature_importance(
     bars = ax.barh(df_imp["feature"], df_imp["importance"], color=colors, edgecolor="black")
 
     # Anotações
-    for bar, imp in zip(bars, df_imp["importance"]):
+    for bar, imp in zip(bars, df_imp["importance"], strict=False):
         ax.text(
             imp,
             bar.get_y() + bar.get_height() / 2.0,
