@@ -63,6 +63,42 @@ make quality
 
 ## 3) Escopo coberto
 
+### 📂 Estrutura Hierárquica de Testes (NOVO)
+
+O projeto utiliza uma estrutura organizada de testes para facilitar navegação e manutenção:
+
+```
+tests/
+├── conftest.py                    # Configuração global (fixtures, mocks)
+├── utils_streamlit.py             # Utilitários para tests do dashboard
+├── app/                           # Testes de app/ (FastAPI + Dashboard)
+│   ├── 18 arquivos de teste
+│   └── Cobertura: endpoints, dashboard, config, logging, XAI
+├── src/                           # Testes de src/ (Pipeline ML)
+│   ├── 4 arquivos de teste
+│   └── Cobertura: data cleaning, feature engineering, model
+├── scripts/                       # Testes de scripts/ (Utilitários) ⭐ NOVO
+│   ├── test_data_processing.py       (28 testes)
+│   ├── test_eda_analysis.py          (22 testes)
+│   ├── test_notebook_feature_engineering.py (22 testes)
+│   ├── test_visualization.py         (26 testes)
+│   └── Cobertura total: 98+ testes
+└── integration/                   # Testes de integração
+    └── test_deployment_config.py  (validação de render.yaml)
+```
+
+**Execução por diretório:**
+
+```bash
+pytest tests/app/ -v              # Testes de API e Dashboard
+pytest tests/src/ -v              # Testes de Pipeline ML
+pytest tests/scripts/ -v          # Testes de Scripts Utilitários (NOVO)
+pytest tests/integration/ -v      # Testes de Integração
+pytest tests/ -v                  # Todos os testes
+```
+
+---
+
 Os testes do diretório `tests/` cobrem os seguintes diretórios e módulos:
 
 ### Diretórios cobertos pela cobertura (conforme pytest.ini)
@@ -113,6 +149,29 @@ Os testes do diretório `tests/` cobrem os seguintes diretórios e módulos:
 - `test_keep_alive.py` — keep-alive para Render
 - `test_app_config.py` — configurações da aplicação
 - `test_deployment_config.py` — validação de render.yaml
+
+#### Scripts Utilitários (tests/scripts/) ⭐ NOVO
+- `test_data_processing.py` — ETL e consolidação de dataframes (28 testes)
+  - Padronização de colunas por ano
+  - Análise de valores nulos
+  - Cálculo de idade a partir de data de nascimento
+  - Consolidação de múltiplos dataframes
+  
+- `test_notebook_feature_engineering.py` — transformações de domínio (22 testes)
+  - Criação de features: NOVA_TURMA, NOVA_FASE, VETERANO
+  - Validação de regras de negócio
+  - Edge cases: valores '9' como válidos em 2024
+  
+- `test_eda_analysis.py` — análise estatística (22 testes)
+  - Testes de normalidade (Shapiro-Wilk, D'Agostino K²)
+  - Transformações logarítmicas para redução de skewness
+  - Validação cruzada estratificada com métricas completas
+  
+- `test_visualization.py` — funções de plotagem (26 testes)
+  - Gráficos de contagem com porcentagens
+  - Heatmaps de correlação
+  - Distribuição de target
+  - Feature importance
 
 ### Markers disponíveis
 
