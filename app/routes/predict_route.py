@@ -12,11 +12,12 @@ import logging
 from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import FeatureContribution, PredictionResponse, StudentData
 from app.utils.model_loader import get_current_model, load_model
+from app.utils.security import validate_requested_by
 from app.utils.structured_logging import log_with_request
 from app.utils.xai import explain_prediction
 from src.data_cleaning import clean_data, handle_missing_values
@@ -58,6 +59,7 @@ async def predict(
         ),
     ],
     request: Request,
+    requested_by: Annotated[str, Depends(validate_requested_by)],
 ) -> PredictionResponse:
     """
     Realiza predicao de risco de defasagem escolar.
@@ -89,8 +91,6 @@ async def predict(
     model = get_current_model()
     if model is None:
         model, _ = load_model()
-    requested_by = request.headers.get("x-requested-by", "unknown")
-
     if not model:
         log_with_request(
             logger=logger,

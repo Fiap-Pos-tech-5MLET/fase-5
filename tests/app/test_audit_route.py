@@ -25,7 +25,7 @@ def api_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app, raise_server_exceptions=False)
-    client.headers.update({"X-API-KEY": "test-api-key"})
+    client.headers.update({"X-API-KEY": "test-api-key", "x-requested-by": "test-suite"})
     return client
 
 
@@ -358,6 +358,7 @@ class TestUpdateDataRoute:
         app = FastAPI()
         app.include_router(router)
         client = TestClient(app, raise_server_exceptions=False)
+        client.headers.update({"x-requested-by": "test-suite"})
         # ⚠️ NO header - will be rejected since X-API-KEY is not set
 
         files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
