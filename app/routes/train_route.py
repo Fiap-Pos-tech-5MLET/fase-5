@@ -99,6 +99,9 @@ async def retrain(
         # Convert k=None to 'all' for SelectKBest
         k_value = params.k if params.k is not None else "all"
 
+        # Obter caminho dinâmico do dataset ANTES de treinar
+        dataset_path = _get_latest_dataset_path()
+
         log_with_request(
             logger=logger,
             level=logging.INFO,
@@ -106,6 +109,7 @@ async def retrain(
             request=request,
             requested_by=params.requested_by,
             status="started",
+            dataset_path=dataset_path,
             n_estimators=params.n_estimators,
             max_depth=params.max_depth,
             min_samples_split=params.min_samples_split,
@@ -113,8 +117,13 @@ async def retrain(
             test_size=params.test_size,
         )
 
+        # Construir caminho completo do dataset
+        from pathlib import Path
+        dataset_full_path = str(Path("app/data/raw") / dataset_path) if dataset_path != "unknown" else None
+
         result = await run_in_threadpool(
             run_training,
+            data_path=dataset_full_path,
             model_path=candidate_path,
             n_estimators=params.n_estimators,
             max_depth=params.max_depth,
@@ -137,7 +146,8 @@ async def retrain(
             requested_by=params.requested_by,
             status="success",
             run_id=run_id,
-            dataset_path=_get_latest_dataset_path(),
+            dataset_path=dataset_path,
+            model_path=candidate_path,
         )
 
         return {
