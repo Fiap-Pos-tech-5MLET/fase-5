@@ -24,7 +24,7 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
         None
     """
     st.markdown("# 🔮 Predição de Risco de Defasagem")
-    st.markdown("Preencha as 14 variáveis do modelo para obter a predição de risco.")
+    st.markdown("Preencha as 13 variáveis do modelo para obter a predição de risco.")
 
     if not api_healthy:
         st.error("⚠️ API não disponível. Verifique a conexão com o servidor de predição.")
@@ -47,8 +47,6 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
         qtde_aval_realizadas = st.number_input(
             "Qtde. Avaliações Realizadas", min_value=0, max_value=20, value=4, step=1
         )
-        instituicao_label = st.selectbox("Instituição de Ensino", ["Pública", "Privada"])
-        instituicao_ensino_mapped = 0 if instituicao_label == "Pública" else 1
 
     with col2:
         veterano = st.selectbox("Veterano", ["Não", "Sim"])
@@ -112,7 +110,6 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
         "veterano": 1.0 if veterano == "Sim" else 0.0,
         "em_fase": 1.0 if em_fase == "Sim" else 0.0,
         "qtde_aval_realizadas": float(qtde_aval_realizadas),
-        "instituicao_ensino_mapped": float(instituicao_ensino_mapped),
         "iaa": float(iaa),
         "ieg": float(ieg),
         "ips": float(ips),
