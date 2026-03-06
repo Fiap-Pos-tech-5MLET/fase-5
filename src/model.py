@@ -7,20 +7,20 @@ treinar modelos LightGBM e avaliar performance.
 
 import logging
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import joblib
 import numpy as np
 import pandas as pd
 
-LGBMClassifier: Any
+if TYPE_CHECKING:
+    from lightgbm import LGBMClassifier
+else:
+    try:
+        from lightgbm import LGBMClassifier
+    except ImportError:
+        LGBMClassifier = None
 
-try:
-    from lightgbm import LGBMClassifier as _LGBMClassifier
-
-    LGBMClassifier = _LGBMClassifier
-except ImportError:
-    LGBMClassifier = None
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.feature_selection import SelectKBest, f_classif
