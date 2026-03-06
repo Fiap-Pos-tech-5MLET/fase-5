@@ -12,6 +12,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 import mlflow
 import uvicorn
 from fastapi import FastAPI, Request
@@ -23,6 +25,8 @@ from app.routes.train_route import router as train_router
 from app.utils.keep_alive import start_keep_alive
 from app.utils.model_loader import load_model
 from app.utils.structured_logging import log_with_request
+
+load_dotenv()  # Carrega variáveis de ambiente do arquivo .env
 
 # Configure structured logging
 logging.basicConfig(
