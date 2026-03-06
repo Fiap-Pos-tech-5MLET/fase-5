@@ -207,7 +207,7 @@ class TestDashboardPages:
 
         data_path = tmp_path / "data.csv"
         data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
-        
+
         report_path = tmp_path / "report.html"
         report_path.write_text("<html>ok</html>", encoding="utf-8")
 

@@ -140,7 +140,7 @@ def test_render_drift_page_with_existing_report(tmp_path, monkeypatch) -> None:
 
     data_path = tmp_path / "data.csv"
     data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
-    
+
     report_path = tmp_path / "report.html"
     report_path.write_text("<html>ok</html>", encoding="utf-8")
 
@@ -161,7 +161,7 @@ def test_render_drift_page_missing_report(tmp_path, monkeypatch) -> None:
 
     data_path = tmp_path / "data.csv"
     data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
-    
+
     missing_path = tmp_path / "missing.html"
     generate_mock = MagicMock()
     monkeypatch.setattr(drift_page, "generate_drift_report", generate_mock)
@@ -176,10 +176,10 @@ def test_render_drift_page_missing_report_error(tmp_path, monkeypatch) -> None:
     """Deve exibir erro quando geração falha sem relatório prévio."""
     st = make_streamlit_mock()
     monkeypatch.setattr(drift_page, "st", st)
-    
+
     data_path = tmp_path / "data.csv"
     data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
-    
+
     missing_path = tmp_path / "missing.html"
 
     def _raise(data_path: str, report_path: str) -> None:
@@ -201,7 +201,7 @@ def test_render_drift_page_generate_error(tmp_path, monkeypatch) -> None:
 
     data_path = tmp_path / "data.csv"
     data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
-    
+
     report_path = tmp_path / "report.html"
     report_path.write_text("<html>ok</html>", encoding="utf-8")
 

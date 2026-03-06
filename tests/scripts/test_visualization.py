@@ -227,7 +227,7 @@ class TestAnalyseCorr:
         # Act: DataFrame vazio com coluna inexistente retorna sem exception
         # Deve passar um target_col válido que existe
         result = analyse_corr(df_vazio)
-        
+
         # Assert: função retorna figura mesmo para DataFrame vazio
         assert isinstance(result, plt.Figure)
 
@@ -444,9 +444,9 @@ class TestEdgeCasesVisualization:
 
         # Act: função retorna figura mesmo com série vazia
         fig = plot_distribuicao_target(y_vazio)
-        
+
         # Assert: retorna figura válida
-        assert fig is None or isinstance(fig, (plt.Figure, type(None)))
+        assert fig is None or isinstance(fig, plt.Figure | type(None))
 
     def test_importances_tamanho_diferente(self):
         """Testa feature importance com arrays de tamanhos diferentes."""

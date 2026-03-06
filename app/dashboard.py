@@ -5,9 +5,9 @@ Painel interativo para predição de risco de defasagem escolar,
 monitoramento de drift e visualização de métricas do modelo.
 """
 
+import sys
 from datetime import datetime
 from pathlib import Path
-import sys
 
 import streamlit as st
 
@@ -15,6 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.config import RAW_DATA_PATH
 from app.dashboard.config import (
     API_URL,
     CLASS_REPORT_PATH,
@@ -38,7 +39,6 @@ from app.dashboard.pages.prediction import render_prediction_page
 from app.dashboard.pages.retrain import render_retrain_page
 from app.dashboard.sidebar import render_sidebar
 from app.dashboard.styles import apply_custom_css
-from app.config import RAW_DATA_PATH
 
 configure_page()
 apply_custom_css()

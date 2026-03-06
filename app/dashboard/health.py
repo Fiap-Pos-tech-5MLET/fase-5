@@ -6,6 +6,7 @@ sem necessidade de acessar o filesystem.
 """
 
 from typing import Optional
+
 import requests
 import streamlit as st
 

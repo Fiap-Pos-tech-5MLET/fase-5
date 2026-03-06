@@ -463,7 +463,7 @@ class TestModelValidation:
 
         for key, value in metrics.items():
             # Métricas devem ser numbers ou dicts (no caso de classification_report)
-            assert isinstance(value, (int, float, dict)) or hasattr(value, "__iter__")
+            assert isinstance(value, int | float | dict) or hasattr(value, "__iter__")
 
     def test_model_accuracy_in_metrics(
         self, sample_dataframe, numeric_features, categorical_features

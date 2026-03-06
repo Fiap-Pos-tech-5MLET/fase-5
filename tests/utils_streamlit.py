@@ -37,7 +37,7 @@ def make_streamlit_mock() -> MagicMock:
     st.sidebar = DummyContext()
 
     def _columns(count: int | list[int] | tuple[int, ...]) -> List[DummyContext]:
-        size = len(count) if isinstance(count, (list, tuple)) else int(count)
+        size = len(count) if isinstance(count, list | tuple) else int(count)
         return [DummyContext() for _ in range(size)]
 
     def _tabs(labels: Iterable[str]) -> List[DummyContext]:

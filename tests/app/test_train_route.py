@@ -507,8 +507,7 @@ class TestTrainRouteParameters:
 
     def test_retrain_request_structure(self) -> None:
         """Testa estrutura de RetrainRequest."""
-        from app.models.schemas import RetrainRequest
-        
+
         # Deve ter estes atributos
         fields = RetrainRequest.model_fields.keys()
         assert "requested_by" in fields
@@ -518,8 +517,7 @@ class TestTrainRouteParameters:
 
     def test_retrain_with_default_k(self) -> None:
         """Testa que k padrão é None quando não fornecido."""
-        from app.models.schemas import RetrainRequest
-        
+
         # Sem fornecer k
         params = RetrainRequest(
             requested_by="lucas_admin",
@@ -531,8 +529,7 @@ class TestTrainRouteParameters:
 
     def test_retrain_with_custom_k(self, valid_retrain_params) -> None:
         """Testa que k pode ser um inteiro customizado."""
-        from app.models.schemas import RetrainRequest
-        
+
         # valid_retrain_params já tem k=10
         params = RetrainRequest(**valid_retrain_params)
         assert params.k == 10
@@ -548,10 +545,10 @@ class TestErrorResponses:
         from app.routes.train_route import router
         app.include_router(router)
         client = TestClient(app, raise_server_exceptions=False)
-        
+
         # Sem header de API Key
         response = client.post("/retrain", json={"requested_by": "test"})
-        
+
         # Deve retornar 403 ou 401
         assert response.status_code in [401, 403]
 
@@ -567,6 +564,6 @@ class TestErrorResponses:
                     "min_samples_split": 2,
                 }
             )
-            
+
             # Deve ser um erro HTTP
             assert response.status_code >= 400

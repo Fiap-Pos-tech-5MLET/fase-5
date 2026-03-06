@@ -212,7 +212,7 @@ def plot_distribuicao_target(
     )
 
     # Adiciona contagem absoluta
-    for autotext, count in zip(autotexts, contagens.values):
+    for autotext, count in zip(autotexts, contagens.values, strict=False):
         autotext.set_text(f"{autotext.get_text()}\n(n={count})")
 
     ax.set_title(titulo, fontsize=14, fontweight="bold", pad=20)

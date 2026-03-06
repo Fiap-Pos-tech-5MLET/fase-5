@@ -3,12 +3,12 @@
 
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 os.chdir(ROOT)
 
-ARCHIVE_DIR = f"archive_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+ARCHIVE_DIR = f"archive_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
 
 
 def main():

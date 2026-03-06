@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 import pandas as pd
@@ -52,7 +52,7 @@ def persist_dataset_version(
     """
     os.makedirs(output_dir, exist_ok=True)
     version = compute_dataset_version(df)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     file_name = f"{dataset_name}_{timestamp}_{version}.csv"
     full_path = os.path.join(output_dir, file_name)
     df.to_csv(full_path, index=False)
@@ -94,7 +94,7 @@ def register_feature_view(
 
     registry["views"].append(
         {
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "target": target_name,
             "n_rows": int(feature_df.shape[0]),
             "n_features": int(feature_df.shape[1]),

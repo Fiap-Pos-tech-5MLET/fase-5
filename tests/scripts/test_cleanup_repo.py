@@ -7,7 +7,8 @@ Cobre:
 - Validação de nomes de arquivo com timestamp
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
+
 import pytest
 
 
@@ -18,7 +19,7 @@ class TestCleanupRepo:
     def test_archive_dir_name_format(self) -> None:
         """Testa que nome do diretório segue o padrão archive_YYYYMMdd_HHMMSS."""
         # Use uma data fixa para teste determinístico
-        test_date = datetime(2024, 3, 5, 14, 30, 45, tzinfo=timezone.utc)
+        test_date = datetime(2024, 3, 5, 14, 30, 45, tzinfo=UTC)
         expected_format = test_date.strftime("archive_%Y%m%d_%H%M%S")
         assert expected_format == "archive_20240305_143045"
         assert expected_format.startswith("archive_")
@@ -46,15 +47,15 @@ class TestCleanupRepo:
         source_dir.mkdir()
         test_file = source_dir / "test.html"
         test_file.write_text("<html>test</html>")
-        
+
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir(exist_ok=True)
-        
+
         # Execute
         import shutil
         target = archive_dir / "htmlcov"
         shutil.move(str(source_dir), str(target))
-        
+
         # Verify
         assert not source_dir.exists()
         assert target.exists()
@@ -66,18 +67,18 @@ class TestCleanupRepo:
         # Setup
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir(exist_ok=True)
-        
+
         # Existem diretórios que não existem
         nonexistent = tmp_path / "nonexistent_dir"
         assert not nonexistent.exists()
-        
+
         # Não deve tentar mover
         moved_count = 0
         for d in ["nonexistent_dir"]:
             path = tmp_path / d
             if path.exists():
                 moved_count += 1
-        
+
         assert moved_count == 0
 
     def test_multiple_directories_moved(self, tmp_path) -> None:
@@ -86,10 +87,10 @@ class TestCleanupRepo:
         candidates = ["htmlcov", "docs", "data"]
         for candidate in candidates:
             (tmp_path / candidate).mkdir()
-        
+
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir(exist_ok=True)
-        
+
         # Execute: mover cada candidato
         import shutil
         moved = []
@@ -99,7 +100,7 @@ class TestCleanupRepo:
                 target = archive_dir / d
                 shutil.move(str(path), str(target))
                 moved.append(d)
-        
+
         # Verify
         assert len(moved) == 3
         assert all((archive_dir / d).exists() for d in candidates)
@@ -113,15 +114,15 @@ class TestCleanupRepo:
         (source / "api").mkdir()
         (source / "api" / "index.md").write_text("# API Docs")
         (source / "guide.md").write_text("# Guide")
-        
+
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir(exist_ok=True)
-        
+
         # Execute
         import shutil
         target = archive_dir / "docs"
         shutil.move(str(source), str(target))
-        
+
         # Verify
         assert (target / "api" / "index.md").exists()
         assert (target / "guide.md").exists()
@@ -130,7 +131,7 @@ class TestCleanupRepo:
     def test_empty_archive_message(self) -> None:
         """Testa mensagem quando nenhum diretório é encontrado."""
         moved = []
-        
+
         if not moved:
             message = "No candidate directories found to archive."
             assert "No candidate" in message
@@ -149,11 +150,11 @@ class TestCleanupRepoIntegration:
         for d in candidates:
             (root / d).mkdir()
             (root / d / "file.txt").write_text(f"Content of {d}")
-        
+
         # Criar archive
-        archive_dir = root / f"archive_20240305_143045"
+        archive_dir = root / "archive_20240305_143045"
         archive_dir.mkdir(exist_ok=True)
-        
+
         # Simular movimento
         import shutil
         moved = []
@@ -163,7 +164,7 @@ class TestCleanupRepoIntegration:
                 target = archive_dir / d
                 shutil.move(str(path), str(target))
                 moved.append((d, str(target)))
-        
+
         # Verify
         assert len(moved) == 3
         assert all((archive_dir / d).exists() for d, _ in moved)
@@ -176,11 +177,11 @@ class TestCleanupRepoIntegration:
         (tmp_path / "src").mkdir()
         (tmp_path / "src" / "main.py").write_text("print('hello')")
         (tmp_path / "htmlcov").mkdir()
-        
+
         # Archive
         archive_dir = tmp_path / "archive"
         archive_dir.mkdir(exist_ok=True)
-        
+
         # Mover apenas candidatos
         import shutil
         candidates_to_move = ["htmlcov"]
@@ -188,7 +189,7 @@ class TestCleanupRepoIntegration:
             path = tmp_path / d
             if path.exists():
                 shutil.move(str(path), archive_dir / d)
-        
+
         # Verify src não foi movido
         assert (tmp_path / "src").exists()
         assert (tmp_path / "src" / "main.py").exists()

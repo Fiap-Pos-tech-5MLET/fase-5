@@ -201,7 +201,7 @@ def train_model(
     if not isinstance(X, pd.DataFrame):
         raise TypeError(f"X deve ser pd.DataFrame, recebido: {type(X)}")
 
-    if not isinstance(y, (pd.Series, np.ndarray)):
+    if not isinstance(y, pd.Series | np.ndarray):
         raise TypeError(f"y deve ser pd.Series ou np.ndarray, recebido: {type(y)}")
 
     if X.empty or len(y) == 0:
@@ -210,7 +210,7 @@ def train_model(
     if len(X) != len(y):
         raise ValueError(f"X e y devem ter mesmo comprimento. X: {len(X)}, y: {len(y)}")
 
-    if not isinstance(test_size, (int, float)) or test_size <= 0 or test_size >= 1:
+    if not isinstance(test_size, int | float) or test_size <= 0 or test_size >= 1:
         raise ValueError(f"test_size deve estar entre 0 e 1, recebido: {test_size}")
 
     logger.info(f"Iniciando treinamento: {X.shape[0]} samples, {X.shape[1]} features")

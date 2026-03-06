@@ -20,7 +20,7 @@ _streamlit_mock = MagicMock()
 _streamlit_mock.components = MagicMock()
 _streamlit_mock.components.v1 = MagicMock()
 _streamlit_mock.cache_resource = lambda func: func
-_streamlit_mock.cache_data = lambda ttl=None: lambda func: func
+_streamlit_mock.cache_data = lambda _ttl=None: lambda func: func
 _streamlit_mock.error = MagicMock()
 _streamlit_mock.set_page_config = MagicMock()
 _streamlit_mock.sidebar = MagicMock()
