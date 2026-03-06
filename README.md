@@ -114,37 +114,59 @@ Com base no dataset de desenvolvimento educacional dos anos **2022, 2023 e 2024*
 
 ## 🧱 Arquitetura da Solução
 
-Arquitetura modular para cobrir o ciclo completo de dados, treino, inferência e operação:
-- **Desenvolvimento local**: execução com Docker Compose (porta de entrada única em `http://localhost`).
-- **Produção no Render**: container único com **Nginx + FastAPI + Streamlit** sob supervisão do **Supervisor**.
+Arquitetura modular e escalável para cobrir o ciclo completo: dados → treino → inferência → operação. Otimizada para desenvolvimento local (Docker Compose) e produção (Render + container único).
+
+**Premissas principais:**
+- **Desenvolvimento local**: Docker Compose com entrada única em `http://localhost`
+- **Produção no Render**: Container único com **Nginx + FastAPI + Streamlit + Supervisor**
+- **MLOps**: Champion/Challenger com MLflow para rastreabilidade completa
+- **Segurança**: Rotas sensíveis protegidas por `X-API-KEY`, dados auditados
+
+### 📚 Stack Tecnológico e Justificativa
+
+| Componente | Tecnologia | Justificativa |
+|------------|-----------|---------------|
+| **Web Server** | Nginx | Reverse proxy único, suporta múltiplas rotas, eficiente, leve |
+| **API Backend** | FastAPI | Validação automática (Pydantic), async nativo, docs automáticas |
+| **Dashboard** | Streamlit | Prototipagem rápida, sem HTML/CSS, deploy simples |
+| **Processamento** | Scikit-learn | Modelos clássicos rápidos, interpretáveis, sem GPU |
+| **Explicabilidade** | SHAP + LIME | XAI standards, modelos agnósticos |
+| **Rastreabilidade** | MLflow | Versionamento de modelos, métricas, artefatos |
+| **Drift Detection** | Evidently | Detecção de data/model drift pronta para produção |
+| **Orchestração Local** | Docker Compose | Reprodutibilidade desenvolvimento ↔ produção |
+| **Orchestração Produção** | Supervisor | Process manager no container único |
+| **Testes** | Pytest + Coverage | Mínimo 85% cobertura, fixtures reutilizáveis |
+| **Deploy** | GitHub Actions + Render | CI/CD GitFlow, IaC com render.yaml |
 
 ### 1. 🏗️ Arquitetura de Execução
 
 ```mermaid
 flowchart TD
-    %% Acesso Externo com ícone e círculo menor
+    %% Acesso Externo
     User@{ shape: circle, label: "👤 Usuários ONG"} -->|Acesso HTTPS| Nginx[Nginx Reverse Proxy :8080]
     
-    %% Roteamento Nginx e Orquestração
-    subgraph Docker [Produção: Container Único]
+    %% Roteamento Nginx
+    subgraph Container ["🐳 Container Único (Produção)"]
         Nginx -->|Raiz /| Landing[Landing Page Estática]
         Nginx -->|Rota /api| FastAPI[FastAPI Backend :8000]
         Nginx -->|Rota /dashboard| Streamlit[Streamlit UI :8501]
     end
     
     %% Comunicação Interna 
-    Streamlit -->|Chamadas REST| FastAPI
+    Streamlit -->|REST API| FastAPI
     
     %% Motor MLOps e Persistência
-    subgraph MLOps [MLOps Engine]
-        FastAPI -->|Injeção de Modelo| ModelPKL[(app/models/model.pkl)]
-        FastAPI -->|XAI Explainer| SHAP[SHAP / LIME]
+    subgraph MLOps ["🤖 MLOps Engine"]
+        FastAPI -->|Load| ModelPKL[(app/models/model.pkl<br/>Champion)]
+        FastAPI -->|XAI| SHAP[SHAP Explainer]
+        ModelPKL -->|Treinamento| MLflow[(MLflow Artifacts<br/>Champion / Challenger)]
     end
     
-    %% Saídas e Monitoramento
-    FastAPI -->|Auditoria| JSONLogs[(Logs JSON)]
+    %% Monitoring e Logs
+    FastAPI -->|Logs JSON| JSONLogs[(Auditoria<br/>Logs Estruturados)]
+    FastAPI -->|Drift| Evidently[Evidently<br/>Data Drift]
     
-    %% Estilização de Cores e Contrastes
+    %% Estilização
     classDef proxy fill:#5c2d91,stroke:#333,stroke-width:2px,color:#fff;
     classDef api fill:#0078d4,stroke:#333,stroke-width:2px,color:#fff;
     classDef ui fill:#107c10,stroke:#333,stroke-width:2px,color:#fff;
@@ -154,169 +176,291 @@ flowchart TD
     class Nginx proxy;
     class FastAPI api;
     class Streamlit,Landing ui;
-    class SHAP ops;
+    class SHAP,MLflow,Evidently ops;
     class ModelPKL,JSONLogs db;
 ```
 
 **Roteamento principal via Nginx:**
-- `/` → landing page
-- `/api/*` → FastAPI
-- `/dashboard/*` → Streamlit
-- `/health` → health check da API
 
-### 🔄 Pipeline de Dados e ML
+| Rota | Destino | Descrição |
+|------|---------|-----------|
+| `/` | Landing page estática | Página inicial |
+| `/api/*` | FastAPI :8000 | Endpoints REST (protegidos) |
+| `/dashboard/*` | Streamlit :8501 | Interface interativa |
+| `/api/health` | FastAPI | Health check (sem autenticação) |
+| `/api/docs` | FastAPI | Swagger UI (sem autenticação) |
+
+**Portas internas (não expostas):**
+- FastAPI escuta em `:8000`
+- Streamlit escuta em `:8501`
+- MLflow (se local) em `:5000`
+
+### 2. 🔄 Pipeline de Dados e ML
 
 ```mermaid
 flowchart LR
-    %% Fontes de Dados
-    Data[(Dataset Excel)] --> Load[1. Carga: load_data]
+    %% Entrada de Dados
+    Data[(Dataset Excel<br/>BASE DE DADOS<br/>PEDE 2024)] --> Load["1️⃣ Carga<br/>load_data()"]
     
-    %% Etapas de Processamento (Conforme src/)
-    subgraph Prep [Preparação e Treino]
+    %% Etapas de Preparação
+    subgraph Prep ["🔧 Preparação (src/)"]
         direction TB
-        Load --> Clean[2. Limpeza: clean_data]
-        Clean --> Target[3. Target: create_target]
-        Target --> Missing[4. Imputação: handle_missing_values]
-        Missing --> Feature[5. Engenharia: create_features]
-        Feature --> Train[6. Treino: scripts/train.py]
+        Load --> Clean["2️⃣ Limpeza<br/>clean_data()"]
+        Clean --> Target["3️⃣ Target Criação<br/>create_target()"]
+        Target --> Missing["4️⃣ Imputação<br/>handle_missing_values()"]
+        Missing --> Feature["5️⃣ Feature Engineering<br/>create_features()"]
+        Feature --> Store["6️⃣ Feature Store<br/>versionamento"]
     end
 
+    %% Treino
+    Store --> Train["🤖 Treino<br/>scripts/train.py"]
+    
     %% Artefatos
-    Train --> Champion[(app/models/model.pkl)]
-    Train --> MLflow[(MLflow Artifacts)]
+    Train --> Champion[(🏆 Model Champion<br/>app/models/model.pkl)]
+    Train --> Artifacts[(📦 Artifacts<br/>MLflow Experiments<br/>Métricas + Plots)]
 
-    %% Ciclo de Predição (Conforme predict_route.py)
-    subgraph Predict [Fluxo de Inferência]
+    %% Ciclo de Inferência
+    subgraph Predict ["⚡ Inferência (app/routes/)"]
         direction TB
-        Input[Input Aluno] --> Align[Alinhamento de Features]
-        Align --> Champion
-        Champion --> Result[Predição + XAI]
+        Input["📥 Input Aluno<br/>StudentInput"] --> Align["Alinhamento Features"]
+        Align --> Validation["Validação<br/>Schema + Range"]
+        Validation --> Champion
+        Champion --> Result["🎯 Predição<br/>+ Probabilidade<br/>+ SHAP Explain"]
     end
+
+    %% Monitoramento
+    Result --> Audit["📋 Auditoria<br/>JSON Logs"]
+    Result --> Drift["📊 Monitor Drift<br/>Evidently"]
 
     %% Estilização
-    classDef step_first fill:#e3f2fd,stroke:#1976d2,stroke-width:1px,color:#000;
-    classDef step_second fill:#f3f2f1,stroke:#616161,stroke-width:1px,color:#000;
-    classDef dbs fill:#fff4dd,stroke:#d4a017,stroke-width:2px,color:#000;
+    classDef prep fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000;
+    classDef predict fill:#f3f2f1,stroke:#616161,stroke-width:2px,color:#000;
+    classDef train fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
+    classDef monitor fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000;
+    classDef dbs fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000;
 
-    class Prep step_first;
-    class Predict step_second;
-    class Data,Champion,MLflow dbs;
+    class Prep prep;
+    class Predict predict;
+    class Train train;
+    class Audit,Drift monitor;
+    class Data,Champion,Artifacts dbs;
 ```
 
-### 🎯 Componentes Principais
+**Fluxos principais:**
 
-1. **🌐 Nginx (Reverse Proxy)**: padroniza entrada única e reduz acoplamento entre cliente e serviços internos.
-2. **📊 Camada de Dados**: garante limpeza e consistência antes de qualquer inferência.
-3. **🛠️ Feature Engineering**: transforma sinais pedagógicos em variáveis úteis ao modelo.
-4. **🤖 Camada de Modelo**: mantém ciclo de evolução champion/challenger com rastreabilidade.
-5. **⚡ API FastAPI**: expõe endpoints operacionais e auditáveis para integração externa.
-6. **🎨 Dashboard Streamlit**: acelera análise funcional por usuários não técnicos.
-7. **🔍 Monitoramento com MLflow**: viabiliza comparabilidade entre versões de modelo.
-8. **🐳 Infraestrutura Docker**: assegura reprodutibilidade entre desenvolvimento e produção.
+1. **Ingestão de Dados** → `/update-data` POST endpoint auditado
+2. **Treinamento** → `scripts/train.py` com MLflow tracking automático
+3. **Inferência** → `/predict` POST endpoint com XAI explicability
+4. **Monitoramento** → `/drift` GET endpoint com Evidently
+
+### 3. 🎯 Componentes Principais e Responsabilidades
+
+#### **Camada 1: Entrada (Nginx)**
+- Centraliza acesso HTTPS
+- Padroniza URLs internas (`/api`, `/dashboard`)
+- Reduz acoplamento cliente ↔ serviços
+- Suporta gzip, caching, rate limiting (configurável)
+
+#### **Camada 2: API (FastAPI + Routes)**
+| Rota | Método | Proteção | Responsabilidade |
+|------|--------|----------|-----------------|
+| `/health` | GET | ❌ Pública | Status da API e modelo |
+| `/` | GET | ❌ Pública | Info da aplicação |
+| `/predict` | POST | ❌ Pública | **Predição com XAI** |
+| `/drift` | GET | ❌ Pública | Relatório de dados drift |
+| `/model-info` | GET | ❌ Pública | Metadados do modelo |
+| `/model-metrics` | GET | ❌ Pública | Métricas de performance |
+| `/update-data` | POST | ✅ API-KEY | **Ingestão de dados com auditoria** |
+| `/retrain` | POST | ✅ API-KEY | **Criar challenger** |
+| `/promote` | POST | ✅ API-KEY | **Promover para champion** |
+| `/discard` | POST | ✅ API-KEY | **Descartar challenger** |
+| `/model-artifact/{name}` | GET | ✅ API-KEY | **Download de artefatos** |
+
+#### **Camada 3: Dashboard (Streamlit)**
+- Páginas: Prediction, Metrics, Drift Detection, Retrain, About
+- API-driven: chamadas para FastAPI endpoints
+- Cache: `@st.cache_data`, `@st.cache_resource`
+- Autenticação: herda de `API_URL` (API-KEY em headers)
+
+#### **Camada 4: Processamento (src/)**
+- `data_cleaning.py` → Limpeza, remoção de outliers
+- `feature_engineering.py` → Transformações de features
+- `feature_store.py` → Versionamento de features
+- `model.py` → Treino e validação de modelos
+
+#### **Camada 5: MLOps (scripts/ + MLflow)**
+- `scripts/train.py` → Orquestração de treino
+- Champion/Challenger gerenciados em MLflow
+- Métricas automáticas: acurácia, AUC, F1, matriz confusão
+- Artefatos: modelos pickle, exploratory reports
+
+#### **Camada 6: Utilidades (app/utils/)**
+| Módulo | Responsabilidade |
+|--------|-----------------|
+| `model_loader.py` | Load/cache do modelo champion |
+| `security.py` | Validação de `X-API-KEY` |
+| `structured_logging.py` | Logs JSON estruturados para auditoria |
+| `xai.py` | SHAP values para explicabilidade |
+| `keep_alive.py` | Ping para manter Render free tier ativo |
+
+### 4. 📊 Fluxo de Dados Detalhado
+
+**Timeline de uma predição end-to-end:**
+
+```
+1. Cliente envía POST /predict com StudentInput
+   ↓
+2. FastAPI valida schema (Pydantic)
+   ↓
+3. app/utils/model_loader.py carrega modelo champion (cached)
+   ↓
+4. app/routes/predict_route.py:
+   - Alinha features do input com features de treino
+   - Executa predição sklearn
+   - Calcula SHAP values
+   ↓
+5. Retorna JSON com:
+   - prediction: classe predita (0/1)
+   - probability: confiança [0, 1]
+   - shap_values: explicações por feature
+   ↓
+6. app/utils/structured_logging.py registra auditoria:
+   - Timestamp, input, output, latência
+   - Run ID do modelo
+   ↓
+7. Retorna 200 OK com resposta JSON
+```
+
+### 5. 🔐 Estratégia de Segurança
+
+**Em Rotas Públicas (`/predict`, `/drift`, `/health`):**
+- Sem autenticação
+- Rate limiting (configurável em Nginx)
+- Validação rigorosa de input via Pydantic
+
+**Em Rotas Sensíveis (`/retrain`, `/promote`, `/discard`, `/update-data`):**
+- `X-API-KEY` obrigatório no header
+- Implementado em `app/utils/security.py`
+- API_KEY vem de variável de ambiente
+- Sem hardcode de secrets
+
+**Logging e Auditoria:**
+- Todas as requisições são logadas em JSON
+- Erros incluem contexto sem expor segredos
+- Logs estruturados para análise posterior
+
+### 6. 🚀 Estratégia de Deploy
+
+| Ambiente | Execução | Orchestração | Monitoramento |
+|----------|----------|--------------|---------------|
+| **Desenvolvimento** | Localhost | Docker Compose | Logs stdout |
+| **Staging** | Render preview | GitHub Actions | Smoke tests |
+| **Produção** | Render free | Supervisor + Nginx | MLflow + Evidently |
+
+**Deployments em Produção:**
+1. Merge em `main` dispara `main-pipeline.yml`
+2. Validações: `render.yaml`, testes, segurança
+3. Build Docker e push (Render detecta)
+4. Smoke tests pós-deploy
+5. Auto-rollback se detectar falhas críticas
+
+### 7. 📈 Decisões Arquiteturais Principais
+
+| Decisão | Justificativa |
+|---------|---------------|
+| **Container único** | Render free tier, menor overhead, mais simples operacionalmente |
+| **Nginx reverse proxy** | Flexibilidade de rotas, desacoplamento, cache/gzip |
+| **FastAPI + Streamlit** | FastAPI para API robusta, Streamlit para dashboard rápido |
+| **Champion/Challenger** | Validação de modelos antes de produção, rollback fácil |
+| **MLflow artifacts** | Versionamento, comparação, reprodutibilidade |
+| **Scikit-learn** | Modelos clássicos, interpretáveis, sem dependências pesadas |
+| **SHAP XAI** | Explicabilidade agnóstica, integrada em predições |
+| **Logs JSON** | Parseable para análise, auditoria estruturada |
+| **GitHub Actions** | CI/CD integrado, sem custo, GitFlow nativo |
 
 ---
 
 ## 🗂️ Estrutura de Diretórios
 
-Estrutura atual detalhada (principais diretórios e arquivos):
+Organização dos arquivos conforme padrão MVC adaptado para ML:
 
 ```text
 fase-5/
 ├── .github/                           # Workflows CI/CD e instruções para IA
-│   ├── copilot-instructions.md        # Diretrizes de code review
-│   ├── copilot-operational-runbook.md # Runbook operacional
+│   ├── copilot-instructions.md        # Diretrizes de code review completas
+│   ├── copilot-operational-runbook.md # Runbook de troubleshooting operacional
 │   └── workflows/                     # Pipelines GitHub Actions
-│       ├── feature-pipeline.yml       # Pipeline para branches feature/*
-│       ├── develop-pipeline.yml       # Pipeline para branch develop
-│       ├── main-pipeline.yml          # Pipeline para branch main (produção)
-│       └── issue-ops-rollback.yml     # Workflow de rollback emergencial
+│       ├── feature-pipeline.yml       # Pipeline para branches feature/* (rápido)
+│       ├── develop-pipeline.yml       # Pipeline para branch develop (completo)
+│       ├── main-pipeline.yml          # Pipeline para branch main (deploy produção)
+│       └── issue-ops-rollback.yml     # Workflow de rollback emergencial via issue
 │
 ├── app/                               # Aplicação principal (API + Dashboard)
-│   ├── main.py                        # FastAPI application (root_path="/api")
-│   ├── dashboard.py                   # Entry point do dashboard Streamlit
-│   ├── config.py                      # Configurações da aplicação
+│   ├── main.py                        # FastAPI app (root_path="/api")
+│   ├── dashboard.py                   # Entry point Streamlit
+│   ├── config.py                      # Configurações e variáveis de ambiente
 │   ├── routes/                        # Rotas da API
-│   │   ├── predict_route.py           # Endpoint de predição
-│   │   ├── train_route.py             # Endpoints de retreinamento (champion/challenger)
-│   │   └── audit_route.py             # Endpoints de auditoria e monitoramento
-│   ├── models/                        # Artefatos de modelos treinados
-│   │   ├── model.pkl                  # Modelo champion em produção
-│   │   ├── champion_run_id.txt        # Run ID do modelo em produção
-│   │   └── candidate_run_id.txt       # Run ID do modelo candidato
+│   │   ├── predict_route.py           # POST /predict (inferência + XAI)
+│   │   ├── train_route.py             # POST /retrain, /promote, /discard (MLOps)
+│   │   └── audit_route.py             # POST /update-data, GET /drift (dados + monitoramento)
+│   ├── models/                        # Artefatos de modelos
+│   │   ├── model.pkl                  # Scikit-learn model (champion)
+│   │   ├── champion_run_id.txt        # MLflow run ID em produção
+│   │   └── candidate_run_id.txt       # MLflow run ID do challenger
 │   ├── dashboard/                     # Módulos do dashboard Streamlit
-│   │   ├── config.py                  # Configuração do dashboard
-│   │   ├── data.py                    # Funções de carregamento de dados
-│   │   ├── sidebar.py                 # Barra lateral do dashboard
-│   │   ├── styles.py                  # Estilos CSS customizados
-│   │   └── pages/                     # Páginas do dashboard
+│   │   ├── config.py                  # Config do Streamlit
+│   │   ├── sidebar.py                 # Sidebar componente
+│   │   ├── styles.py                  # CSS customizado
+│   │   ├── data.py                    # Carregamento de dados
+│   │   └── pages/                     # Páginas Streamlit
 │   │       ├── prediction.py          # Página de predição
 │   │       ├── metrics.py             # Página de métricas
-│   │       ├── drift.py               # Página de análise de drift
+│   │       ├── drift.py               # Página de drift detection
 │   │       ├── retrain.py             # Página de retreinamento
-│   │       └── about.py               # Página sobre o projeto
-│   ├── utils/                         # Utilitários
-│   │   ├── model_loader.py            # Carregamento e validação de modelos
-│   │   ├── security.py                # Validação de API key
-│   │   ├── structured_logging.py      # Logging estruturado em JSON
-│   │   ├── xai.py                     # Explicabilidade (SHAP/LIME)
-│   │   └── keep_alive.py              # Keep-alive para Render free tier
-│   ├── data/                          # Dados brutos e processados
-│   └── artifacts/                     # Artefatos de treinamento
+│   │       └── about.py               # Página sobre
+│   ├── utils/                         # Utilidades
+│   │   ├── model_loader.py            # Carregamento + cache de modelo
+│   │   ├── security.py                # Validação de X-API-KEY
+│   │   ├── structured_logging.py      # Logs JSON auditados
+│   │   ├── xai.py                     # SHAP explainability
+│   │   └── keep_alive.py              # Keep-alive para Render
+│   ├── data/                          # Dados (raw, processed, outputs)
+│   └── artifacts/                     # Artefatos de treino (reports, gráficos)
 │
-├── src/                               # Pipeline de dados e ML
-│   ├── data_cleaning.py               # Limpeza e preparação de dados
-│   ├── feature_engineering.py         # Engenharia de features
-│   ├── feature_store.py               # Armazenamento de features
-│   └── model.py                       # Definição e treinamento de modelos
+├── src/                               # Pipeline de dados e treinamento
+│   ├── data_cleaning.py               # Limpeza de dados
+│   ├── feature_engineering.py         # Transformações de features
+│   ├── feature_store.py               # Versionamento de features
+│   └── model.py                       # Treino e validação
 │
 ├── scripts/                           # Scripts de automação
-│   ├── train.py                       # Script principal de treinamento
+│   ├── train.py                       # Orquestração de treino com MLflow
 │   └── monitoring.py                  # Scripts de monitoramento
 │
-├── tests/                             # Suite completa de testes (85%+ cobertura)
-│   ├── conftest.py                    # Fixtures e configuração pytest
-│   ├── test_app_config.py             # Testes de configuração da app
-│   ├── test_main.py                   # Testes da aplicação FastAPI
-│   ├── test_predict_route.py          # Testes do endpoint de predição
-│   ├── test_train_route.py            # Testes dos endpoints de retreinamento
-│   ├── test_audit_route.py            # Testes dos endpoints de auditoria
-│   ├── test_schemas.py                # Testes de validação de schemas
-│   ├── test_model_loader.py           # Testes do carregador de modelos
-│   ├── test_security.py               # Testes de segurança (API key)
-│   ├── test_structured_logging.py     # Testes de logging
-│   ├── test_xai_utils.py              # Testes de explicabilidade
-│   ├── test_keep_alive.py             # Testes de keep-alive
-│   ├── test_data_cleaning.py          # Testes de limpeza de dados
-│   ├── test_feature_engineering.py    # Testes de feature engineering
-│   ├── test_feature_store.py          # Testes de feature store
-│   ├── test_model.py                  # Testes de treinamento de modelo
-│   ├── test_dashboard*.py             # Testes do dashboard (múltiplos arquivos)
-│   └── test_deployment_config.py      # Testes de configuração de deploy
+├── tests/                             # Suite completa (85%+ cobertura)
+│   ├── conftest.py                    # Fixtures pytest
+│   ├── test_*.py                      # 20+ arquivos de testes
+│   └── test_deployment_config.py      # Validação de deployment
 │
-├── notebooks/                         # Notebooks Jupyter para análises
-│   ├── data_preprocessing_passos_magicos.ipynb
-│   └── DATATHON-PASSOS-MÁGICOS.ipynb
+├── notebooks/                         # Análises exploratórias
+│   ├── DATATHON-PASSOS-MÁGICOS.ipynb # Notebook principal (refatorado)
+│   └── data_preprocessing_passos_magicos.ipynb
 │
-├── k8s/                               # Manifestos Kubernetes (opcional)
-│   ├── api-deployment.yaml
-│   ├── api-service.yaml
-│   └── README.md
+├── k8s/                               # Manifestos Kubernetes (opcional, futuro)
 │
-├── htmlcov/                           # Relatórios de cobertura HTML
-│
-├── docker-compose.yml                 # Orquestração local (desenvolvimento)
-├── Dockerfile                         # Imagem Docker de produção
-├── nginx.conf                         # Configuração do reverse proxy
-├── supervisord.conf                   # Orquestração de processos no container
-├── render.yaml                        # IaC para deploy no Render
+├── docker-compose.yml                 # Orquestração local
+├── Dockerfile                         # Imagem single-stage para produção
+├── nginx.conf                         # Configuração reverse proxy
+├── supervisord.conf                   # Orquestração de processos
+├── render.yaml                        # IaC para Render (Blueprint, futuro)
 ├── requirements.txt                   # Dependências Python
-├── pyproject.toml                     # Configuração de ferramentas Python
-├── pytest.ini                         # Configuração do pytest
-├── Makefile                           # Comandos de automação
+├── pyproject.toml                     # Config ferramentas (ruff, mypy, etc)
+├── pytest.ini                         # Config pytest (cobertura 85%)
+├── Makefile                           # Comandos úteis
 ├── DEPLOYMENT.md                      # Guia de deploy
 ├── TESTING.md                         # Guia de testes
 ├── TESTING_STRATEGY.md                # Estratégia de testes
-├── IMPLEMENTATION_SUMMARY.md          # Resumo de implementação
+├── IMPLEMENTATION_SUMMARY.md          # Resumo técnico
 ├── CONTRIBUTING.md                    # Guia de contribuição
 └── README.md                          # Este arquivo
 ```
@@ -608,7 +752,7 @@ Esta abordagem garante que os testes executem rapidamente sem dependências exte
 
 ---
 
-## 2. 🔄 Esteira CI/CD (Fluxo GitFlow Horizontal)
+## 2. 🔄 Esteira CI/CD
 
 O projeto adota pipelines GitHub Actions por branch, alinhados ao fluxo GitFlow. Cada branch tem sua própria estratégia de validação, com gatilhos progressivos de qualidade e segurança.
 
@@ -1258,19 +1402,98 @@ curl https://datathon-app.onrender.com/model-metrics
 
 ## 🤖 IA para Code Review
 
-O projeto usa **GitHub Copilot** com instruções customizadas para padronização técnica.
+O projeto usa **GitHub Copilot** com instruções customizadas (`.instructions.md`) para validação automática de qualidade técnica, segurança e consistência com a arquitetura existente.
 
-### Padrões verificados
+### 🎯 Objetivo e Escopo
 
+A integração do Copilot garante que todas as mudanças de código preservem:
+- ✅ **Estabilidade de deploy** (Docker + Nginx + Supervisor)
+- ✅ **Segurança de rotas sensíveis** (validação de `X-API-KEY`)
+- ✅ **Consistência entre código, workflows e documentação**
+- ✅ **Qualidade técnica** com foco pragmático para entrega acadêmica
+
+### 📋 Padrões Verificados Automaticamente
+
+**Código Python:**
 - ✅ Type hints em parâmetros e retornos
 - ✅ Docstrings em estilo Google (português)
-- ✅ Convenções de nomenclatura e organização de código
-- ✅ Regras de segurança (inputs, segredos, erros)
-- ✅ Boas práticas de testes e cobertura
-- ✅ Protocolo de validação por tipo de mudança (código, scripts, docs e testes)
+- ✅ Convenções de nomenclatura (snake_case/PascalCase conforme contexto)
+- ✅ Evitar `except Exception:` e `bare except:`
+- ✅ Sem hardcode de segredos (usar variáveis de ambiente)
 
-As diretrizes estão em [.github/copilot-instructions.md](.github/copilot-instructions.md) e
-no runbook operacional [.github/copilot-operational-runbook.md](.github/copilot-operational-runbook.md).
+**Testes e Cobertura:**
+- ✅ Testes focados no escopo alterado
+- ✅ Mínimo 85% de cobertura (`--cov-fail-under=85`)
+- ✅ Protocolo de validação por tipo de mudança (código, scripts, docs, testes)
+
+**API e Segurança:**
+- ✅ Preservação de `root_path="/api"` no FastAPI
+- ✅ Proteção de rotas sensíveis (`/retrain`, `/promote`, `/discard`)
+- ✅ Não remover endpoints de governança de modelo
+- ✅ Dashboard deve usar `API_URL` em chamadas HTTP
+
+**Deploy e Configuração:**
+- ✅ Coerência entre `render.yaml`, `.env.example` e documentação
+- ✅ Nenhum path interno sem validação em `nginx.conf` + `supervisord.conf`
+- ✅ Variáveis de ambiente esperadas respeitadas
+
+**Documentação:**
+- ✅ Atualizar `README.md`, `DEPLOYMENT.md` conforme mudanças
+- ✅ Manter Mermaid diagrams sincronizados com texto
+- ✅ Exemplos de código compatíveis com a realidade
+
+### 🔄 Validação por Tipo de Mudança
+
+O Copilot aplica validações específicas conforme o tipo de alteração:
+
+**1. Mudança em `app/routes/*`, `app/main.py` ou segurança:**
+```bash
+# Verificações:
+- Confirmar contratos de rota e root_path="/api"
+- Confirmar proteção X-API-KEY em /retrain, /promote, /discard
+- Executar testes de API relacionados
+```
+
+**2. Mudança em `app/dashboard/*`:**
+```bash
+# Verificações:
+- Confirmar uso de API_URL em chamadas HTTP
+- Validar que erros não mascaram problema de config
+- Executar testes de dashboard (tests/test_dashboard_*.py)
+```
+
+**3. Mudança em `scripts/*` ou pipeline de dados/treino:**
+```bash
+# Verificações:
+- Validar paths com env vars esperadas
+- Evitar caminhos hardcoded sem fallback controlado
+- Executar testes focados de script/rota impactada
+```
+
+**4. Mudança em deploy/workflows/configuração:**
+```bash
+# Verificações:
+- Confirmar consistência com README.md, DEPLOYMENT.md, .env.example
+- Executar tests/test_deployment_config.py
+- Validar gatilhos/guardrails dos workflows
+```
+
+### 📂 Diretrizes do Projeto
+
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** — Instruções técnicas completas e checklist de PR
+- **[.github/copilot-operational-runbook.md](.github/copilot-operational-runbook.md)** — Runbook de troubleshooting e validação operacional
+
+### ✅ Checklist de PR (Automático)
+
+Antes de fazer merge, o Copilot verifica:
+
+1. **Resolução adequada**: Mudança resolve causa raiz sem quebrar fluxos existentes?
+2. **Segurança**: Rotas sensíveis continuam com `X-API-KEY`?
+3. **Consistência**: Deploy/configs coerentes (`render.yaml`, `.env.example`, docs)?
+4. **Testes**: Testes focados do escopo alterado passaram? Coverage ≥ 85%?
+5. **Documentação**: Se houve alteração de comportamento, README/DEPLOYMENT foram revisados?
+6. **Cobertura**: Se alteração em código/scripts, existe teste novo/ajustado?
+7. **Anti-padrões**: Nenhum padrão genérico ou não-compatível com esse projeto?
 
 ---
 
