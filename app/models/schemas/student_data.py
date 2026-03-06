@@ -4,10 +4,9 @@ Schema para wrapper de dados do aluno.
 Aceita formato flexível para retrocompatibilidade.
 """
 
-from typing import Any
+from typing import Any, cast
 
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel, ConfigDict, Field
 
 DEFAULT_STUDENT_DATA: dict[str, float] = {
     "nivel_de_defasagem": 0.0,
@@ -38,10 +37,10 @@ class StudentData(BaseModel):
         examples=[DEFAULT_STUDENT_DATA],
     )
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
-                {"data": DEFAULT_STUDENT_DATA},
+                {"data": cast(dict[str, Any], DEFAULT_STUDENT_DATA)},
                 {
                     "data": {
                         "nivel_de_defasagem": 1.0,
@@ -61,4 +60,4 @@ class StudentData(BaseModel):
                 },
             ]
         }
-    }
+    )

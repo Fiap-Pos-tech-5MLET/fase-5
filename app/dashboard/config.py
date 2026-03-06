@@ -59,6 +59,7 @@ CLASS_REPORT_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "classification_repo
 
 # API URL explícita por ambiente (Render/local)
 API_URL: Final[str] = os.environ.get("API_URL", "http://127.0.0.1:8000/api")
+DASHBOARD_REQUESTED_BY: Final[str] = os.environ.get("DASHBOARD_REQUESTED_BY", "dashboard_app")
 
 
 def configure_page() -> None:

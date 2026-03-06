@@ -60,8 +60,7 @@ def validate_requested_by(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
-                "Validation error: x-requested-by não pode ser vazio, apenas espaços "
-                "ou 'unknown'."
+                "Validation error: x-requested-by não pode ser vazio, apenas espaços ou 'unknown'."
             ),
         )
 

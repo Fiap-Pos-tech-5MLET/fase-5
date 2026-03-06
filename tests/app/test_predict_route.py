@@ -313,6 +313,55 @@ class TestPredictRoute:
     @patch("app.routes.predict_route.create_features")
     @patch("app.routes.predict_route.handle_missing_values")
     @patch("app.routes.predict_route.clean_data")
+    def test_predict_model_without_named_steps_returns_200(
+        self,
+        mock_clean,
+        mock_missing,
+        mock_features,
+        mock_get_model,
+        api_client,
+        valid_student_data,
+    ) -> None:
+        """Predição suporta modelo serializado sem pipeline sklearn."""
+        model = MagicMock()
+        model.predict.return_value = np.array([1])
+        model.predict_proba.return_value = np.array([[0.3, 0.7]])
+        model.feature_names_in_ = np.array(
+            [
+                "nivel_de_defasagem",
+                "idade",
+                "genero",
+                "ano_de_ingresso",
+                "veterano",
+                "em_fase",
+                "qtde_aval_realizadas",
+                "iaa",
+                "ieg",
+                "ips",
+                "ida",
+                "ipv",
+                "ian",
+            ]
+        )
+        model.feature_importances_ = np.ones(13)
+
+        test_df = pd.DataFrame(valid_student_data["data"], index=[0])
+        mock_clean.return_value = test_df
+        mock_missing.return_value = test_df
+        mock_features.return_value = test_df
+        mock_get_model.return_value = model
+
+        response = api_client.post("/predict", json=valid_student_data)
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["risk_prediction"] in [0, 1]
+        assert 0.0 <= payload["risk_probability"] <= 1.0
+
+    @patch("app.routes.predict_route.get_current_model")
+    @patch("app.routes.predict_route.create_features")
+    @patch("app.routes.predict_route.handle_missing_values")
+    @patch("app.routes.predict_route.clean_data")
     def test_predict_single_vs_multiple_predictions(
         self,
         mock_clean,

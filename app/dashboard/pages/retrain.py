@@ -11,6 +11,8 @@ import pandas as pd
 import requests
 import streamlit as st
 
+from app.dashboard.config import DASHBOARD_REQUESTED_BY
+
 MetricsFunc = Callable[[Any, Optional[pd.DataFrame]], Optional[Dict[str, Any]]]
 DatasetFunc = Callable[[], Optional[pd.DataFrame]]
 CacheClearFunc = Callable[[], Any]
@@ -259,7 +261,10 @@ def render_retrain_page(
             response = requests.post(
                 f"{api_url}/retrain",
                 json=retrain_payload,
-                headers={"X-API-KEY": api_key},
+                headers={
+                    "X-API-KEY": api_key,
+                    "x-requested-by": DASHBOARD_REQUESTED_BY,
+                },
                 timeout=120,
             )
 
@@ -434,7 +439,10 @@ def render_retrain_page(
 
                         resp = requests.post(
                             f"{api_url}/promote",
-                            headers={"X-API-KEY": api_key},
+                            headers={
+                                "X-API-KEY": api_key,
+                                "x-requested-by": DASHBOARD_REQUESTED_BY,
+                            },
                             timeout=30,
                         )
                         resp.raise_for_status()
@@ -467,7 +475,10 @@ def render_retrain_page(
 
                         resp = requests.post(
                             f"{api_url}/discard",
-                            headers={"X-API-KEY": api_key},
+                            headers={
+                                "X-API-KEY": api_key,
+                                "x-requested-by": DASHBOARD_REQUESTED_BY,
+                            },
                             timeout=30,
                         )
                         resp.raise_for_status()

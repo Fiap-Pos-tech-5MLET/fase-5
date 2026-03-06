@@ -117,6 +117,7 @@ class TestMainRoutes:
     def test_retrain_route_exists(self):
         """Testa que rota /retrain existe."""
         client = TestClient(app)
+        client.headers.update({"x-requested-by": "test-main"})
         # POST /retrain sem dados pode retornar 422 ou funcionar
         response = client.post("/retrain", json={})
         assert response.status_code in [200, 401, 422, 500, 503]
@@ -125,6 +126,7 @@ class TestMainRoutes:
     def test_audit_route_exists(self):
         """Testa que rota /audit existe."""
         client = TestClient(app)
+        client.headers.update({"x-requested-by": "test-main"})
         # GET /model-info deve existir
         response = client.get("/model-info")
         assert response.status_code in [200, 404, 503]
@@ -133,6 +135,7 @@ class TestMainRoutes:
     def test_promote_route_exists(self):
         """Testa que rota /promote existe."""
         client = TestClient(app)
+        client.headers.update({"x-requested-by": "test-main"})
         response = client.post("/promote")
         assert response.status_code in [200, 401, 400, 404, 500]
 
@@ -140,6 +143,7 @@ class TestMainRoutes:
     def test_discard_route_exists(self):
         """Testa que rota /discard existe."""
         client = TestClient(app)
+        client.headers.update({"x-requested-by": "test-main"})
         response = client.post("/discard")
         assert response.status_code in [200, 401, 400, 404, 500]
 
