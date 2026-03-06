@@ -12,12 +12,11 @@ import streamlit as st
 PredictFunc = Callable[[Dict[str, Any]], Tuple[int, float]]
 
 
-def render_prediction_page(model: Any, predict_func: PredictFunc, api_healthy: bool = False) -> None:
+def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False) -> None:
     """
     Renderiza a página de predição de risco.
 
     Args:
-        model (Any): Modelo carregado (depreciado, use api_healthy).
         predict_func (PredictFunc): Função que chama a API para predição.
         api_healthy (bool): Status de saúde da API. Default: False.
 
@@ -27,7 +26,7 @@ def render_prediction_page(model: Any, predict_func: PredictFunc, api_healthy: b
     st.markdown("# 🔮 Predição de Risco de Defasagem")
     st.markdown("Preencha os dados do aluno para obter a predição de risco de defasagem escolar.")
 
-    if not api_healthy and model is None:
+    if not api_healthy:
         st.error("⚠️ API não disponível. Verifique a conexão com o servidor de predição.")
         st.stop()
 

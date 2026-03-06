@@ -728,6 +728,7 @@ A API oferece endpoints para predição, auditoria e gestão do ciclo de modelos
 GET  /health
 GET  /
 POST /predict
+POST /update-data
 GET  /model-info
 GET  /drift
 POST /retrain
@@ -747,7 +748,75 @@ As rotas de escrita e retreinamento exigem o header `X-API-KEY` com o valor conf
 
 Sem chave válida, a API responde `401 Unauthorized`.
 
-### Exemplo de ingestão via cURL
+### Ingestão de Dataset (POST /update-data)
+
+O endpoint `/update-data` permite que a ONG envie novos datasets para serem usados no próximo retreinamento.
+
+**Características:**
+- ✅ Validação de API Key (governança de acesso)
+- ✅ Validação de formato (`.csv` ou `.xlsx`)
+- ✅ Versionamento automático com timestamp
+- ✅ Logging de auditoria completo
+- ✅ Redirecionamento para próximo passo (drift monitor)
+
+**Requisição:**
+
+```bash
+curl -X POST \
+  'http://localhost/api/update-data' \
+  -H 'x-api-key: SUA_CHAVE_API' \
+  -F 'file=@dados_2024.xlsx'
+```
+
+**Resposta (201 Created):**
+
+```json
+{
+  "status": "sucesso",
+  "mensagem": "Arquivo dados_2024.xlsx atualizado com sucesso.",
+  "arquivo_versionado": "dados_2024_20240305_143000.xlsx",
+  "timestamp": "20240305_143000",
+  "tamanho_bytes": 245632,
+  "proximo_passo": "Acesse GET /drift para monitorar degradação e decida se retreino é necessário.",
+  "auditoria": {
+    "acao": "ingestao_dados",
+    "timestamp": "20240305_143000",
+    "arquivo": "dados_2024.xlsx"
+  }
+}
+```
+
+**Fluxo pós-ingestão:**
+1. Arquivo é salvo com versão: `dados_2024_YYYYMMDD_HHMMSS.xlsx`
+2. Arquivo atual sobrescrito: `dados_2024.xlsx`
+3. Log gerado para auditoria
+4. Usuário redirecionado a `/drift` para monitorar
+
+**Exemplos de exemplo: Requisição via Python**
+
+```python
+import requests
+
+files = {'file': open('dados_2024.xlsx', 'rb')}
+headers = {'x-api-key': 'SUA_CHAVE_API'}
+
+response = requests.post(
+    'http://localhost/api/update-data',
+    files=files,
+    headers=headers
+)
+
+print(response.json())
+# {
+#   "status": "sucesso",
+#   "arquivo_versionado": "dados_2024_20240305_143000.xlsx",
+#   ...
+# }
+```
+
+---
+
+## Exemplo de ingestão via cURL
 
 ```bash
 curl -X POST \
@@ -779,7 +848,157 @@ Com isso, apenas modelos validados viram champion, e cada promoção fica audit�
 
 ---
 
-## 📊 Monitoramento e MLflow
+## � Como o Drift Funciona no Projeto
+
+### O que é Data Drift?
+
+**Data Drift** ocorre quando a distribuição estatística dos dados de entrada muda significativamente em relação aos dados usados para treinar o modelo. Em um contexto educacional, isso significa que o **perfil dos alunos** (idade, distribuição de notas, padrões de frequência) está mudando.
+
+**Por que importa?** Um modelo treinado em 2022 com um perfil específico de alunos pode perder acurácia se, em 2024, os novos alunos têm uma distribuição diferente daqueles dados históricos.
+
+### Ferramenta Base: Evidently
+
+No projeto, o cálculo de drift **não é feito "na mão"**. Utilizamos a biblioteca **Evidently**, que é o **padrão ouro do mercado** para observabilidade de modelos:
+
+```python
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset
+
+report = Report(metrics=[DataDriftPreset()])
+report.run(reference_data=df_referencia, current_data=df_atual)
+```
+
+O **DataDriftPreset** usa testes estatísticos robustos (Kolmogorov-Smirnov, chi-squared, etc.) para cada feature, comparando distribuições empiricamente.
+
+### Fluxo de Execução no Seu Projeto
+
+1. **Geração do Relatório de Drift**
+   - Ao executar `python scripts/monitoring.py` (ou clicar no botão "Gerar Relatório" no Dashboard),ocorre:
+     - Carregamento dos **dados brutos** (`app/data/raw/*.xlsx` ou `.csv`)
+     - Aplicação das **transformações exatas** usadas no treinamento (`clean_data`, `create_target`, `create_features`)
+     - Divisão do dataset em **dados de referência** (usuário pode escolher um ano) e **dados atuais** (ano/período mais recente)
+
+2. **Comparação Estatística**
+   - O Evidently compara distribuições de cada feature:
+     - Features numéricas: teste KS (distância entre CDFs)
+     - Features categóricas: teste chi-squared
+     - Threshold padrão: valor p < 0.05 (significância estatística)
+
+3. **Gera Relatório HTML**
+   - Visualização interativa da drift por feature
+   - Histogramas antes/depois
+   - Recomendações automáticas
+
+4. **Exposição Visual e Auditável**
+   - Local: `app/artifacts/data_drift_report.html`
+   - Via API: `GET /drift` (retorna HTML renderizável)
+   - Via Dashboard: página "🔄 Monitoramento de Drift" (renderiza HTML no Streamlit)
+   - Acesso: `http://localhost/drift` (Nginx)
+
+### Governança Documentada: Critério de Ação
+
+O critério de **quando retreinar** está documentado no endpoint `/model-info`:
+
+```json
+{
+  "degradacao_do_modelo": {
+    "descricao": "Perfil dos alunos muda significativamente ao longo dos anos",
+    "deteccao": "Monitoramento de Data Drift via Evidently. Se > 30% das features apresentarem drift estatístico, disparar alerta.",
+    "acao": "Retreinar o modelo com os dados mais recentes."
+  }
+}
+```
+
+**Simples:** Se **mais de 30% das variáveis** sofrem drift estatístico, é sinal de que o modelo precisa ser retreinado.
+
+### Fluxo Operacional de Decisão
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. ONG carrega novo dataset via endpoint POST /update-data  │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Dashboard/Operador acessa /drift                         │
+│    → Evidently gera relatório de dados brutos vs hist.     │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+              ┌──────┴──────┐
+              │             │
+         Sem Drift    Com Drift (>30%)
+              │             │
+              ▼             ▼
+         ✅ Sem ação   ⚠️ Decisão:
+                       Retreinar?
+                           │
+                      ┌────┴────┐
+                      │         │
+                    Sim       Não
+                      │       (Monitorar)
+                      ▼
+            3. POST /retrain
+               (criar candidato)
+                      │
+                      ▼
+            4. Validar métricas
+               (POST /promote ou /discard)
+                      │
+                      ▼
+            ✅ Champion atualizado
+```
+
+### Exemplo Prático: Executar Drift Detection
+
+**Via Python:**
+
+```python
+from scripts.monitoring import generate_drift_report
+
+# Gera relatório Evidently
+report_path = "app/artifacts/data_drift_report.html"
+generate_drift_report(
+    data_path="app/data/raw/PEDE_PASSOS_DATASET_FIAP.csv",
+    report_path=report_path
+)
+
+print(f"Relatório em: {report_path}")
+```
+
+**Via Dashboard:**
+1. Acesse `http://localhost/dashboard/`
+2. Navegue para "🔄 Monitoramento de Drift"
+3. Clique em "🔄 Gerar Relatório"
+4. Visualize histogramas e recomendações
+
+**Via API (REST):**
+
+```bash
+curl -X GET \
+  'http://localhost/api/drift' \
+  -H 'accept: text/html'
+```
+
+Retorna HTML renderizável no navegador.
+
+### Transparência: Logs de Auditoria
+
+Toda execução de drift (geração, acesso) gera logs estruturados em JSON:
+
+```json
+{
+  "event": "audit_drift_report_served",
+  "timestamp": "2024-03-05T14:30:00",
+  "requested_by": "operador_ong",
+  "report_path": "app/artifacts/data_drift_report.html"
+}
+```
+
+Logs auxiliam em auditorias futuras (quem acessou drift, quando, por quê).
+
+---
+
+## �📊 Monitoramento e MLflow
 
 O projeto utiliza **MLflow** para rastrear experimentos, parâmetros, métricas e artefatos de treinamento.
 

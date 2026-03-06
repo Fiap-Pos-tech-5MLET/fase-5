@@ -61,7 +61,7 @@ if page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]:
     model = load_model(get_model_cache_buster())
 
 if page == "🔮 Predição":
-    render_prediction_page(None, predict_via_api, api_healthy=st.session_state["api_healthy"])
+    render_prediction_page(predict_via_api, api_healthy=st.session_state["api_healthy"])
 elif page == "📊 Métricas do Modelo":
     render_metrics_page(
         model,

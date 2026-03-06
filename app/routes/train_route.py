@@ -40,6 +40,32 @@ logger = logging.getLogger("train_route")
 router = APIRouter()
 
 
+def _get_latest_dataset_path() -> str:
+    """
+    Obtém o caminho do arquivo de dados "atual" em app/data/raw.
+
+    Retorna o nome do arquivo mais recente ou "unknown" se não houver arquivo.
+    Usado para rastreabilidade: qual versão do dataset foi usada para treinar o modelo.
+    """
+    from pathlib import Path
+
+    raw_data_dir = Path("app/data/raw")
+    if not raw_data_dir.exists():
+        return "unknown"
+
+    # Procura arquivos .csv ou .xlsx
+    files = list(raw_data_dir.glob("*.csv")) + list(raw_data_dir.glob("*.xlsx"))
+    if not files:
+        return "unknown"
+
+    # Retorna os nomes dos arquivos (não versionados), exemplo: dados.csv
+    current_files = [f for f in files if "_" not in f.stem or f.stem.split("_")[0].isalpha()]
+    if current_files:
+        return str(current_files[0].name)
+
+    return str(max(files, key=lambda f: f.stat().st_mtime).name)
+
+
 @router.post("/retrain")
 async def retrain(
     params: Annotated[RetrainRequest, Body(...)],
@@ -109,6 +135,7 @@ async def retrain(
             requested_by=params.requested_by,
             status="success",
             run_id=run_id,
+            dataset_path=_get_latest_dataset_path(),
         )
 
         return {
@@ -162,6 +189,7 @@ async def retrain(
 
 @router.post("/promote", response_model=PromoteResponse)
 async def promote(
+    request: Request,
     _authenticated: Annotated[None, Depends(validate_api_key)],
 ) -> PromoteResponse:
     """
@@ -205,6 +233,17 @@ async def promote(
 
         # Reload champion
         _, loaded_at = reload_model()
+
+        # Log rastreabilidade: modelo promovido com qual dataset
+        log_with_request(
+            logger=logger,
+            level=logging.INFO,
+            event="model_promoted",
+            request=request,
+            run_id=promoted_run_id,
+            champion_path=str(model_path),
+            dataset_path=_get_latest_dataset_path(),
+        )
 
         # Remove candidate files
         os.remove(candidate_path)
