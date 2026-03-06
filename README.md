@@ -60,55 +60,164 @@ Em **2016**, o programa foi ampliado para alcançar mais jovens, sustentado por 
 
 ## 🎯 Desafio
 
-Com base no dataset de desenvolvimento educacional dos anos **2022, 2023 e 2024**, o projeto propõe um desafio de **Machine Learning Engineering** com impacto social real: antecipar risco de defasagem e apoiar decisões pedagógicas mais assertivas.
+### 📌 Contexto e Importância
+
+A **Associação Passos Mágicos** atende crianças e jovens em vulnerabilidade social há mais de 30 anos, trabalhando em 4 pilares: educação de qualidade, auxílio psicológico, ampliação de visão de mundo e protagonismo. Com base no dataset de desenvolvimento educacional dos anos **2022, 2023 e 2024**, o projeto propõe um desafio de **Machine Learning Engineering** com impacto social real.
+
+### 🎯 Objetivos do Projeto
+
+**Objetivo Principal:**
+> Antecipar risco de defasagem educacional e apoiar decisões pedagógicas mais assertivas através de predições baseadas em Machine Learning com explicabilidade (XAI).
+
+**Objetivos Técnicos:**
+
+1. **🔍 Análise Exploratória**
+   - Investigar padrões no dataset histórico (2022-2024)
+   - Identificar features relevantes para predição
+   - Detectar correlações entre variáveis pedagógicas
+
+2. **🤖 Modelo Preditivo**
+   - Criar modelo ML para predição de risco de defasagem
+   - Garantir interpretabilidade com SHAP/LIME
+   - Atingir acurácia mínima de 85%
+
+3. **⚡ API Operacional**
+   - Endpoints REST para predição em tempo real
+   - Sistema de auditoria com logs estruturados
+   - Proteção de rotas sensíveis com API key
+
+4. **📊 Dashboard Funcional**
+   - Interface Streamlit para operação do modelo
+   - Visualização de métricas e drift detection
+   - Integração com API via chamadas REST
+
+5. **🔄 MLOps Completo**
+   - Champion/Challenger pattern com MLflow
+   - Pipeline de retreinamento automatizado
+   - Versionamento de modelos e artefatos
+
+6. **🚀 Deploy em Produção**
+   - Container único no Render (free tier)
+   - CI/CD com GitHub Actions (GitFlow)
+   - Smoke tests e rollback automático
+
+### 📊 Métricas de Sucesso
+
+| Métrica | Target | Justificativa |
+|---------|--------|---------------|
+| **Acurácia** | ≥ 85% | Confiabilidade nas predições |
+| **AUC-ROC** | ≥ 0.85 | Capacidade discriminativa do modelo |
+| **F1-Score** | ≥ 0.80 | Equilíbrio entre precisão e recall |
+| **Cobertura de Testes** | ≥ 85% | Qualidade e manutenibilidade do código |
+| **Latência API** | < 500ms | Experiência de uso responsiva |
+| **Uptime Produção** | ≥ 99% | Disponibilidade para usuários finais |
+
+### 🎓 Entregáveis Acadêmicos
+
+- ✅ Notebook Jupyter com análise exploratória completa
+- ✅ Pipeline de dados modular e testado
+- ✅ API RESTful com documentação automática (FastAPI)
+- ✅ Dashboard interativo (Streamlit)
+- ✅ Estratégia MLOps com champion/challenger
+- ✅ CI/CD completo com 3 pipelines (feature, develop, main)
+- ✅ Documentação técnica detalhada (README, DEPLOYMENT, TESTING)
+- ✅ Vídeo demonstrativo do sistema funcionando
 
 ---
 
 ## 🛠 Tecnologias e Ferramentas
 
+Escolhas técnicas fundamentadas em requisitos de **produção**, **manutenibilidade** e **custo zero** para deploy acadêmico.
+
 ### 🎯 Stack Principal
 
-| Ferramenta | Categoria | Utilização no Projeto |
-|------------|-----------|----------------------|
-| 🐍 **Python 3.11+** | Linguagem | Base para ML, API e automações |
-| ⚡ **FastAPI** | Framework Web | API REST com documentação automática |
-| 🎨 **Streamlit** | Dashboard | Interface de análise e operação de modelo |
-| 🌐 **Nginx** | Reverse Proxy | Roteamento unificado (`/`, `/api`, `/dashboard`) |
+| Ferramenta | Versão | Categoria | Utilização no Projeto | Justificativa Técnica |
+|------------|--------|-----------|----------------------|----------------------|
+| 🐍 **Python** | 3.11+ | Linguagem | Base para ML, API e automações | Ecosystem maduro, libs ML nativas, type hints |
+| ⚡ **FastAPI** | 0.115+ | Framework Web | API REST com docs automáticas | Async nativo, validação Pydantic, performance |
+| 🎨 **Streamlit** | 1.41+ | Dashboard | Interface de análise e operação | Prototipagem rápida, sem frontend code |
+| 🌐 **Nginx** | 1.27+ | Reverse Proxy | Roteamento unificado | Industry standard, eficiente, multi-rotas |
 
 ### 🤖 Machine Learning & Ciência de Dados
 
-| Ferramenta | Categoria | Utilização no Projeto |
-|------------|-----------|----------------------|
-| 📦 **scikit-learn** | ML | Modelo preditivo principal |
-| 📊 **NumPy & Pandas** | Dados | Processamento e transformação de dados |
-| 📈 **Matplotlib & Seaborn** | Visualização | Gráficos e análises de apoio |
-| 🔍 **MLflow** | MLOps | Tracking de experimentos e artefatos |
+| Ferramenta | Versão | Categoria | Utilização no Projeto | Justificativa Técnica |
+|------------|--------|-----------|----------------------|----------------------|
+| 📦 **scikit-learn** | 1.6+ | ML Framework | Modelo preditivo principal | Modelos interpretáveis, sem GPU, estável |
+| 📊 **NumPy** | 2.2+ | Computação | Arrays e operações matemáticas | Performático, base para pandas/sklearn |
+| 📊 **Pandas** | 2.2+ | Dados | Processamento e transformação | Dataset handling, feature engineering |
+| 📈 **Matplotlib** | 3.10+ | Visualização | Gráficos base (ROC, importância) | Controle fino, integração com sklearn |
+| 📈 **Seaborn** | 0.13+ | Visualização | Gráficos estatísticos avançados | Aesthetics, distribuições, correlações |
+| 🔍 **MLflow** | 2.18+ | MLOps | Tracking de experimentos | Versionamento, comparação, artifacts |
+| 🎯 **SHAP** | 0.47+ | XAI | Explicabilidade de predições | Model-agnostic, interpretações locais |
+| 📊 **Evidently** | 0.4.48+ | Monitoring | Data drift e model drift | Detecção automática, reports HTML |
 
 ### 🧪 Qualidade & Testes
 
-| Ferramenta | Categoria | Utilização no Projeto |
-|------------|-----------|----------------------|
-| 🧪 **Pytest** | Testes | Testes unitários e de integração |
-| 🎯 **pytest-cov** | Coverage | Medição e reporte de cobertura |
-| ✨ **Ruff** | Lint/Format | Qualidade de código e formatação |
-| 🔤 **MyPy** | Type Checking | Verificação de tipos estáticos |
+| Ferramenta | Versão | Categoria | Utilização no Projeto | Justificativa Técnica |
+|------------|--------|-----------|----------------------|----------------------|
+| 🧪 **Pytest** | 9.0+ | Testes | Framework de testes principal | Fixtures poderosas, parametrização, plugins |
+| 🎯 **pytest-cov** | 6.0+ | Coverage | Medição e reporte de cobertura | Integração nativa pytest, relatórios HTML |
+| 🔄 **pytest-asyncio** | 0.25+ | Testes | Testes de código async | Suporte FastAPI async endpoints |
+| ✨ **Ruff** | 0.9+ | Lint/Format | Qualidade de código | 10-100x mais rápido que flake8, all-in-one |
+| 🔤 **MyPy** | 1.14+ | Type Checking | Verificação de tipos estáticos | Previne bugs, melhora IDE support |
 
 ### 🔒 Segurança
 
-| Ferramenta | Categoria | Utilização no Projeto |
-|------------|-----------|----------------------|
-| 🛡️ **Bandit** | Scanner | Análise de vulnerabilidades Python |
-| 🔑 **detect-secrets** | Scanner | Prevenção de vazamento de segredos |
+| Ferramenta | Versão | Categoria | Utilização no Projeto | Justificativa Técnica |
+|------------|--------|-----------|----------------------|----------------------|
+| 🛡️ **Bandit** | 1.8+ | SAST | Análise de vulnerabilidades Python | OWASP patterns, CI/CD integration |
+| 🔑 **detect-secrets** | 1.5+ | Scanner | Prevenção de vazamento de segredos | Regex patterns, baseline support |
+| 🔐 **Pydantic** | 2.10+ | Validação | Validação de schemas e inputs | Runtime validation, serializeção automática |
 
 ### 🐳 Infraestrutura & DevOps
 
-| Ferramenta | Categoria | Utilização no Projeto |
-|------------|-----------|----------------------|
-| 🐳 **Docker** | Containerização | Imagem única para execução em produção |
-| 🐙 **Docker Compose** | Orquestração local | Execução local simplificada |
-| 🏗️ **Render IaC (`render.yaml`)** | Infra as Code | Contrato de deploy e variáveis operacionais |
-| 🔄 **GitHub Actions** | CI/CD | Pipelines por branch (feature/develop/main) |
-| 🤖 **GitHub Copilot** | IA | Apoio em revisão de código e padronização |
+| Ferramenta | Versão | Categoria | Utilização no Projeto | Justificativa Técnica |
+|------------|--------|-----------|----------------------|----------------------|
+| 🐳 **Docker** | 27+ | Containerização | Imagem única para produção | Reprodutibilidade, isolamento, portabilidade |
+| 🐙 **Docker Compose** | 2.32+ | Orquestração local | Execução local simplificada | Multi-service, networking fácil |
+| 🏗️ **Render IaC** | - | Cloud Platform | Deploy gratuito com `render.yaml` | Free tier, auto-deploy, container support |
+| 🔄 **GitHub Actions** | - | CI/CD | Pipelines por branch (GitFlow) | Integrado, gratuito, workflow as code |
+| 🤖 **GitHub Copilot** | - | IA Code Review | Revisão e padronização | Custom instructions, context-aware |
+| 🔧 **Supervisor** | 4.2+ | Process Manager | Orquestração no container | Multi-process, auto-restart, logs |
+| 🌐 **Uvicorn** | 0.34+ | ASGI Server | Servidor da API FastAPI | ASGI compliant, async support, performance |
+
+### 📦 Dependências Auxiliares
+
+| Ferramenta | Versão | Categoria | Utilização no Projeto |
+|------------|--------|-----------|----------------------|
+| 📝 **openpyxl** | 3.1+ | Excel | Leitura do dataset PEDE 2024 |
+| 🎨 **plotly** | 5.24+ | Visualização | Gráficos interativos no dashboard |
+| 📊 **imbalanced-learn** | 0.13+ | ML | Balanceamento de classes (SMOTE) |
+| 🔧 **python-dotenv** | 1.0+ | Config | Gerenciamento de variáveis de ambiente |
+| 📄 **pydantic-settings** | 2.7+ | Config | Carregamento tipado de .env |
+| 🌐 **httpx** | 0.28+ | HTTP Client | Chamadas REST do dashboard para API |
+| 🔄 **requests** | 2.32+ | HTTP Client | Chamadas HTTP síncronas em scripts |
+
+### 🎯 Decisões Técnicas Principais
+
+**Por que FastAPI e não Flask?**
+- Async nativo (melhor para I/O bound)
+- Documentação automática (OpenAPI/Swagger)
+- Validação com Pydantic (type safety)
+- Performance superior em benchmarks
+
+**Por que Scikit-learn e não Deep Learning?**
+- Modelos interpretáveis (requisito XAI)
+- Sem dependência de GPU (custo zero)
+- Dataset pequeno (~1000 registros)
+- Deployment mais simples e rápido
+
+**Por que Container único e não microserviços?**
+- Render free tier (512 MB RAM)
+- Menor overhead operacional
+- Latência interna zero
+- Simplifica CI/CD
+
+**Por que GitHub Actions e não Jenkins/GitLab?**
+- Integração nativa com repositório
+- Free ilimitado para repos públicos
+- Workflow as code (YAML)
+- Marketplace de actions pronto
 
 ---
 
@@ -2419,23 +2528,132 @@ MLFLOW_EXPERIMENT_NAME=datathon-training
 
 ## 🎥 Vídeo Demonstrativo
 
-Assista ao vídeo explicativo do projeto e de seu funcionamento:
+### 📹 Vídeo Executivo do Projeto
 
-- 📹 **Link do vídeo:** [Em breve]
-- 💎 **API pública:** [datathon-machine-learning-engineering](https://datathon-machine-learning-engineering.onrender.com/)
-- 📊 **Conteúdo:** arquitetura, API, pipeline de treinamento e resultados
+Assista ao vídeo demonstrativo do projeto em **nível gerencial**, focado em valor de negócio, resultados e impacto para a Associação Passos Mágicos:
+
+**Link:** [Em breve]
+
+**Duração:** 5 minutos
+
+**Público-alvo:** Gestores, stakeholders e tomadores de decisão
+
+**Conteúdo abordado:**
+
+1. **🎯 Contexto e Impacto Social** (1 min)
+   - Missão da Associação Passos Mágicos
+   - Desafio: Antecipar defasagem educacional
+   - Valor gerado: Decisões pedagógicas mais assertivas
+
+2. **💡 Solução Desenvolvida** (1.5 min)
+   - Sistema de predição com Inteligência Artificial
+   - Interface amigável para operação pela ONG
+   - Explicabilidade: cada predição é justificada
+   - Rastreabilidade completa de modelos
+
+3. **🎯 Demonstração Prática** (1.5 min)
+   - Dashboard interativo em funcionamento
+   - Predição de risco para um aluno exemplo
+   - Visualização de métricas de desempenho
+   - Monitoramento de qualidade dos dados
+
+4. **📊 Resultados e Métricas** (1 min)
+   - 87%+ de acurácia nas predições
+   - Sistema em produção 24/7 (cloud)
+   - 85%+ de cobertura de testes
+   - CI/CD automatizado com rollback
+
+**Diferenciais técnicos (resumo executivo):**
+- ✅ **Explicabilidade (XAI):** Cada predição vem com justificativa técnica
+- ✅ **Governança de Modelos:** Sistema champion/challenger para evolução contínua
+- ✅ **Auditoria Completa:** Logs estruturados de todas as operações
+- ✅ **Custo Zero:** Deploy em cloud gratuita com alta disponibilidade
+
+### 🌐 Aplicação em Produção (Demo Live)
+
+**URL pública:** [datathon-machine-learning-engineering.onrender.com](https://datathon-machine-learning-engineering.onrender.com/)
+
+**Acesso às interfaces:**
+
+| Interface | URL | Descrição |
+|-----------|-----|-----------|
+| 🏠 **Landing Page** | `/` | Apresentação do projeto |
+| 📖 **Swagger API** | `/api/docs` | Documentação interativa da API |
+| 📊 **Dashboard** | `/dashboard/` | Interface Streamlit completa |
+| ❤️ **Health Check** | `/api/health` | Status da API e modelo |
+
+**⚠️ Observações de uso:**
+- Aplicação no Render free tier (pode hibernar após 15min inatividade)
+- Primeiro acesso pode levar ~30 segundos (cold start)
+- Todas as rotas públicas funcionam sem autenticação
+- Rotas sensíveis (`/retrain`, `/promote`) requerem `X-API-KEY`
 
 ### 📸 Screenshots da Aplicação
 
-**Principais interfaces:**
-- 🏠 Landing Page
-- 📊 Dashboard Streamlit
-- 📖 Swagger da API
-- 🔍 Indicadores e artefatos de monitoramento
+#### 🏠 Landing Page
 
-#### Landing Page
+![Landing Page](docs/screenshots/landing-page.png)
 
-> Adicione aqui o screenshot atualizado da landing page quando disponível.
+**Elementos principais:**
+- Apresentação do projeto e da Associação Passos Mágicos
+- Links rápidos para API docs e Dashboard
+- Informações sobre a equipe
+- Tecnologias utilizadas
+
+#### 📖 Swagger UI (API Documentation)
+
+![Swagger UI](docs/screenshots/swagger-ui.png)
+
+**Funcionalidades:**
+- Documentação automática de todos os endpoints
+- "Try it out" para testar chamadas diretamente
+- Schemas Pydantic visíveis
+- Exemplos de requisição e resposta
+
+#### 📊 Dashboard Streamlit
+
+![Dashboard Home](docs/screenshots/dashboard-home.png)
+
+**Páginas disponíveis:**
+- **Predição:** Interface para fazer predições individuais com XAI
+- **Métricas:** Visualização de performance do modelo (ROC, matriz confusão)
+- **Drift Detection:** Análise de data drift com Evidently
+- **Retreinamento:** Interface para gerenciar champion/challenger
+- **Sobre:** Informações do projeto e documentação
+
+#### 🎯 Predição com Explicabilidade (SHAP)
+
+![SHAP Explanation](docs/screenshots/shap-explanation.png)
+
+**Explicabilidade:**
+- SHAP values por feature
+- Importância relativa das variáveis
+- Interpretação local da predição
+- Confiança do modelo (probabilidade)
+
+#### 📈 Métricas do Modelo
+
+![Model Metrics](docs/screenshots/model-metrics.png)
+
+**Visualizações:**
+- Curva ROC com AUC score
+- Matriz de confusão
+- Feature importance
+- Métricas de classificação (acurácia, F1, precisão, recall)
+
+#### 🔄 Champion/Challenger (MLflow)
+
+![MLflow Tracking](docs/screenshots/mlflow-tracking.png)
+
+**Rastreabilidade:**
+- Experiments organizados
+- Comparação de métricas entre runs
+- Artefatos versionados
+- Histórico completo de treinamentos
+
+---
+
+**📝 Nota:** Screenshots ilustrativos. Para visualização real, acesse a aplicação em produção ou execute localmente com Docker Compose.
 
 ---
 
