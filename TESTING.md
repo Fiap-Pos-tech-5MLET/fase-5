@@ -49,7 +49,7 @@
 
 ## 2. Comandos Essenciais
 
-### Testes
+### ⚡ Testes Básicos
 
 ```bash
 # Todos os testes com output verbose
@@ -62,7 +62,7 @@ pytest tests/ --cov=src --cov=app --cov-report=term-missing -v
 pytest tests/ --cov=src --cov=app --cov-report=html
 
 # Teste específico
-pytest tests/test_predict_route.py -v
+pytest tests/app/test_predict_route.py -v
 
 # Testes de dashboard
 pytest tests/app/test_dashboard*.py -v
@@ -74,13 +74,37 @@ pytest tests/app/test_dashboard_health.py -v
 pytest -k "test_predict" -v
 ```
 
-### Testes com markers
+**Output esperado (exemplo):**
+```bash
+$ pytest tests/ --cov=src --cov=app --cov-report=term
+
+========================= test session starts ==========================
+platform linux -- Python 3.11.5, pytest-7.4.3, pluggy-1.3.0
+collected 600 items
+
+tests/app/test_main.py ............                               [  2%]
+tests/app/test_predict_route.py ................                  [  4%]
+tests/src/test_data_cleaning.py .............................     [ 10%]
+...
+========================= 600 passed in 98.45s ==========================
+
+----------- coverage: platform linux, python 3.11.5 -----------
+Name                              Stmts   Miss  Cover
+-----------------------------------------------------
+src/data_cleaning.py                120      8    93%
+src/feature_engineering.py          150     12    92%
+app/routes/predict_route.py          80      5    94%
+-----------------------------------------------------
+TOTAL                               830     77    91%
+```
+
+### 🎯 Testes com Markers
 
 ```bash
-# Apenas testes unitários
+# Apenas testes unitários (rápidos)
 pytest -m unit -v
 
-# Apenas testes de integração
+# Apenas testes de integração (médios)
 pytest -m integration -v
 
 # Apenas testes de API
@@ -94,19 +118,134 @@ pytest -m "data_loading or data_cleaning or feature_engineering" -v
 
 # Testes rápidos (excluindo lentos)
 pytest -m "not slow" -v
+
+# Testes que requerem GPU (skip se não tiver)
+pytest -m gpu -v
 ```
 
-### Qualidade (local)
+**Exemplo de uso de markers:**
+```python
+# tests/app/test_predict_route.py
+import pytest
+
+@pytest.mark.api
+@pytest.mark.integration
+def test_predict_endpoint_retorna_200(client):
+    \"\"\"Testa que endpoint /predict retorna 200 OK.\"\"\"
+    response = client.post("/api/predict", json=sample_data)
+    assert response.status_code == 200
+
+@pytest.mark.unit
+def test_processar_idades_validas():
+    \"\"\"Testa função de limpeza de idades (unitário).\"\"\"
+    df = pd.DataFrame({"IDADE": [10, 15, 12]})
+    result = limpar_idades(df)
+    assert result["IDADE"].min() >= 5
+```
+
+### 🛠️ Qualidade de Código (Local)
 
 ```bash
+# Formatar código automaticamente
 make format
+# Equivale a: ruff format .
+
+# Validar lint
 make lint
+# Equivale a: ruff check .
+
+# Validar tipos
 make type-check
+# Equivale a: mypy src/ app/ --strict
+
+# Scan de segurança
 make security
+# Equivale a: bandit -r src/ app/ -ll && detect-secrets scan
+
+# Executar todas as verificações de qualidade
 make quality
+# Equivale a: format + lint + type-check + security (sequencial)
+
+# Executar tudo (qualidade + testes)
+make all
+# Equiv a: quality + test
 ```
 
-## 3) Escopo coberto
+**Output esperado (make quality):**
+```bash
+$ make quality
+Running ruff format...
+✅ 120 files formatted
+
+Running ruff lint...
+✅ All checks passed!
+
+Running mypy type check...
+Success: no issues found in 85 source files
+
+Running bandit security scan...
+[main]  INFO  Run metrics:
+        Total issues (by severity):
+                Low: 0
+                Medium: 0
+                High: 0
+✅ No security issues found
+
+Running detect-secrets...
+✅ No secrets detected
+
+🎉 All quality checks passed!
+```
+
+### 📊 Comandos Avançados
+
+**1. Ver duração dos testes mais lentos:**
+```bash
+pytest tests/ --durations=10
+
+# Output:
+# slowest 10 durations
+# ==========================================
+# 5.23s call     tests/app/test_dashboard_pages.py::test_prediction_page_renders
+# 3.45s call     tests/src/test_model.py::test_train_model_completo
+# 2.78s call     tests/app/test_train_route.py::test_retrain_endpoint
+# ...
+```
+
+**2. Executar testes em paralelo (pytest-xdist):**
+```bash
+# Requer: pip install pytest-xdist
+pytest tests/ -n auto  # Usa todos os CPU cores disponíveis
+pytest tests/ -n 4     # Usa 4 workers
+
+# Reduz tempo de ~2min → ~40s em máquinas com 8 cores
+```
+
+**3. Executar apenas testes que falharam na última execução:**
+```bash
+pytest --lf  # --last-failed
+pytest --ff  # --failed-first (tenta failed primeiro, depois passa para restantes)
+```
+
+**4. Modo verboso com output capturado:**
+```bash
+pytest -vv -s  # -vv = extra verbose, -s = mostra prints
+```
+
+**5. Gerar relatório XML (para CI/CD):**
+```bash
+pytest tests/ --junitxml=test-report.xml
+```
+
+**6. Executar com debugger (pdb):**
+```bash
+pytest tests/app/test_predict_route.py::test_especifico --pdb
+# Abre debugger quando teste falha
+```
+
+---
+
+## 3. Estrutura de Testes
 
 ### 📂 Estrutura Hierárquica de Testes (NOVO)
 
