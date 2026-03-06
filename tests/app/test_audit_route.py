@@ -310,8 +310,9 @@ class TestUpdateDataRoute:
         csv_data = b"IDADE,INDE_23,INDE_22\n10,1,2\n11,2,3"
         files = {"file": ("dados.csv", BytesIO(csv_data), "text/csv")}
 
-        with patch("app.routes.audit_route.Path.mkdir"), patch(
-            "app.routes.audit_route.shutil.copy"
+        with (
+            patch("app.routes.audit_route.Path.mkdir"),
+            patch("app.routes.audit_route.shutil.copy"),
         ):
             response = api_client.post("/update-data", files=files)
 
@@ -328,9 +329,11 @@ class TestUpdateDataRoute:
         xlsx_data = b"PK\x03\x04..."  # Simulado
         files = {"file": ("dados.xlsx", BytesIO(xlsx_data), "application/vnd.ms-excel")}
 
-        with patch("app.routes.audit_route.Path.mkdir"), patch(
-            "app.routes.audit_route.shutil.copy"
-        ), patch("builtins.open", create=True):
+        with (
+            patch("app.routes.audit_route.Path.mkdir"),
+            patch("app.routes.audit_route.shutil.copy"),
+            patch("builtins.open", create=True),
+        ):
             response = api_client.post("/update-data", files=files)
 
             # Pode falhar em write, mas teste que formato é validado
@@ -356,7 +359,7 @@ class TestUpdateDataRoute:
         app.include_router(router)
         client = TestClient(app, raise_server_exceptions=False)
         # ⚠️ NO header - will be rejected since X-API-KEY is not set
-        
+
         files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
         response = client.post("/update-data", files=files)
 
@@ -369,9 +372,11 @@ class TestUpdateDataRoute:
 
         files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
 
-        with patch("app.routes.audit_route.Path.mkdir"), patch(
-            "app.routes.audit_route.shutil.copy"
-        ), patch("builtins.open", create=True):
+        with (
+            patch("app.routes.audit_route.Path.mkdir"),
+            patch("app.routes.audit_route.shutil.copy"),
+            patch("builtins.open", create=True),
+        ):
             response = api_client.post("/update-data", files=files)
 
             if response.status_code == 201:
@@ -386,11 +391,12 @@ class TestUpdateDataRoute:
 
         files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
 
-        with patch("app.routes.audit_route.Path.mkdir"), patch(
-            "app.routes.audit_route.shutil.copy"
-        ), patch("builtins.open", create=True), patch(
-            "app.routes.audit_route.log_with_request"
-        ) as mock_log:
+        with (
+            patch("app.routes.audit_route.Path.mkdir"),
+            patch("app.routes.audit_route.shutil.copy"),
+            patch("builtins.open", create=True),
+            patch("app.routes.audit_route.log_with_request") as mock_log,
+        ):
             response = api_client.post("/update-data", files=files)
 
             # log_with_request deve ter sido chamado
@@ -403,8 +409,9 @@ class TestUpdateDataRoute:
 
         files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
 
-        with patch("app.routes.audit_route.Path.mkdir"), patch(
-            "app.routes.audit_route.shutil.copy"
+        with (
+            patch("app.routes.audit_route.Path.mkdir"),
+            patch("app.routes.audit_route.shutil.copy"),
         ):
             response = api_client.post("/update-data", files=files)
 

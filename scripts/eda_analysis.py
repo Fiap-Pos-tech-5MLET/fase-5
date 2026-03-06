@@ -229,7 +229,9 @@ def perform_cross_validation(
     return metricas
 
 
-def calcular_coeficiente_variacao(df: pd.DataFrame, colunas: Optional[List[str]] = None) -> pd.DataFrame:
+def calcular_coeficiente_variacao(
+    df: pd.DataFrame, colunas: Optional[List[str]] = None
+) -> pd.DataFrame:
     """
     Calcula o coeficiente de variação (CV = std/mean * 100%) para colunas numéricas.
 

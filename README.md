@@ -870,7 +870,7 @@ report.run(reference_data=df_referencia, current_data=df_atual)
 
 O **DataDriftPreset** usa testes estatísticos robustos (Kolmogorov-Smirnov, chi-squared, etc.) para cada feature, comparando distribuições empiricamente.
 
-### Fluxo de Execução no Seu Projeto
+### Fluxo de Execução
 
 1. **Geração do Relatório de Drift**
    - Ao executar `python scripts/monitoring.py` (ou clicar no botão "Gerar Relatório" no Dashboard),ocorre:

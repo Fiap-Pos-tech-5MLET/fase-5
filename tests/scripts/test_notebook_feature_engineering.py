@@ -130,30 +130,21 @@ class TestCriarColunaEmFase:
 
     def test_aluno_em_fase(self):
         """Testa alunos na fase ideal."""
-        df = pd.DataFrame({
-            "FASE_ATUAL": ["Fase 2", "Fase 1"],
-            "FASE_IDEAL": ["Fase 2", "Fase 2"]
-        })
+        df = pd.DataFrame({"FASE_ATUAL": ["Fase 2", "Fase 1"], "FASE_IDEAL": ["Fase 2", "Fase 2"]})
         resultado = criar_coluna_em_fase(df, "FASE_ATUAL", "FASE_IDEAL")
 
         assert list(resultado["EM_FASE"]) == [1, 0]
 
     def test_case_sensitive(self):
         """Testa que comparação é case-sensitive."""
-        df = pd.DataFrame({
-            "FASE_ATUAL": ["fase 2", "Fase 2"],
-            "FASE_IDEAL": ["Fase 2", "Fase 2"]
-        })
+        df = pd.DataFrame({"FASE_ATUAL": ["fase 2", "Fase 2"], "FASE_IDEAL": ["Fase 2", "Fase 2"]})
         resultado = criar_coluna_em_fase(df, "FASE_ATUAL", "FASE_IDEAL")
 
         assert list(resultado["EM_FASE"]) == [0, 1]
 
     def test_preserva_original(self):
         """Testa que DataFrame original não é alterado."""
-        df_original = pd.DataFrame({
-            "FASE_ATUAL": ["Fase 2"],
-            "FASE_IDEAL": ["Fase 2"]
-        })
+        df_original = pd.DataFrame({"FASE_ATUAL": ["Fase 2"], "FASE_IDEAL": ["Fase 2"]})
         criar_coluna_em_fase(df_original, "FASE_ATUAL", "FASE_IDEAL")
 
         assert "EM_FASE" not in df_original.columns
@@ -182,9 +173,7 @@ class TestAplicarTransformacoesFaseTurma:
     def test_sem_turma(self):
         """Testa opção de não criar coluna de turma."""
         df = pd.DataFrame({"FASE_ORIGINAL": ["8A"]})
-        resultado = aplicar_transformacoes_fase_turma(
-            df, "FASE_ORIGINAL", criar_turma=False
-        )
+        resultado = aplicar_transformacoes_fase_turma(df, "FASE_ORIGINAL", criar_turma=False)
 
         assert "FASE_PADRONIZADA" in resultado.columns
         assert "TURMA" not in resultado.columns

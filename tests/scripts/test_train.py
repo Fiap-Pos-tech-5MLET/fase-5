@@ -31,7 +31,7 @@ class TestPlotClassificationReport:
         output_path = str(tmp_path / "report.png")
 
         # Mock da função
-        with patch('matplotlib.pyplot.savefig') as mock_savefig, patch('matplotlib.pyplot.close'):
+        with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
             # Simular geração
             mock_savefig(output_path)
             mock_savefig.assert_called_once_with(output_path)
@@ -95,7 +95,7 @@ class TestPlotROCCurve:
         output_path = str(tmp_path / "roc.png")
 
         # Mock
-        with patch('matplotlib.pyplot.savefig') as mock_savefig, patch('matplotlib.pyplot.close'):
+        with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
             mock_savefig(output_path)
             mock_savefig.assert_called()
 
@@ -213,7 +213,7 @@ class TestMainFunction:
             "max_depth": None,
             "min_samples_split": 2,
             "k": "all",
-            "test_size": 0.2
+            "test_size": 0.2,
         }
 
         assert default_params["n_estimators"] == 100
@@ -221,11 +221,7 @@ class TestMainFunction:
 
     def test_main_custom_parameters(self) -> None:
         """Testa passagem de parâmetros customizados."""
-        params = {
-            "n_estimators": 200,
-            "max_depth": 10,
-            "k": 15
-        }
+        params = {"n_estimators": 200, "max_depth": 10, "k": 15}
 
         assert params["n_estimators"] == 200
         assert params["max_depth"] == 10
@@ -274,11 +270,15 @@ class TestTrainMetrics:
     def test_metrics_dict_structure(self) -> None:
         """Testa estrutura do dicionário de métricas."""
         required_keys = [
-            "accuracy", "roc_auc", "f1_score",
-            "precision", "recall", "classification_report"
+            "accuracy",
+            "roc_auc",
+            "f1_score",
+            "precision",
+            "recall",
+            "classification_report",
         ]
 
-        metrics = {key: 0.0 for key in required_keys}
+        metrics = dict.fromkeys(required_keys, 0.0)
 
         assert all(k in metrics for k in required_keys)
 

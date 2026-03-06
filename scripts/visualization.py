@@ -144,9 +144,9 @@ def analyse_corr(
     plt.tight_layout()
 
     # Identifica correlações fortes (acima do threshold)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"CORRELAÇÕES FORTES (|r| > {threshold}):")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     strong_corrs = []
     for i in range(len(corr_matrix.columns)):
@@ -167,7 +167,7 @@ def analyse_corr(
     else:
         print(f"Nenhuma correlação acima de |{threshold}| encontrada.")
 
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     return fig
 
@@ -202,7 +202,7 @@ def plot_distribuicao_target(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    _wedges, _texts, autotexts = ax.pie(
+    _wedges, _texts, autotexts = ax.pie(  # type: ignore[misc]
         contagens.values,
         labels=labels,
         autopct="%1.1f%%",

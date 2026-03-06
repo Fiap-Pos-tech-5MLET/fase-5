@@ -53,6 +53,7 @@ class TestCleanupRepo:
 
         # Execute
         import shutil
+
         target = archive_dir / "htmlcov"
         shutil.move(str(source_dir), str(target))
 
@@ -93,6 +94,7 @@ class TestCleanupRepo:
 
         # Execute: mover cada candidato
         import shutil
+
         moved = []
         for d in candidates:
             path = tmp_path / d
@@ -120,6 +122,7 @@ class TestCleanupRepo:
 
         # Execute
         import shutil
+
         target = archive_dir / "docs"
         shutil.move(str(source), str(target))
 
@@ -157,6 +160,7 @@ class TestCleanupRepoIntegration:
 
         # Simular movimento
         import shutil
+
         moved = []
         for d in candidates:
             path = root / d
@@ -184,6 +188,7 @@ class TestCleanupRepoIntegration:
 
         # Mover apenas candidatos
         import shutil
+
         candidates_to_move = ["htmlcov"]
         for d in candidates_to_move:
             path = tmp_path / d
