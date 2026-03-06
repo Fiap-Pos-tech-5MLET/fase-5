@@ -143,6 +143,12 @@ async def predict(
             for col_name in missing_cols:
                 feature_matrix[col_name] = 0
 
+            # Remove features extras que o modelo atual não espera
+            # (ex: instituicao_ensino se o modelo foi treinado antes dessa feature)
+            extra_cols = set(feature_matrix.columns) - set(expected_cols)
+            if extra_cols:
+                feature_matrix = feature_matrix.drop(columns=list(extra_cols))
+
             feature_matrix = feature_matrix[expected_cols]
 
         # Compatibilidade para modelos sem feature_names_in_
