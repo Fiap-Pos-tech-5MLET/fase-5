@@ -10,6 +10,8 @@ from typing import Optional
 import requests
 import streamlit as st
 
+from app.dashboard.config import DASHBOARD_REQUESTED_BY
+
 
 def check_api_health(api_url: str, timeout: int = 5) -> bool:
     """
@@ -39,7 +41,10 @@ def check_api_health(api_url: str, timeout: int = 5) -> bool:
             response = requests.get(
                 f"{api_url}/model-info",
                 timeout=timeout,
-                headers={"Accept": "application/json"},
+                headers={
+                    "Accept": "application/json",
+                    "x-requested-by": DASHBOARD_REQUESTED_BY,
+                },
             )
             return response.status_code == 200
 
@@ -73,7 +78,10 @@ def get_api_status(api_url: str, timeout: int = 5) -> Optional[dict]:
         response = requests.get(
             f"{api_url}/model-info",
             timeout=timeout,
-            headers={"Accept": "application/json"},
+            headers={
+                "Accept": "application/json",
+                "x-requested-by": DASHBOARD_REQUESTED_BY,
+            },
         )
         if response.status_code == 200:
             return response.json()

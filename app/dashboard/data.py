@@ -14,7 +14,7 @@ import streamlit as st
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from app.dashboard.config import API_URL, DATA_PATH, MODEL_PATH
+from app.dashboard.config import API_URL, DASHBOARD_REQUESTED_BY, DATA_PATH, MODEL_PATH
 from src.data_cleaning import clean_data, create_target, handle_missing_values, load_data
 from src.feature_engineering import create_features, select_features
 
@@ -123,6 +123,7 @@ def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float]:
         response = requests.post(
             f"{API_URL}/predict",
             json={"data": student_data},
+            headers={"x-requested-by": DASHBOARD_REQUESTED_BY},
             timeout=30,
         )
         response.raise_for_status()

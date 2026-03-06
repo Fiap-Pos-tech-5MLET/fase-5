@@ -12,6 +12,8 @@ import plotly.express as px
 import requests
 import streamlit as st
 
+from app.dashboard.config import DASHBOARD_REQUESTED_BY
+
 MetricsFunc = Callable[[Any, Optional[pd.DataFrame]], Optional[Dict[str, Any]]]
 DatasetFunc = Callable[[], Optional[pd.DataFrame]]
 
@@ -47,7 +49,11 @@ def render_metrics_page(
     mlflow_source: Optional[str] = None
 
     try:
-        resp = requests.get(f"{api_url}/model-metrics", timeout=10)
+        resp = requests.get(
+            f"{api_url}/model-metrics",
+            timeout=10,
+            headers={"x-requested-by": DASHBOARD_REQUESTED_BY},
+        )
         if resp.status_code == 200:
             mlflow_data = resp.json()
             mlflow_source = mlflow_data.get("source")
@@ -188,7 +194,11 @@ def render_metrics_page(
         with col_left:
             st.markdown('<div class="section-header">Curva ROC</div>', unsafe_allow_html=True)
             try:
-                img_resp = requests.get(f"{api_url}/model-artifact/roc_curve.png", timeout=10)
+                img_resp = requests.get(
+                    f"{api_url}/model-artifact/roc_curve.png",
+                    timeout=10,
+                    headers={"x-requested-by": DASHBOARD_REQUESTED_BY},
+                )
                 if img_resp.status_code == 200:
                     st.image(img_resp.content, use_container_width=True)
                 else:
@@ -206,7 +216,9 @@ def render_metrics_page(
             )
             try:
                 img_resp = requests.get(
-                    f"{api_url}/model-artifact/classification_report.png", timeout=10
+                    f"{api_url}/model-artifact/classification_report.png",
+                    timeout=10,
+                    headers={"x-requested-by": DASHBOARD_REQUESTED_BY},
                 )
                 if img_resp.status_code == 200:
                     st.image(img_resp.content, use_container_width=True)
@@ -230,6 +242,7 @@ def render_metrics_page(
             img_resp = requests.get(
                 f"{api_url}/model-artifact/feature_importance.png",
                 timeout=10,
+                headers={"x-requested-by": DASHBOARD_REQUESTED_BY},
             )
             if img_resp.status_code == 200:
                 st.image(img_resp.content, use_container_width=True)
