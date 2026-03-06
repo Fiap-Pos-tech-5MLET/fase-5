@@ -98,7 +98,7 @@ def render_retrain_page(
     1. **Carga** dos dados brutos (PEDE 2024)
     2. **Limpeza** e tratamento de valores faltantes
     3. **Feature Engineering** (criação de variáveis derivadas)
-    4. **Treinamento** com Random Forest + SelectKBest
+    4. **Treinamento** com LightGBM (lgbm_model)
     5. **Avaliação** de métricas (Accuracy, ROC-AUC, F1, Precision, Recall)
     6. **Salvamento** do modelo e registro no MLflow
     """
@@ -115,9 +115,16 @@ def render_retrain_page(
             max_value=1000,
             value=100,
             step=10,
-            help=(
-                "Número de árvores na Random Forest. Mais árvores = maior precisão, mas mais lento."
-            ),
+            help="Número de árvores no boosting.",
+        )
+        learning_rate = st.number_input(
+            "Learning Rate",
+            min_value=0.01,
+            max_value=1.0,
+            value=0.10,
+            step=0.01,
+            format="%.2f",
+            help="Taxa de aprendizado do LightGBM.",
         )
         max_depth_option = st.selectbox(
             "Profundidade Máxima (max_depth)",
@@ -128,21 +135,32 @@ def render_retrain_page(
         max_depth = None if max_depth_option == "Sem limite" else int(max_depth_option)
 
     with hp2:
-        min_samples_split = st.number_input(
-            "Min. Amostras para Split",
+        num_leaves = st.number_input(
+            "Num Leaves",
             min_value=2,
-            max_value=50,
-            value=2,
+            max_value=255,
+            value=31,
             step=1,
-            help="Mínimo de amostras necessário para dividir um nó interno.",
+            help="Número máximo de folhas por árvore no LightGBM.",
         )
-        k_option = st.selectbox(
-            "Features Selecionadas (SelectKBest)",
-            ["Todas", "5", "10", "15", "20", "25"],
-            index=0,
-            help="Selecionar apenas as K features mais relevantes.",
+        subsample = st.number_input(
+            "Subsample",
+            min_value=0.10,
+            max_value=1.0,
+            value=1.0,
+            step=0.05,
+            format="%.2f",
+            help="Fração de linhas usada por iteração.",
         )
-        k_value = "all" if k_option == "Todas" else int(k_option)
+        colsample_bytree = st.number_input(
+            "Colsample Bytree",
+            min_value=0.10,
+            max_value=1.0,
+            value=1.0,
+            step=0.05,
+            format="%.2f",
+            help="Fração de colunas usada por árvore.",
+        )
 
     with hp3:
         test_size = st.slider(
@@ -160,8 +178,9 @@ def render_retrain_page(
         summary_html = (
             '<div class="info-box">'
             "<strong>Resumo da configuração:</strong><br>"
-            f"• {n_estimators} árvores, profundidade {depth_label}<br>"
-            f"• Min. split: {min_samples_split}, Features: {k_option}<br>"
+            f"• {n_estimators} árvores, learning rate {learning_rate:.2f}<br>"
+            f"• Depth: {depth_label}, Leaves: {num_leaves}<br>"
+            f"• Subsample: {subsample:.2f}, Colsample: {colsample_bytree:.2f}<br>"
             f"• Teste: {test_size}% dos dados"
             "</div>"
         )
@@ -220,8 +239,10 @@ def render_retrain_page(
                 "requested_by": requested_by,
                 "n_estimators": n_estimators,
                 "max_depth": max_depth,
-                "min_samples_split": min_samples_split,
-                "k": k_value if k_value != "all" else None,
+                "learning_rate": learning_rate,
+                "num_leaves": num_leaves,
+                "subsample": subsample,
+                "colsample_bytree": colsample_bytree,
                 "test_size": test_size_float,
             }
 

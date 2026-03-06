@@ -36,8 +36,10 @@ def valid_retrain_params() -> dict:
         "requested_by": "lucas_admin",
         "n_estimators": 100,
         "max_depth": 15,
-        "min_samples_split": 2,
-        "k": 10,
+        "learning_rate": 0.1,
+        "num_leaves": 31,
+        "subsample": 1.0,
+        "colsample_bytree": 1.0,
         "test_size": 0.2,
     }
 
@@ -135,8 +137,10 @@ class TestTrainRetrain:
             "requested_by": "lucas_admin",
             "n_estimators": 200,
             "max_depth": 20,
-            "min_samples_split": 5,
-            "k": 15,
+            "learning_rate": 0.05,
+            "num_leaves": 63,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
             "test_size": 0.25,
         }
 
@@ -146,7 +150,8 @@ class TestTrainRetrain:
         data = response.json()
         assert data["hyperparameters"]["n_estimators"] == 200
         assert data["hyperparameters"]["max_depth"] == 20
-        assert data["hyperparameters"]["min_samples_split"] == 5
+        assert data["hyperparameters"]["learning_rate"] == 0.05
+        assert data["hyperparameters"]["num_leaves"] == 63
 
     @patch("app.routes.train_route.get_model_paths")
     @patch("app.routes.train_route.run_training")
@@ -164,8 +169,10 @@ class TestTrainRetrain:
             "requested_by": "lucas_admin",
             "n_estimators": -50,
             "max_depth": 10,
-            "min_samples_split": 2,
-            "k": 10,
+            "learning_rate": 0.1,
+            "num_leaves": 31,
+            "subsample": 1.0,
+            "colsample_bytree": 1.0,
             "test_size": 0.2,
         }
 
@@ -174,10 +181,10 @@ class TestTrainRetrain:
 
     @patch("app.routes.train_route.get_model_paths")
     @patch("app.routes.train_route.run_training")
-    def test_retrain_k_none_converts_to_all(
+    def test_retrain_default_lightgbm_params(
         self, mock_run_training, mock_get_paths, api_client, mock_metrics
     ) -> None:
-        """Testa que k=None é convertido para 'all'."""
+        """Testa que parâmetros padrão de LightGBM são aceitos."""
         mock_get_paths.return_value = (
             "models/model.pkl",
             "models/model_best.pkl",
@@ -189,8 +196,10 @@ class TestTrainRetrain:
             "requested_by": "lucas_admin",
             "n_estimators": 100,
             "max_depth": 15,
-            "min_samples_split": 2,
-            "k": None,
+            "learning_rate": 0.1,
+            "num_leaves": 31,
+            "subsample": 1.0,
+            "colsample_bytree": 1.0,
             "test_size": 0.2,
         }
 
@@ -198,8 +207,8 @@ class TestTrainRetrain:
 
         assert response.status_code == 200
         data = response.json()
-        # k=None deve ser convertido para 'all' na resposta
-        assert data["hyperparameters"]["k"] == "all"
+        assert data["hyperparameters"]["learning_rate"] == 0.1
+        assert data["hyperparameters"]["num_leaves"] == 31
 
     @patch("app.routes.train_route.get_model_paths")
     @patch("app.routes.train_route.run_training")
@@ -223,8 +232,10 @@ class TestTrainRetrain:
         payload = {
             "n_estimators": 100,
             "max_depth": 15,
-            "min_samples_split": 2,
-            "k": 10,
+            "learning_rate": 0.1,
+            "num_leaves": 31,
+            "subsample": 1.0,
+            "colsample_bytree": 1.0,
             "test_size": 0.2,
         }
 
@@ -516,26 +527,27 @@ class TestTrainRouteParameters:
         assert "requested_by" in fields
         assert "n_estimators" in fields
         assert "max_depth" in fields
-        assert "min_samples_split" in fields
+        assert "learning_rate" in fields
+        assert "num_leaves" in fields
 
-    def test_retrain_with_default_k(self) -> None:
-        """Testa que k padrão é None quando não fornecido."""
+    def test_retrain_with_default_lightgbm_params(self) -> None:
+        """Testa que parâmetros padrão de LightGBM são aplicados."""
 
         # Sem fornecer k
         params = RetrainRequest(
             requested_by="lucas_admin",
             n_estimators=100,
             max_depth=15,
-            min_samples_split=2,
         )
-        assert params.k is None
+        assert params.learning_rate == 0.1
+        assert params.num_leaves == 31
 
-    def test_retrain_with_custom_k(self, valid_retrain_params) -> None:
-        """Testa que k pode ser um inteiro customizado."""
+    def test_retrain_with_custom_lightgbm_params(self, valid_retrain_params) -> None:
+        """Testa parâmetros customizados de LightGBM no schema."""
 
-        # valid_retrain_params já tem k=10
         params = RetrainRequest(**valid_retrain_params)
-        assert params.k == 10
+        assert params.subsample == 1.0
+        assert params.colsample_bytree == 1.0
 
 
 @pytest.mark.unit
@@ -565,7 +577,8 @@ class TestErrorResponses:
                     "requested_by": "test",
                     "n_estimators": 100,
                     "max_depth": None,
-                    "min_samples_split": 2,
+                    "learning_rate": 0.1,
+                    "num_leaves": 31,
                 },
             )
 

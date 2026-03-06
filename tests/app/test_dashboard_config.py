@@ -16,7 +16,7 @@ def test_api_url_default(monkeypatch) -> None:
     monkeypatch.delenv("API_URL", raising=False)
     importlib.reload(dashboard_config)
 
-    assert dashboard_config.API_URL == "http://127.0.0.1:8000"
+    assert dashboard_config.API_URL == "http://127.0.0.1:8000/api"
 
 
 def test_api_url_env(monkeypatch) -> None:

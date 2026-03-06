@@ -4,7 +4,7 @@ Script de treinamento do pipeline de Machine Learning.
 Este script executa o pipeline completo de treinamento incluindo:
 - Carregamento e limpeza de dados
 - Feature engineering
-- Treinamento do modelo RandomForest
+- Treinamento do modelo LightGBM
 - Avaliação de métricas
 - Logging no MLflow
 - Geração de artefatos visuais
@@ -141,7 +141,10 @@ def main(
     artifacts_dir: Optional[str] = None,
     n_estimators: int = 100,
     max_depth: Optional[int] = None,
-    min_samples_split: int = 2,
+    learning_rate: float = 0.1,
+    num_leaves: int = 31,
+    subsample: float = 1.0,
+    colsample_bytree: float = 1.0,
     k: Union[int, str] = "all",
     test_size: float = 0.2,
 ) -> Tuple[Dict[str, Any], str]:
@@ -151,9 +154,12 @@ def main(
         data_path (Optional[str]): Caminho para os dados brutos.
         model_path (Optional[str]): Caminho de saída do modelo treinado.
         artifacts_dir (Optional[str]): Diretório para artefatos visuais.
-        n_estimators (int): Número de árvores no RandomForest.
+        n_estimators (int): Número de árvores no LightGBM.
         max_depth (Optional[int]): Profundidade máxima das árvores.
-        min_samples_split (int): Mínimo de amostras para split.
+        learning_rate (float): Taxa de aprendizado do boosting.
+        num_leaves (int): Número máximo de folhas.
+        subsample (float): Fração de linhas por árvore.
+        colsample_bytree (float): Fração de colunas por árvore.
         k (Union[int, str]): Número de features para SelectKBest.
         test_size (float): Proporção para conjunto de teste.
 
@@ -178,9 +184,10 @@ def main(
 
         # Log dataset path and metadata
         from pathlib import Path
+
         logger.info(f"Loading data from: {DATA_PATH}")
         data_file_path = Path(DATA_PATH)
-        dataset_metadata = {
+        dataset_metadata: Dict[str, Any] = {
             "dataset_file": data_file_path.name,
             "dataset_path": DATA_PATH,
         }
@@ -243,18 +250,25 @@ def main(
             y,
             n_estimators=n_estimators,
             max_depth=max_depth,
-            min_samples_split=min_samples_split,
+            learning_rate=learning_rate,
+            num_leaves=num_leaves,
+            subsample=subsample,
+            colsample_bytree=colsample_bytree,
             k=k,
             test_size=test_size,
         )
 
-        # Log Model Params (Random Forest)
+        # Log Model Params (LightGBM)
         try:
-            rf = model.named_steps["classifier"]
-            mlflow.log_param("model_type", "RandomForestClassifier")
-            mlflow.log_param("n_estimators", rf.n_estimators)
-            mlflow.log_param("max_depth", rf.max_depth)
-            mlflow.log_param("min_samples_split", rf.min_samples_split)
+            classifier = model.named_steps["classifier"]
+            mlflow.log_param("model_type", type(classifier).__name__)
+            mlflow.log_param("model_flavor", "lgbm_model")
+            mlflow.log_param("n_estimators", n_estimators)
+            mlflow.log_param("max_depth", max_depth)
+            mlflow.log_param("learning_rate", learning_rate)
+            mlflow.log_param("num_leaves", num_leaves)
+            mlflow.log_param("subsample", subsample)
+            mlflow.log_param("colsample_bytree", colsample_bytree)
             mlflow.log_param("test_size", test_size)
             mlflow.log_param("k_best", k)
         except (AttributeError, KeyError, TypeError) as exc:

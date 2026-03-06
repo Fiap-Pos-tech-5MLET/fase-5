@@ -2,7 +2,7 @@
 Módulo de criação e treinamento de modelos de Machine Learning.
 
 Este módulo fornece funções para criar pipelines de ML com pré-processamento,
-treinar modelos RandomForest e avaliar performance.
+treinar modelos LightGBM e avaliar performance.
 """
 
 import logging
@@ -12,8 +12,13 @@ from typing import Dict, List, Optional, Tuple, Union
 import joblib
 import numpy as np
 import pandas as pd
+
+try:
+    from lightgbm import LGBMClassifier
+except ImportError:
+    LGBMClassifier = None
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split
@@ -29,25 +34,32 @@ def create_pipeline(
     n_estimators: int = 100,
     max_depth: Optional[int] = None,
     min_samples_split: int = 2,
+    learning_rate: float = 0.1,
+    num_leaves: int = 31,
+    subsample: float = 1.0,
+    colsample_bytree: float = 1.0,
     k: Union[int, str] = "all",
     random_state: int = 42,
 ) -> Pipeline:
     """
-    Cria pipeline de ML com pré-processamento e modelo RandomForest.
+    Cria pipeline de ML com pré-processamento e modelo LightGBM.
 
     Constrói pipeline completo incluindo:
     - Normalização de features numéricas (StandardScaler)
     - Codificação one-hot de features categóricas
     - Seleção de features (SelectKBest)
-    - Classificador RandomForest
+    - Classificador LightGBM
 
     Args:
         numeric_features (List[str]): Lista de nomes de colunas numéricas.
         categorical_features (List[str]): Lista de nomes de colunas categóricas.
-        n_estimators (int): Número de árvores no Random Forest. Padrão: 100.
+        n_estimators (int): Número de árvores no boosting. Padrão: 100.
         max_depth (Optional[int]): Profundidade máxima das árvores. None = ilimitado.
             Padrão: None.
-        min_samples_split (int): Mínimo de amostras para split de nó. Padrão: 2.
+        learning_rate (float): Taxa de aprendizado. Padrão: 0.1.
+        num_leaves (int): Número máximo de folhas no LightGBM. Padrão: 31.
+        subsample (float): Fração de linhas por árvore. Padrão: 1.0.
+        colsample_bytree (float): Fração de colunas por árvore. Padrão: 1.0.
         k (Union[int, str]): Número de features a selecionar com SelectKBest. 'all' mantém todas.
             Padrão: 'all'.
         random_state (int): Seed para reprodutibilidade. Padrão: 42.
@@ -90,6 +102,22 @@ def create_pipeline(
     if not isinstance(min_samples_split, int) or min_samples_split < 2:
         raise ValueError(f"min_samples_split deve ser >= 2, recebido: {min_samples_split}")
 
+    if not isinstance(learning_rate, int | float) or learning_rate <= 0:
+        raise ValueError(f"learning_rate deve ser > 0, recebido: {learning_rate}")
+
+    if not isinstance(num_leaves, int) or num_leaves < 2:
+        raise ValueError(f"num_leaves deve ser >= 2, recebido: {num_leaves}")
+
+    if not isinstance(subsample, int | float) or subsample <= 0 or subsample > 1:
+        raise ValueError(f"subsample deve estar em (0, 1], recebido: {subsample}")
+
+    if (
+        not isinstance(colsample_bytree, int | float)
+        or colsample_bytree <= 0
+        or colsample_bytree > 1
+    ):
+        raise ValueError(f"colsample_bytree deve estar em (0, 1], recebido: {colsample_bytree}")
+
     if k != "all" and (not isinstance(k, int) or k <= 0):
         raise ValueError(f"k deve ser inteiro positivo ou 'all', recebido: {k}")
 
@@ -99,9 +127,10 @@ def create_pipeline(
         len(categorical_features),
     )
     logger.debug(
-        "Parâmetros: n_estimators=%d, max_depth=%s, k=%s",
+        "Parâmetros: n_estimators=%d, max_depth=%s, learning_rate=%.3f, k=%s",
         n_estimators,
         max_depth,
+        learning_rate,
         k,
     )
 
@@ -122,21 +151,33 @@ def create_pipeline(
 
     preprocessor = ColumnTransformer(transformers=transformers)
 
+    if LGBMClassifier is not None:
+        classifier = LGBMClassifier(
+            n_estimators=n_estimators,
+            max_depth=-1 if max_depth is None else max_depth,
+            learning_rate=float(learning_rate),
+            num_leaves=num_leaves,
+            subsample=float(subsample),
+            colsample_bytree=float(colsample_bytree),
+            random_state=random_state,
+            n_jobs=-1,
+            verbose=-1,
+        )
+    else:
+        logger.warning("lightgbm não encontrado; usando fallback GradientBoostingClassifier")
+        classifier = GradientBoostingClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            learning_rate=float(learning_rate),
+            random_state=random_state,
+        )
+
     # Pipeline completo
     clf = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
             ("feature_selection", SelectKBest(f_classif, k=k)),
-            (
-                "classifier",
-                RandomForestClassifier(
-                    n_estimators=n_estimators,
-                    max_depth=max_depth,
-                    min_samples_split=min_samples_split,
-                    random_state=random_state,
-                    n_jobs=-1,  # Usar todos os cores disponíveis
-                ),
-            ),
+            ("classifier", classifier),
         ]
     )
 
@@ -150,12 +191,16 @@ def train_model(
     n_estimators: int = 100,
     max_depth: Optional[int] = None,
     min_samples_split: int = 2,
+    learning_rate: float = 0.1,
+    num_leaves: int = 31,
+    subsample: float = 1.0,
+    colsample_bytree: float = 1.0,
     k: Union[int, str] = "all",
     test_size: float = 0.2,
     random_state: int = 42,
 ) -> Tuple[Pipeline, Dict[str, float], pd.DataFrame, pd.Series]:
     """
-    Treina modelo RandomForest e retorna métricas de avaliação.
+    Treina modelo LightGBM e retorna métricas de avaliação.
 
     Divide dados em treino/teste, cria pipeline, treina modelo e
     calcula métricas detalhadas de performance.
@@ -163,9 +208,12 @@ def train_model(
     Args:
         X (pd.DataFrame): DataFrame com features.
         y (pd.Series): Series com target binário.
-        n_estimators (int): Número de árvores no Random Forest. Padrão: 100.
+        n_estimators (int): Número de árvores no boosting. Padrão: 100.
         max_depth (Optional[int]): Profundidade máxima das árvores. Padrão: None.
-        min_samples_split (int): Mínimo de amostras para split. Padrão: 2.
+        learning_rate (float): Taxa de aprendizado. Padrão: 0.1.
+        num_leaves (int): Número máximo de folhas. Padrão: 31.
+        subsample (float): Fração de linhas por árvore. Padrão: 1.0.
+        colsample_bytree (float): Fração de colunas por árvore. Padrão: 1.0.
         k (Union[int, str]): Número de features a selecionar. Padrão: 'all'.
         test_size (float): Proporção dos dados para teste (0.0-1.0). Padrão: 0.2.
         random_state (int): Seed para reprodutibilidade. Padrão: 42.
@@ -244,7 +292,10 @@ def train_model(
         categorical_features,
         n_estimators=n_estimators,
         max_depth=max_depth,
-        min_samples_split=min_samples_split,
+        learning_rate=learning_rate,
+        num_leaves=num_leaves,
+        subsample=subsample,
+        colsample_bytree=colsample_bytree,
         k=k,
         random_state=random_state,
     )
