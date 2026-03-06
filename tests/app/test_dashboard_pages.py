@@ -138,13 +138,16 @@ def test_render_drift_page_with_existing_report(tmp_path, monkeypatch) -> None:
     st.button.return_value = True
     monkeypatch.setattr(drift_page, "st", st)
 
+    data_path = tmp_path / "data.csv"
+    data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
+    
     report_path = tmp_path / "report.html"
     report_path.write_text("<html>ok</html>", encoding="utf-8")
 
     generate_mock = MagicMock()
     monkeypatch.setattr(drift_page, "generate_drift_report", generate_mock)
 
-    drift_page.render_drift_page(str(report_path))
+    drift_page.render_drift_page(str(data_path), str(report_path))
 
     generate_mock.assert_called_once()
     st.components.v1.html.assert_called_once()
@@ -156,11 +159,14 @@ def test_render_drift_page_missing_report(tmp_path, monkeypatch) -> None:
     st.button.return_value = True
     monkeypatch.setattr(drift_page, "st", st)
 
+    data_path = tmp_path / "data.csv"
+    data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
+    
     missing_path = tmp_path / "missing.html"
     generate_mock = MagicMock()
     monkeypatch.setattr(drift_page, "generate_drift_report", generate_mock)
 
-    drift_page.render_drift_page(str(missing_path))
+    drift_page.render_drift_page(str(data_path), str(missing_path))
 
     generate_mock.assert_called_once()
     st.warning.assert_called()
@@ -169,17 +175,19 @@ def test_render_drift_page_missing_report(tmp_path, monkeypatch) -> None:
 def test_render_drift_page_missing_report_error(tmp_path, monkeypatch) -> None:
     """Deve exibir erro quando geração falha sem relatório prévio."""
     st = make_streamlit_mock()
-    st.button.return_value = True
     monkeypatch.setattr(drift_page, "st", st)
-
+    
+    data_path = tmp_path / "data.csv"
+    data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
+    
     missing_path = tmp_path / "missing.html"
 
-    def _raise() -> None:
+    def _raise(data_path: str, report_path: str) -> None:
         raise RuntimeError("fail")
 
     monkeypatch.setattr(drift_page, "generate_drift_report", _raise)
 
-    drift_page.render_drift_page(str(missing_path))
+    drift_page.render_drift_page(str(data_path), str(missing_path))
 
     st.error.assert_called()
     st.exception.assert_called_once()
@@ -191,15 +199,18 @@ def test_render_drift_page_generate_error(tmp_path, monkeypatch) -> None:
     st.button.return_value = True
     monkeypatch.setattr(drift_page, "st", st)
 
+    data_path = tmp_path / "data.csv"
+    data_path.write_text("col1,col2\n1,2\n", encoding="utf-8")
+    
     report_path = tmp_path / "report.html"
     report_path.write_text("<html>ok</html>", encoding="utf-8")
 
-    def _raise() -> None:
+    def _raise(data_path: str, report_path: str) -> None:
         raise RuntimeError("fail")
 
     monkeypatch.setattr(drift_page, "generate_drift_report", _raise)
 
-    drift_page.render_drift_page(str(report_path))
+    drift_page.render_drift_page(str(data_path), str(report_path))
 
     st.error.assert_called()
     st.exception.assert_called_once()
