@@ -440,6 +440,7 @@ Os testes cobrem os seguintes diretórios principais:
 
 - **`src/`** — Pipeline de dados e ML (data cleaning, feature engineering, feature store, modelo)
 - **`app/`** — Aplicação completa (API FastAPI, Dashboard Streamlit, rotas, utilitários)
+- **`scripts/`** — Scripts de utilidades (treinamento, monitoramento, processamento, visualização)
 
 ### 🧪 Tipos de Testes
 
@@ -477,6 +478,16 @@ A suite de testes está organizada por categorias:
 #### 5. Testes de Configuração e Infraestrutura
 - **`test_app_config.py`** — Configurações da aplicação
 - **`test_deployment_config.py`** — Validação de configuração de deploy (render.yaml)
+
+#### 6. Testes de Scripts e Utilitários
+- **`test_train.py`** — Script de treinamento e MLflow
+- **`test_visualization.py`** — Visualização de gráficos (ROC, importância, etc)
+- **`test_monitoring.py`** — Monitoramento de aplicação
+- **`test_data_processing.py`** — Processamento de dados em lote
+- **`test_eda_analysis.py`** — Análise exploratória de dados
+- **`test_datathon_cleaning.py`** — Limpeza específica do datathon
+- **`test_notebook_feature_engineering.py`** — Feature engineering em notebooks
+- **`test_cleanup_repo.py`** — Limpeza de repositório
 
 ### 🏷️ Markers de Testes
 
