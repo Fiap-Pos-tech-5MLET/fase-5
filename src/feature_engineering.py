@@ -13,6 +13,126 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+MODEL_FEATURE_COLUMNS: list[str] = [
+    "nivel_de_defasagem",
+    "idade",
+    "genero",
+    "ano_de_ingresso",
+    "veterano",
+    "em_fase",
+    "qtde_aval_realizadas",
+    "iaa",
+    "ieg",
+    "ips",
+    "ida",
+    "ipv",
+    "ian",
+]
+
+_COLUMN_ALIASES: dict[str, str] = {
+    "NIVEL_DE_DEFASAGEM": "nivel_de_defasagem",
+    "DEFASAGEM": "nivel_de_defasagem",
+    "IDADE": "idade",
+    "GENERO": "genero",
+    "GÊNERO": "genero",
+    "ANO_DE_INGRESSO": "ano_de_ingresso",
+    "ANO_INGRESSO": "ano_de_ingresso",
+    "VETERANO": "veterano",
+    "EM_FASE": "em_fase",
+    "QTDE_AVAL_REALIZADAS": "qtde_aval_realizadas",
+    "Nº_AV": "qtde_aval_realizadas",
+    "N_AV": "qtde_aval_realizadas",
+    "IAA": "iaa",
+    "IEG": "ieg",
+    "IPS": "ips",
+    "IDA": "ida",
+    "IPV": "ipv",
+    "IAN": "ian",
+}
+
+
+def _normalize_new_feature_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Normaliza nomes/tipos para o contrato de features do modelo atual."""
+    normalized = df.copy()
+
+    current_cols_upper = {str(col).strip().upper() for col in normalized.columns}
+    canonical_present = any(col in normalized.columns for col in MODEL_FEATURE_COLUMNS)
+    new_contract_signals = {
+        "NIVEL_DE_DEFASAGEM",
+        "ANO_DE_INGRESSO",
+        "ANO_INGRESSO",
+        "QTDE_AVAL_REALIZADAS",
+        "IAA",
+        "IEG",
+        "IPS",
+        "IDA",
+        "IPV",
+        "IAN",
+        "EM_FASE",
+        "VETERANO",
+    }
+
+    should_map_aliases = canonical_present or bool(
+        current_cols_upper.intersection(new_contract_signals)
+    )
+    if not should_map_aliases:
+        return normalized
+
+    for col in normalized.columns:
+        upper_col = str(col).strip().upper()
+        if upper_col in _COLUMN_ALIASES:
+            canonical_col = _COLUMN_ALIASES[upper_col]
+            if canonical_col not in normalized.columns:
+                normalized[canonical_col] = normalized[col]
+
+    if "veterano" not in normalized.columns and "ano_de_ingresso" in normalized.columns:
+        normalized["veterano"] = (
+            pd.to_numeric(normalized["ano_de_ingresso"], errors="coerce") < 2024
+        ).astype(int)
+
+    if "em_fase" not in normalized.columns and "nivel_de_defasagem" in normalized.columns:
+        normalized["em_fase"] = (
+            pd.to_numeric(normalized["nivel_de_defasagem"], errors="coerce") == 0
+        ).astype(int)
+
+    if "genero" in normalized.columns:
+        genero_map = {
+            "M": 1,
+            "MASCULINO": 1,
+            "HOMEM": 1,
+            "F": 0,
+            "FEMININO": 0,
+            "MULHER": 0,
+        }
+        normalized["genero"] = (
+            normalized["genero"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            .map(genero_map)
+            .fillna(pd.to_numeric(normalized["genero"], errors="coerce"))
+            .fillna(0)
+        )
+
+    for col in MODEL_FEATURE_COLUMNS:
+        if col in normalized.columns:
+            normalized[col] = pd.to_numeric(normalized[col], errors="coerce").fillna(0.0)
+
+    return normalized
+
+
+def build_feature_matrix_for_model(df: pd.DataFrame) -> pd.DataFrame:
+    """Constrói matriz no mesmo schema de features esperado pelo modelo atual."""
+    normalized = _normalize_new_feature_columns(df)
+    feature_matrix = pd.DataFrame(index=normalized.index)
+    for col in MODEL_FEATURE_COLUMNS:
+        if col in normalized.columns:
+            feature_matrix[col] = normalized[col]
+        else:
+            feature_matrix[col] = 0.0
+    return feature_matrix
+
+
 def create_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Cria novas features derivadas para o modelo preditivo.
@@ -57,6 +177,9 @@ def create_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
     features_created = []
+
+    # Normalização para o schema atual (modelo lgbm)
+    df = _normalize_new_feature_columns(df)
 
     # Feature 1: Crescimento do INDE (evolução temporal)
     if "INDE_2024" in df.columns and "INDE_23" in df.columns:
@@ -151,6 +274,19 @@ def select_features(
         raise ValueError("Target column not found. Run create_target first.")
 
     df = df.copy()
+    df = _normalize_new_feature_columns(df)
+
+    # Caminho principal do projeto atual: usar as 13 features canônicas
+    canonical_hits = sum(1 for col in MODEL_FEATURE_COLUMNS if col in df.columns)
+    if canonical_hits >= 4:
+        target_series = df[target_col]
+        feature_matrix = build_feature_matrix_for_model(df)
+        logger.info(
+            "Features canônicas selecionadas: %d colunas, %d samples",
+            feature_matrix.shape[1],
+            feature_matrix.shape[0],
+        )
+        return feature_matrix, target_series
 
     # Separar target
     target_series = df[target_col]

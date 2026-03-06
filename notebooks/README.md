@@ -14,6 +14,7 @@ Este diretório contém notebooks Jupyter para análise exploratória de dados (
 | **`eda_passos_magicos_refactored.ipynb`** | Análise exploratória com testes estatísticos | ✅ Prod | `scripts/eda_analysis.py` + `scripts/visualization.py` | Inclusos |
 | **`DATATHON-PASSOS-MÁGICOS_refactored.ipynb`** | Exploração e análise de continuidade 2020-2022 | ✅ Prod | `scripts/datathon_cleaning.py` | 38 testes |
 | **`EDA_and_Training_refactored.ipynb`** | Pipeline completo: EDA → Treino → Avaliação | ✅ Prod | `src/data_cleaning.py` + `src/feature_engineering.py` + `scripts/visualization.py` | Inclusos |
+| **`model_training.ipynb`** | Treino e avaliação LightGBM com workflow enxuto | ✅ Prod | `scripts/model_training_analysis.py` | `tests/scripts/test_model_training_analysis.py` |
 
 ### Notebooks Legados 📦
 
@@ -59,6 +60,15 @@ Este diretório contém notebooks Jupyter para análise exploratória de dados (
 - Contagem de novos alunos e taxas de permanência
 
 ### 4. Para Treinamento de Modelos
+**Use:** `model_training.ipynb`
+
+**Características:**
+- ✅ Notebook orquestrador com documentação inicial
+- ✅ Lógica isolada em `scripts/model_training_analysis.py`
+- ✅ Testes dedicados em `tests/scripts/test_model_training_analysis.py`
+- ✅ Treino, CV e métricas alinhados ao `lgbm_model`
+
+### 5. Para Pipeline Completo (EDA + Treino)
 **Use:** `EDA_and_Training_refactored.ipynb`
 
 **Características:**
@@ -175,6 +185,7 @@ pytest tests/test_data_processing.py --cov=scripts.data_processing
 - **`datathon_cleaning.py`** — Limpeza e análise de continuidade estudantil (filter_columns, cleaning_dataset, create_annual_datasets, analyze_student_continuity)
 - **`notebook_feature_engineering.py`** — Transformações de FASE, TURMA, flags derivadas
 - **`eda_analysis.py`** — Testes estatísticos, validação cruzada
+- **`model_training_analysis.py`** — Split, CV, treino final e métricas para LightGBM
 - **`visualization.py`** — Gráficos e visualizações
 
 ### src/

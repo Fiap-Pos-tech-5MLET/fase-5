@@ -24,7 +24,7 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
         None
     """
     st.markdown("# 🔮 Predição de Risco de Defasagem")
-    st.markdown("Preencha os dados do aluno para obter a predição de risco de defasagem escolar.")
+    st.markdown("Preencha as 13 variáveis do modelo para obter a predição de risco.")
 
     if not api_healthy:
         st.error("⚠️ API não disponível. Verifique a conexão com o servidor de predição.")
@@ -35,131 +35,87 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
     col1, col2, col3 = st.columns(3)
 
     with col1:
+        nivel_de_defasagem = st.number_input(
+            "Nível de Defasagem", min_value=-6.0, max_value=6.0, value=0.0, step=0.1
+        )
         idade = st.number_input("Idade", min_value=6, max_value=30, value=12, step=1)
-        genero = st.selectbox("Gênero", ["Feminino", "Masculino"])
-        fase = st.selectbox(
-            "Fase",
-            [
-                "ALFA",
-                "1A",
-                "1B",
-                "2A",
-                "2B",
-                "3A",
-                "3B",
-                "4A",
-                "4B",
-                "5A",
-                "5B",
-                "6A",
-                "7A",
-                "8A",
-                "8B",
-                "9",
-            ],
+        genero_label = st.selectbox("Gênero", ["Feminino", "Masculino"])
+        genero = 1 if genero_label == "Masculino" else 0
+        ano_de_ingresso = st.number_input(
+            "Ano de Ingresso", min_value=2010, max_value=2035, value=2022, step=1
+        )
+        qtde_aval_realizadas = st.number_input(
+            "Qtde. Avaliações Realizadas", min_value=0, max_value=20, value=4, step=1
         )
 
     with col2:
-        ano_ingresso = st.number_input(
-            "Ano de Ingresso", min_value=2016, max_value=2024, value=2022, step=1
+        veterano = st.selectbox("Veterano", ["Não", "Sim"])
+        em_fase = st.selectbox("Em Fase", ["Não", "Sim"])
+        iaa = st.number_input(
+            "IAA (Índice de Autoavaliação)",
+            min_value=0.0,
+            max_value=10.0,
+            value=6.0,
+            step=0.1,
+            format="%.1f",
         )
-        fase_ideal = st.selectbox(
-            "Fase Ideal",
-            [
-                "ALFA (1° e 2° ano)",
-                "Fase 1 (3° e 4° ano)",
-                "Fase 2 (5° e 6° ano)",
-                "Fase 3 (7° e 8° ano)",
-                "Fase 4 (9° ano)",
-                "Fase 5 (1° EM)",
-                "Fase 6 (2° EM)",
-                "Fase 7 (3° EM)",
-                "Fase 8 (Universitários)",
-            ],
+        ieg = st.number_input(
+            "IEG (Índice de Engajamento)",
+            min_value=0.0,
+            max_value=10.0,
+            value=6.0,
+            step=0.1,
+            format="%.1f",
         )
-        ativo = st.selectbox("Status", ["Cursando", "Inativo"])
+        ips = st.number_input(
+            "IPS (Índice Psicossocial)",
+            min_value=0.0,
+            max_value=10.0,
+            value=6.0,
+            step=0.1,
+            format="%.1f",
+        )
 
     with col3:
-        inde_22 = st.number_input(
-            "INDE 2022",
+        ida = st.number_input(
+            "IDA (Índice de Aprendizagem)",
             min_value=0.0,
             max_value=10.0,
-            value=5.0,
+            value=6.0,
             step=0.1,
             format="%.1f",
         )
-        inde_23 = st.number_input(
-            "INDE 2023",
+        ipv = st.number_input(
+            "IPV (Índice de Ponto de Virada)",
             min_value=0.0,
             max_value=10.0,
-            value=5.5,
+            value=6.0,
             step=0.1,
             format="%.1f",
         )
-
-    st.markdown(
-        '<div class="section-header">Performance Histórica (Opcional)</div>',
-        unsafe_allow_html=True,
-    )
-
-    with st.expander("📋 Pedras e Conceitos (clique para expandir)", expanded=False):
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            pedra_20 = st.number_input(
-                "Pedra 2020", min_value=0.0, max_value=10.0, value=0.0, step=0.1
-            )
-            pedra_21 = st.number_input(
-                "Pedra 2021", min_value=0.0, max_value=10.0, value=0.0, step=0.1
-            )
-        with c2:
-            pedra_22 = st.number_input(
-                "Pedra 2022", min_value=0.0, max_value=10.0, value=0.0, step=0.1
-            )
-            pedra_23 = st.number_input(
-                "Pedra 2023", min_value=0.0, max_value=10.0, value=0.0, step=0.1
-            )
-        with c3:
-            cg = st.number_input(
-                "CG (Conceito Geral)",
-                min_value=0.0,
-                max_value=10.0,
-                value=0.0,
-                step=0.1,
-            )
-            cf = st.number_input(
-                "CF (Conceito Final)",
-                min_value=0.0,
-                max_value=10.0,
-                value=0.0,
-                step=0.1,
-            )
-        with c4:
-            ct = st.number_input(
-                "CT (Conceito Total)",
-                min_value=0.0,
-                max_value=10.0,
-                value=0.0,
-                step=0.1,
-            )
-            n_av = st.number_input("Nº Avaliações", min_value=0, max_value=6, value=0, step=1)
+        ian = st.number_input(
+            "IAN (Índice de Adequação Nivelar)",
+            min_value=0.0,
+            max_value=10.0,
+            value=6.0,
+            step=0.1,
+            format="%.1f",
+        )
 
     student_data = {
-        "IDADE": idade,
-        "GENERO": genero,
-        "FASE": fase,
-        "ANO_INGRESSO": ano_ingresso,
-        "FASE_IDEAL": fase_ideal,
-        "ATIVO/_INATIVO": ativo,
-        "INDE_22": inde_22,
-        "INDE_23": inde_23,
-        "PEDRA_20": pedra_20,
-        "PEDRA_21": pedra_21,
-        "PEDRA_22": pedra_22,
-        "PEDRA_23": pedra_23,
-        "CG": cg,
-        "CF": cf,
-        "CT": ct,
-        "Nº_AV": float(n_av),
+        "nivel_de_defasagem": float(nivel_de_defasagem),
+        "idade": float(idade),
+        "genero": float(genero),
+        "ano_de_ingresso": float(ano_de_ingresso),
+        "veterano": 1.0 if veterano == "Sim" else 0.0,
+        "em_fase": 1.0 if em_fase == "Sim" else 0.0,
+        "qtde_aval_realizadas": float(qtde_aval_realizadas),
+        "iaa": float(iaa),
+        "ieg": float(ieg),
+        "ips": float(ips),
+        "ida": float(ida),
+        "ipv": float(ipv),
+        "ian": float(ian),
     }
 
     with st.spinner("Processando predição via API..."):

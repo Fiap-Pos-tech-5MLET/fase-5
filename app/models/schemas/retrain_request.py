@@ -21,20 +21,37 @@ class RetrainRequest(BaseModel):
         100,
         ge=10,
         le=1000,
-        description="Número de árvores no Random Forest",
+        description="Número de árvores (boosting rounds) no LightGBM",
     )
     max_depth: Optional[int] = Field(
         None,
-        ge=2,
-        le=100,
-        description="Profundidade máxima (None = ilimitada)",
-    )
-    min_samples_split: int = Field(2, ge=2, le=50, description="Mínimo de amostras para split")
-    k: Optional[int] = Field(
-        None,
         ge=1,
         le=100,
-        description="Features selecionadas via SelectKBest (None = todas)",
+        description="Profundidade máxima das árvores (None = sem limite explícito)",
+    )
+    learning_rate: float = Field(
+        0.1,
+        gt=0.0,
+        le=1.0,
+        description="Taxa de aprendizado do boosting",
+    )
+    num_leaves: int = Field(
+        31,
+        ge=2,
+        le=255,
+        description="Número máximo de folhas por árvore",
+    )
+    subsample: float = Field(
+        1.0,
+        gt=0.0,
+        le=1.0,
+        description="Fraçao de linhas usadas por iteração",
+    )
+    colsample_bytree: float = Field(
+        1.0,
+        gt=0.0,
+        le=1.0,
+        description="Fraçao de colunas usadas por árvore",
     )
     test_size: float = Field(
         0.2,
