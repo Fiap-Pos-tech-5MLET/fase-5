@@ -13,7 +13,7 @@ Functions:
 """
 
 import pandas as pd
-from typing import List, Dict, Set, Tuple
+from typing import Any, List, Dict, Set, Tuple
 
 
 def filter_columns(df: pd.DataFrame, filters: List[str]) -> pd.DataFrame:
@@ -137,7 +137,7 @@ def analyze_student_continuity(
     df_2021: pd.DataFrame,
     df_2022: pd.DataFrame,
     nome_col: str = 'NOME'
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """
     Analisar continuidade de alunos entre anos.
     
