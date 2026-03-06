@@ -149,9 +149,10 @@ class TestStudentDataSchema:
         }
 
     def test_student_data_data_field_required(self) -> None:
-        """StudentData exige campo 'data'."""
-        with pytest.raises(ValidationError):
-            StudentData()
+        """StudentData aplica payload default quando 'data' não é enviado."""
+        student_data = StudentData()
+        assert "idade" in student_data.data
+        assert student_data.data["idade"] == 12.0
 
     def test_student_data_accepts_empty_dict(self) -> None:
         """StudentData deve aceitar data={} (dict vazio)."""

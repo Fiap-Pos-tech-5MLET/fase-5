@@ -8,18 +8,29 @@ Cobre:
 """
 
 import os
+import sys
 import tempfile
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, call, patch
 
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas as pd
 import pytest
 
+# Backend não-interativo para ambientes headless/CI
+matplotlib.use("Agg")
+
+# Carrega o módulo real mesmo com mock global em tests/conftest.py
+sys.modules.pop("scripts.train", None)
+train_module = import_module("scripts.train")
+
 # Import das funções reais para cobertura
-from scripts.train import plot_classification_report, plot_feature_importance, plot_roc_curve
+plot_classification_report = train_module.plot_classification_report
+plot_feature_importance = train_module.plot_feature_importance
+plot_roc_curve = train_module.plot_roc_curve
 
 
 @pytest.mark.unit
@@ -34,7 +45,7 @@ class TestPlotClassificationReport:
         output_path = str(tmp_path / "report.png")
 
         # Chamar função real com mock de plt.savefig
-        with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
+        with patch("scripts.train.plt.savefig") as mock_savefig, patch("scripts.train.plt.close"):
             plot_classification_report(y_true, y_pred, output_path)
             mock_savefig.assert_called_once_with(output_path)
 
@@ -97,22 +108,24 @@ class TestPlotROCCurve:
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
-        
+
         output_path = str(tmp_path / "roc.png")
-        
+
         # Criar dados sintéticos
         X = pd.DataFrame({"f1": [1, 2, 3, 4, 5, 6], "f2": [2, 3, 4, 5, 6, 7]})
         y = pd.Series([0, 0, 0, 1, 1, 1])
-        
+
         # Treinar modelo simples
-        estimator = Pipeline([
-            ("scaler", StandardScaler()),
-            ("classifier", RandomForestClassifier(n_estimators=10, random_state=42))
-        ])
+        estimator = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("classifier", RandomForestClassifier(n_estimators=10, random_state=42)),
+            ]
+        )
         estimator.fit(X, y)
-        
+
         # Chamar função real com mock de plt.savefig
-        with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
+        with patch("scripts.train.plt.savefig") as mock_savefig, patch("scripts.train.plt.close"):
             plot_roc_curve(estimator, X, y, output_path)
             mock_savefig.assert_called_once_with(output_path)
 
@@ -191,24 +204,26 @@ class TestPlotFeatureImportance:
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
-        
+
         output_path = str(tmp_path / "feature_importance.png")
-        
+
         # Criar dados sintéticos
         X = pd.DataFrame({"f1": [1, 2, 3, 4], "f2": [2, 3, 4, 5], "f3": [3, 4, 5, 6]})
         y = pd.Series([0, 0, 1, 1])
-        
+
         # Treinar modelo simples
-        model = Pipeline([
-            ("scaler", StandardScaler()),
-            ("classifier", RandomForestClassifier(n_estimators=10, random_state=42))
-        ])
+        model = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("classifier", RandomForestClassifier(n_estimators=10, random_state=42)),
+            ]
+        )
         model.fit(X, y)
-        
+
         feature_names = np.array(["f1", "f2", "f3"])
-        
+
         # Chamar função real com mock de plt.savefig
-        with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
+        with patch("scripts.train.plt.savefig") as mock_savefig, patch("scripts.train.plt.close"):
             plot_feature_importance(model, feature_names, output_path, top_n=3)
             mock_savefig.assert_called_once_with(output_path)
 

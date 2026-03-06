@@ -12,7 +12,6 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ def _to_dense(matrix: Any) -> np.ndarray:
     return cast(np.ndarray, np.asarray(matrix))
 
 
-def _resolve_feature_names(model: Pipeline, transformed_size: int) -> list[str]:
+def _resolve_feature_names(model: Any, transformed_size: int) -> list[str]:
     """Obtém nomes das features após preprocessamento e seleção.
 
     Args:
@@ -106,7 +105,7 @@ def _build_contributions(
 
 
 def explain_prediction(
-    model: Pipeline,
+    model: Any,
     feature_matrix: pd.DataFrame,
     top_n: int = 5,
 ) -> tuple[list[dict[str, Any]], str]:
@@ -122,11 +121,40 @@ def explain_prediction(
             - Lista das principais features e contribuições
             - Método utilizado na explicação
     """
-    preprocessor = model.named_steps.get("preprocessor")
-    classifier = model.named_steps.get("classifier")
-    selector = model.named_steps.get("feature_selection")
+    named_steps = getattr(model, "named_steps", None)
+    if isinstance(named_steps, dict):
+        preprocessor = named_steps.get("preprocessor")
+        classifier = named_steps.get("classifier")
+        selector = named_steps.get("feature_selection")
+    else:
+        preprocessor = None
+        classifier = model
+        selector = None
 
-    if preprocessor is None or classifier is None:
+    if classifier is None:
+        return [], "unavailable"
+
+    if preprocessor is None:
+        if hasattr(classifier, "feature_importances_"):
+            importances = np.asarray(classifier.feature_importances_)
+            if feature_matrix.empty or importances.size == 0:
+                return [], "unavailable"
+
+            row_values_series = pd.to_numeric(feature_matrix.iloc[0], errors="coerce").fillna(0.0)
+            row_values = row_values_series.to_numpy(dtype=float)
+            feature_names = [str(col) for col in feature_matrix.columns]
+            size = min(importances.size, row_values.size, len(feature_names))
+            if size == 0:
+                return [], "unavailable"
+
+            proxy_contrib = row_values[:size] * importances[:size]
+            return (
+                _build_contributions(
+                    feature_names[:size], row_values[:size], proxy_contrib, top_n
+                ),
+                "feature_importance_proxy",
+            )
+
         return [], "unavailable"
 
     transformed = preprocessor.transform(feature_matrix)

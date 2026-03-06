@@ -29,7 +29,7 @@ router = APIRouter()
 @router.get("/")
 async def health_check(
     request: Request,
-    requested_by: str = Depends(validate_requested_by),  # noqa: B008
+    requested_by: str = Depends(validate_requested_by),
 ) -> Dict[str, bool]:
     """
     Health check endpoint.
@@ -55,7 +55,7 @@ async def health_check(
 @router.get("/model-info", response_model=ModelInfoResponse)
 async def model_info(
     request: Request,
-    requested_by: str = Depends(validate_requested_by),  # noqa: B008
+    requested_by: str = Depends(validate_requested_by),
 ) -> ModelInfoResponse:
     """
     Retorna metadados do modelo em produção, incluindo estratégia de
@@ -161,7 +161,7 @@ async def model_info(
 @router.get("/drift", response_class=HTMLResponse)
 async def drift_report(
     request: Request,
-    requested_by: str = Depends(validate_requested_by),  # noqa: B008
+    requested_by: str = Depends(validate_requested_by),
 ) -> HTMLResponse:
     """
     Serve o relatório de data drift como HTML.
@@ -211,7 +211,7 @@ async def drift_report(
 async def update_dataset(
     request: Request,
     file: UploadFile = File(...),  # noqa: B008
-    requested_by: str = Depends(validate_requested_by),  # noqa: B008
+    requested_by: str = Depends(validate_requested_by),
     _authenticated: Any = Depends(validate_api_key),  # noqa: B008
 ) -> JSONResponse:
     """

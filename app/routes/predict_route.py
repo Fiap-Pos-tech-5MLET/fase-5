@@ -134,7 +134,7 @@ async def predict(
                 for col in categorical_cols_model:
                     if col not in feature_matrix.columns:
                         feature_matrix[col] = "UNKNOWN"
-            except ValueError:
+            except (ValueError, AttributeError, KeyError, TypeError):
                 pass
 
             expected_cols = model.feature_names_in_

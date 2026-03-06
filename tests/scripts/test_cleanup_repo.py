@@ -27,7 +27,7 @@ class TestCleanupRepo:
         assert expected_format == "archive_20240305_143045"
         assert expected_format.startswith("archive_")
         assert len(expected_format) == 23  # archive_YYYYMMDD_HHMMSS
-        
+
         # Verificar se o ARCHIVE_DIR do módulo segue o padrão
         assert scripts.cleanup_repo.ARCHIVE_DIR.startswith("archive_")
 
