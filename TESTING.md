@@ -1,14 +1,53 @@
-# Testes e Qualidade
+# Guia Completo de Testes e Qualidade
 
-Runbook técnico para execução local e validação no CI.
+> Runbook técnico abrangente para execução local, validação no CI/CD e garantia de qualidade do código e ML pipeline.
 
-## 1) Objetivo
+---
 
-- Garantir regressão funcional da API e pipeline ML.
-- Garantir qualidade estática (lint, tipos, segurança).
-- Manter cobertura mínima do projeto em **85%**.
+## 📋 Índice
 
-## 2) Comandos essenciais
+- [1. Objetivo e Princípios](#1-objetivo-e-princípios)
+- [2. Comandos Essenciais](#2-comandos-essenciais)
+- [3. Estrutura de Testes](#3-estrutura-de-testes)
+- [4. Cobertura e Métricas](#4-cobertura-e-métricas)
+- [5. Markers e Filtros](#5-markers-e-filtros)
+- [6. Fixtures e Configuração](#6-fixtures-e-configuração)
+- [7. Boas Práticas](#7-boas-práticas)
+- [8. Integração com CI/CD](#8-integração-com-cicd)
+- [9. Troubleshooting](#9-troubleshooting)
+
+---
+
+## 1. Objetivo e Princípios
+
+### 🎯 Objetivos
+
+- **Regressão Funcional:** Garantir que mudanças não quebrem comportamento esperado da API e pipeline ML
+- **Qualidade Estática:** Manter código limpo, tipado e seguro (lint, type checking, security scans)
+- **Cobertura Mínima:** Manter cobertura de código em **85%+** conforme `pytest.ini`
+- **Reprodutibilidade:** Testes executam rapidamente sem dependências externas pesadas (MLflow, Streamlit mockados)
+- **Rastreabilidade:** Cada teste documentado e categorizado por tipo e escopo
+
+### 📐 Princípios
+
+1. **AAA Pattern:** Arrange → Act → Assert (estrutura clara)
+2. **Independência:** Testes não compartilham estado mutável
+3. **Determinismo:** Execuções repetidas produzem mesmo resultado
+4. **Velocidade:** Suite completa < 2 min (mocks pesados, fixtures eficientes)
+5. **Clareza:** Nomes descritivos indicam cenário testado
+
+### 🎯 Metas Quantitativas
+
+| Métrica | Target | Justificativa |
+|---------|--------|---------------|
+| **Cobertura Total** | ≥ 85% | Confiança para refatoração e evolução |
+| **Tempo de Execução** | < 2 min | Feedback rápido para desenvolvedores |
+| **Taxa de Falso Positivo** | < 5% | Testes flaky prejudicam confiança |
+| **Lint/Type/Security** | 0 erros críticos | Código limpo e seguro |
+
+---
+
+## 2. Comandos Essenciais
 
 ### Testes
 
