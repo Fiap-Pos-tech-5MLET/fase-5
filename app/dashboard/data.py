@@ -85,6 +85,15 @@ def get_model_metrics(model: Any, df: Optional[pd.DataFrame]) -> Optional[Dict[s
     try:
         X, y = select_features(df)
         _X_train, X_test, _y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        # Remover features extras que o modelo não espera (compatibilidade 13 vs 14 features)
+        if hasattr(model, "feature_names_in_"):
+            expected_cols = list(model.feature_names_in_)
+            extra_cols = set(X_test.columns) - set(expected_cols)
+            if extra_cols:
+                X_test = X_test.drop(columns=list(extra_cols))
+            X_test = X_test[expected_cols]
+        
         y_pred = model.predict(X_test)
         y_proba = model.predict_proba(X_test)[:, 1]
 
