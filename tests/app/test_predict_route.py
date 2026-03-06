@@ -335,7 +335,7 @@ class TestPredictRoute:
                 "veterano",
                 "em_fase",
                 "qtde_aval_realizadas",
-                "instituicao_ensino",
+                "instituicao_ensino_mapped",
                 "iaa",
                 "ieg",
                 "ips",
