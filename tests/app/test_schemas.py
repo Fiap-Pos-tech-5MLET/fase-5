@@ -26,14 +26,19 @@ from app.models.schemas.student_input import StudentInput
 def valid_student_input_dict():
     """Dicionário com dados válidos de StudentInput."""
     return {
-        "FASE": "5A",
-        "IDADE": 13.5,
-        "INDE_22": 75.0,
-        "INDE_23": 78.5,
-        "PEDRA_23": 85.0,
-        "CG": 4.0,
-        "GENERO": "M",
-        "ATIVO_INATIVO": "ATIVO",
+        "nivel_de_defasagem": 0.0,
+        "idade": 13.5,
+        "genero": 1.0,
+        "ano_de_ingresso": 2021,
+        "veterano": 1.0,
+        "em_fase": 1.0,
+        "qtde_aval_realizadas": 8,
+        "iaa": 6.5,
+        "ieg": 7.1,
+        "ips": 6.8,
+        "ida": 7.3,
+        "ipv": 6.9,
+        "ian": 6.7,
     }
 
 
@@ -48,9 +53,9 @@ def valid_student_data_dict():
     """Dicionário com dados válidos de StudentData."""
     return {
         "data": {
-            "FASE": "5A",
-            "IDADE": 13.5,
-            "INDE_23": 78.5,
+            "idade": 13.5,
+            "iaa": 6.8,
+            "ieg": 7.0,
         }
     }
 
@@ -68,111 +73,60 @@ class TestStudentInputSchema:
     def test_student_input_creates_with_valid_data(self, valid_student_input_dict) -> None:
         """StudentInput deve aceitar dados válidos e criar instância."""
         student = StudentInput(**valid_student_input_dict)
-        assert student.FASE == "5A"
-        assert student.IDADE == 13.5
-        assert student.INDE_22 == 75.0
+        assert student.idade == 13.5
+        assert student.iaa == 6.5
+        assert student.nivel_de_defasagem == 0.0
 
     def test_student_input_all_fields_optional(self, minimal_student_input_dict) -> None:
         """StudentInput deve aceitar dict vazio (todos campos opcionais)."""
         student = StudentInput(**minimal_student_input_dict)
-        assert student.FASE is None
-        assert student.IDADE is None
-        assert student.INDE_22 is None
-
-    def test_student_input_accepts_genero_alias(self) -> None:
-        """StudentInput deve aceitar alias 'GÊNERO' para 'GENERO'."""
-        student = StudentInput(**{"GÊNERO": "F"})
-        assert student.GENERO == "F"
-
-    def test_student_input_accepts_genero_field(self) -> None:
-        """StudentInput deve aceitar campo 'GENERO' diretamente."""
-        student = StudentInput(**{"GENERO": "M"})
-        assert student.GENERO == "M"
-
-    def test_student_input_accepts_instituicao_alias(self) -> None:
-        """StudentInput aceita alias 'INSTITUIÇÃO_DE_ENSINO'."""
-        student = StudentInput(**{"INSTITUIÇÃO_DE_ENSINO": "Escola A"})
-        assert student.INSTITUICAO_DE_ENSINO == "Escola A"
-
-    def test_student_input_accepts_numer_av_alias(self) -> None:
-        """StudentInput aceita alias 'Nº_AV' para 'N_AV'."""
-        student = StudentInput(**{"Nº_AV": 3.0})
-        assert student.N_AV == 3.0
-
-    def test_student_input_accepts_ativo_inativo_alias(self) -> None:
-        """StudentInput aceita alias 'ATIVO/_INATIVO'."""
-        student = StudentInput(**{"ATIVO/_INATIVO": "ATIVO"})
-        assert student.ATIVO_INATIVO == "ATIVO"
+        assert student.idade is None
+        assert student.iaa is None
+        assert student.ano_de_ingresso is None
 
     def test_student_input_float_conversion(self) -> None:
         """StudentInput deve converter strings numéricas para float."""
-        student = StudentInput(**{"IDADE": "13.5", "INDE_22": "75"})
-        assert isinstance(student.IDADE, float)
-        assert student.IDADE == 13.5
-        assert student.INDE_22 == 75.0
+        student = StudentInput(**{"idade": "13.5", "iaa": "7.2"})
+        assert isinstance(student.idade, float)
+        assert student.idade == 13.5
+        assert student.iaa == 7.2
 
     def test_student_input_invalid_float_raises_error(self) -> None:
         """StudentInput deve rejeitar string não-numérica para campos float."""
         with pytest.raises(ValidationError):
-            StudentInput(**{"IDADE": "abc"})
+            StudentInput(**{"idade": "abc"})
 
     def test_student_input_rejects_out_of_range_age(self) -> None:
         """StudentInput deve rejeitar idade fora de faixa."""
         with pytest.raises(ValidationError):
-            StudentInput(**{"IDADE": 150})
+            StudentInput(**{"idade": 150})
 
-    def test_student_input_rejects_out_of_range_inde(self) -> None:
-        """StudentInput deve rejeitar INDE fora de faixa."""
+    def test_student_input_rejects_out_of_range_iaa(self) -> None:
+        """StudentInput deve rejeitar IAA fora de faixa."""
         with pytest.raises(ValidationError):
-            StudentInput(**{"INDE_22": 120})
+            StudentInput(**{"iaa": 12})
 
-    def test_student_input_multiple_pedra_fields(self) -> None:
-        """StudentInput deve aceitar PEDRA_20, PEDRA_21, PEDRA_22, PEDRA_23."""
-        student = StudentInput(
-            **{
-                "PEDRA_20": 70.0,
-                "PEDRA_21": 72.0,
-                "PEDRA_22": 74.0,
-                "PEDRA_23": 76.0,
-            }
-        )
-        assert student.PEDRA_20 == 70.0
-        assert student.PEDRA_23 == 76.0
-
-    def test_student_input_multiple_avaliador_fields(self) -> None:
-        """StudentInput deve aceitar até 6 avaliadores."""
-        student = StudentInput(
-            **{
-                "AVALIADOR1": "Prof A",
-                "AVALIADOR2": "Prof B",
-                "AVALIADOR3": "Prof C",
-                "AVALIADOR4": "Prof D",
-                "AVALIADOR5": "Prof E",
-                "AVALIADOR6": "Prof F",
-            }
-        )
-        assert student.AVALIADOR1 == "Prof A"
-        assert student.AVALIADOR6 == "Prof F"
-
-    def test_student_input_model_config_populate_by_name(self, valid_student_input_dict) -> None:
-        """StudentInput deve ter populate_by_name=True para aliases."""
-        # Se temos um alias funcionando, isso já foi testado acima
-        # Esse teste apenas valida que a config está ativa
-        student = StudentInput(**valid_student_input_dict)
-        assert StudentInput.model_config.get("populate_by_name") is True
+    def test_student_input_accepts_binary_flags(self) -> None:
+        """StudentInput deve aceitar variáveis binárias do contrato atual."""
+        student = StudentInput(**{"veterano": 1, "em_fase": 0, "genero": 1})
+        assert student.veterano == 1
+        assert student.em_fase == 0
+        assert student.genero == 1
 
     def test_student_input_fields_with_none(self) -> None:
         """StudentInput deve aceitar None explicitamente para campos opcionais."""
-        student = StudentInput(**{"FASE": None, "IDADE": None, "INDE_22": None})
-        assert student.FASE is None
-        assert student.IDADE is None
-        assert student.INDE_22 is None
+        student = StudentInput(**{"idade": None, "iaa": None, "ipv": None})
+        assert student.idade is None
+        assert student.iaa is None
+        assert student.ipv is None
 
-    def test_student_input_inde_indices(self) -> None:
-        """StudentInput deve aceitar INDE_22 e INDE_23."""
-        student = StudentInput(**{"INDE_22": 50.0, "INDE_23": 60.0})
-        assert student.INDE_22 == 50.0
-        assert student.INDE_23 == 60.0
+    def test_student_input_indices_range(self) -> None:
+        """StudentInput deve aceitar os índices de 0 a 10."""
+        student = StudentInput(
+            **{"iaa": 5.0, "ieg": 6.0, "ips": 7.0, "ida": 8.0, "ipv": 9.0, "ian": 10.0}
+        )
+        assert student.iaa == 5.0
+        assert student.ian == 10.0
 
 
 # ============================================================================
@@ -189,9 +143,9 @@ class TestStudentDataSchema:
         """StudentData deve aceitar dicionário de dados válidos."""
         student_data = StudentData(**valid_student_data_dict)
         assert student_data.data == {
-            "FASE": "5A",
-            "IDADE": 13.5,
-            "INDE_23": 78.5,
+            "idade": 13.5,
+            "iaa": 6.8,
+            "ieg": 7.0,
         }
 
     def test_student_data_data_field_required(self) -> None:
@@ -207,8 +161,8 @@ class TestStudentDataSchema:
     def test_student_data_accepts_nested_student_input(self, valid_student_input_dict) -> None:
         """StudentData pode envolver StudentInput data."""
         student_data = StudentData(**{"data": valid_student_input_dict})
-        assert student_data.data["FASE"] == "5A"
-        assert student_data.data["IDADE"] == 13.5
+        assert student_data.data["idade"] == 13.5
+        assert student_data.data["iaa"] == 6.5
 
     def test_student_data_flexible_format(self) -> None:
         """StudentData aceita qualquer estrutura dict dentro de 'data'."""
@@ -401,8 +355,8 @@ class TestRetrainRequestSchema:
             RetrainRequest(
                 n_estimators=100,
                 max_depth=10,
-                min_samples_split=2,
-                k=10,
+                learning_rate=0.1,
+                num_leaves=31,
                 test_size=0.2,
             )
 
@@ -413,8 +367,8 @@ class TestRetrainRequestSchema:
                 requested_by="lucas_admin",
                 n_estimators=-10,
                 max_depth=10,
-                min_samples_split=2,
-                k=10,
+                learning_rate=0.1,
+                num_leaves=31,
                 test_size=0.2,
             )
 
@@ -725,20 +679,20 @@ class TestSchemaIntegration:
         student = StudentInput(**valid_student_input_dict)
         serialized = student.model_dump()
         assert isinstance(serialized, dict)
-        assert serialized["FASE"] == "5A"
+        assert serialized["idade"] == 13.5
 
     def test_student_input_to_json(self, valid_student_input_dict) -> None:
         """StudentInput deve ser serializável para JSON."""
         student = StudentInput(**valid_student_input_dict)
         json_str = student.model_dump_json()
         assert isinstance(json_str, str)
-        assert "5A" in json_str
+        assert "idade" in json_str
 
     def test_student_data_wraps_student_input(self, valid_student_input_dict) -> None:
         """StudentData pode envolver dados de StudentInput."""
         student = StudentInput(**valid_student_input_dict)
         student_data = StudentData(**{"data": student.model_dump()})
-        assert student_data.data["FASE"] == "5A"
+        assert student_data.data["idade"] == 13.5
 
     def test_prediction_response_json_serializable(self) -> None:
         """PredictionResponse deve ser JSON-serializável."""

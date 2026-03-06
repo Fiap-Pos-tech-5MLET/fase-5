@@ -19,7 +19,11 @@ from app.utils.model_loader import get_current_model, load_model
 from app.utils.structured_logging import log_with_request
 from app.utils.xai import explain_prediction
 from src.data_cleaning import clean_data, handle_missing_values
-from src.feature_engineering import create_features
+from src.feature_engineering import (
+    MODEL_FEATURE_COLUMNS,
+    build_feature_matrix_for_model,
+    create_features,
+)
 
 logger = logging.getLogger("predict_route")
 
@@ -80,36 +84,8 @@ async def predict(student: StudentData, request: Request) -> PredictionResponse:
         df = handle_missing_values(df)
         df = create_features(df)
 
-        # Drop leakage columns
-        leakage_cols = [
-            "INDE_2024",
-            "PEDRA_2024",
-            "IAA",
-            "IEG",
-            "IPS",
-            "IPP",
-            "IDA",
-            "MAT",
-            "POR",
-            "ING",
-            "IPV",
-            "IAN",
-            "DESTAQUE_IEG",
-            "DESTAQUE_IDA",
-            "DESTAQUE_IPV",
-            "ATINGIU_PV",
-            "INDICADO",
-            "REC_AV1",
-            "REC_AV2",
-            "REC_PSICOLOGIA",
-            "DEFASAGEM",
-            "RA",
-            "NOME_ANONIMIZADO",
-            "PEDRA_2024",
-        ]
-        feature_matrix = df.drop(
-            columns=[c for c in leakage_cols if c in df.columns], errors="ignore"
-        )
+        # Caminho principal do modelo atual: 13 variáveis canônicas
+        feature_matrix = build_feature_matrix_for_model(df)
 
         # Feature Alignment
         if hasattr(model, "feature_names_in_"):
@@ -140,6 +116,11 @@ async def predict(student: StudentData, request: Request) -> PredictionResponse:
                 feature_matrix[col_name] = 0
 
             feature_matrix = feature_matrix[expected_cols]
+
+        # Compatibilidade para modelos sem feature_names_in_
+        if not hasattr(model, "feature_names_in_"):
+            available_cols = [col for col in MODEL_FEATURE_COLUMNS if col in feature_matrix.columns]
+            feature_matrix = feature_matrix[available_cols]
 
         prediction = model.predict(feature_matrix)
         proba = model.predict_proba(feature_matrix)[:, 1]

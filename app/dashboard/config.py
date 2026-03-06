@@ -58,7 +58,7 @@ FEATURE_IMP_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "feature_importance.p
 CLASS_REPORT_PATH: Final[str] = os.path.join(ARTIFACTS_DIR, "classification_report.png")
 
 # API URL explícita por ambiente (Render/local)
-API_URL: Final[str] = os.environ.get("API_URL", "http://127.0.0.1:8000")
+API_URL: Final[str] = os.environ.get("API_URL", "http://127.0.0.1:8000/api")
 
 
 def configure_page() -> None:

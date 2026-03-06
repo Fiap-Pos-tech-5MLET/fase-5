@@ -482,8 +482,8 @@ def test_render_retrain_page_with_retrain(monkeypatch) -> None:
     """Deve iniciar retreinamento e armazenar métricas do candidato."""
     st = make_streamlit_mock()
     st.button.side_effect = [True, False, False]
-    st.number_input.side_effect = [100, 2]
-    st.selectbox.side_effect = ["Sem limite", "Todas"]
+    st.number_input.side_effect = [100, 0.10, 31, 1.0, 1.0]
+    st.selectbox.side_effect = ["Sem limite"]
     st.slider.return_value = 20
     st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
@@ -519,8 +519,8 @@ def test_render_retrain_page_with_error(monkeypatch) -> None:
     """Deve exibir erro quando API retorna falha."""
     st = make_streamlit_mock()
     st.button.return_value = True
-    st.number_input.side_effect = [100, 2]
-    st.selectbox.side_effect = ["Sem limite", "Todas"]
+    st.number_input.side_effect = [100, 0.10, 31, 1.0, 1.0]
+    st.selectbox.side_effect = ["Sem limite"]
     st.slider.return_value = 20
     st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
@@ -545,8 +545,8 @@ def test_render_retrain_page_promote_and_discard(monkeypatch) -> None:
     st.session_state["candidate_ready"] = True
     st.session_state["candidate_metrics"] = {"accuracy": 0.9, "roc_auc": 0.95}
     st.button.side_effect = [False, True, True]
-    st.number_input.side_effect = [100, 2]
-    st.selectbox.side_effect = ["Sem limite", "Todas"]
+    st.number_input.side_effect = [100, 0.10, 31, 1.0, 1.0]
+    st.selectbox.side_effect = ["Sem limite"]
     st.slider.return_value = 20
     st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
@@ -577,8 +577,8 @@ def test_render_retrain_page_promote_error(monkeypatch) -> None:
     st.session_state["candidate_ready"] = True
     st.session_state["candidate_metrics"] = {"accuracy": 0.9, "roc_auc": 0.95}
     st.button.side_effect = [False, True, False]
-    st.number_input.side_effect = [100, 2]
-    st.selectbox.side_effect = ["Sem limite", "Todas"]
+    st.number_input.side_effect = [100, 0.10, 31, 1.0, 1.0]
+    st.selectbox.side_effect = ["Sem limite"]
     st.slider.return_value = 20
     st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
@@ -605,8 +605,8 @@ def test_render_retrain_page_discard_error(monkeypatch) -> None:
     st.session_state["candidate_ready"] = True
     st.session_state["candidate_metrics"] = {"accuracy": 0.9, "roc_auc": 0.95}
     st.button.side_effect = [False, False, True]
-    st.number_input.side_effect = [100, 2]
-    st.selectbox.side_effect = ["Sem limite", "Todas"]
+    st.number_input.side_effect = [100, 0.10, 31, 1.0, 1.0]
+    st.selectbox.side_effect = ["Sem limite"]
     st.slider.return_value = 20
     st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)
@@ -631,8 +631,8 @@ def test_render_retrain_page_model_none(monkeypatch) -> None:
     """Deve exibir aviso quando não há modelo carregado."""
     st = make_streamlit_mock()
     st.button.return_value = False
-    st.number_input.side_effect = [100, 2]
-    st.selectbox.side_effect = ["Sem limite", "Todas"]
+    st.number_input.side_effect = [100, 0.10, 31, 1.0, 1.0]
+    st.selectbox.side_effect = ["Sem limite"]
     st.slider.return_value = 20
     st.text_input.side_effect = ["lucas_admin", "test-api-key"]
     monkeypatch.setattr(retrain_page, "st", st)

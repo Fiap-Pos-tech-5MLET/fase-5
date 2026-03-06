@@ -96,9 +96,6 @@ async def retrain(
     try:
         _, _, candidate_path = get_model_paths()
 
-        # Convert k=None to 'all' for SelectKBest
-        k_value = params.k if params.k is not None else "all"
-
         # Obter caminho dinâmico do dataset ANTES de treinar
         dataset_path = _get_latest_dataset_path()
 
@@ -112,14 +109,19 @@ async def retrain(
             dataset_path=dataset_path,
             n_estimators=params.n_estimators,
             max_depth=params.max_depth,
-            min_samples_split=params.min_samples_split,
-            k=k_value,
+            learning_rate=params.learning_rate,
+            num_leaves=params.num_leaves,
+            subsample=params.subsample,
+            colsample_bytree=params.colsample_bytree,
             test_size=params.test_size,
         )
 
         # Construir caminho completo do dataset
         from pathlib import Path
-        dataset_full_path = str(Path("app/data/raw") / dataset_path) if dataset_path != "unknown" else None
+
+        dataset_full_path = (
+            str(Path("app/data/raw") / dataset_path) if dataset_path != "unknown" else None
+        )
 
         result = await run_in_threadpool(
             run_training,
@@ -127,8 +129,10 @@ async def retrain(
             model_path=candidate_path,
             n_estimators=params.n_estimators,
             max_depth=params.max_depth,
-            min_samples_split=params.min_samples_split,
-            k=k_value,
+            learning_rate=params.learning_rate,
+            num_leaves=params.num_leaves,
+            subsample=params.subsample,
+            colsample_bytree=params.colsample_bytree,
             test_size=params.test_size,
         )
 
@@ -164,8 +168,10 @@ async def retrain(
             "hyperparameters": {
                 "n_estimators": params.n_estimators,
                 "max_depth": params.max_depth,
-                "min_samples_split": params.min_samples_split,
-                "k": k_value,
+                "learning_rate": params.learning_rate,
+                "num_leaves": params.num_leaves,
+                "subsample": params.subsample,
+                "colsample_bytree": params.colsample_bytree,
                 "test_size": params.test_size,
             },
         }
