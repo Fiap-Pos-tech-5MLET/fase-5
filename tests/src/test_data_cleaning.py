@@ -22,7 +22,6 @@ from src.data_cleaning import (
     create_target,
     handle_missing_values,
     load_data,
-    map_instituicao_ensino,
     validate_data_quality,
 )
 
@@ -341,106 +340,6 @@ class TestTargetCreation:
         expected = [1, 0, 0, 1, 0]
 
         np.testing.assert_array_equal(result["TARGET"].values, expected)
-
-
-@pytest.mark.unit
-@pytest.mark.data_cleaning
-class TestInstituicaoEnsinoMapping:
-    """Testes para mapeamento binário de instituição de ensino."""
-
-    def test_map_instituicao_ensino_publica(self):
-        """Testa mapeamento de Escola Pública para 0."""
-        df = pd.DataFrame({"INSTITUICAO_DE_ENSINO": ["Escola Pública", "Escola Pública"]})
-
-        result = map_instituicao_ensino(df)
-
-        assert "INSTITUICAO_ENSINO_MAPPED" in result.columns
-        assert result["INSTITUICAO_ENSINO_MAPPED"].tolist() == [0, 0]
-        assert "INSTITUICAO_DE_ENSINO" not in result.columns
-
-    def test_map_instituicao_ensino_privada(self):
-        """Testa mapeamento de escolas privadas para 1."""
-        df = pd.DataFrame(
-            {"INSTITUICAO_DE_ENSINO": ["Rede Decisão", "Escola JP II", "Rede Decisão"]}
-        )
-
-        result = map_instituicao_ensino(df)
-
-        assert result["INSTITUICAO_ENSINO_MAPPED"].tolist() == [1, 1, 1]
-
-    def test_map_instituicao_ensino_mixed(self):
-        """Testa mapeamento com valores mistos."""
-        df = pd.DataFrame(
-            {
-                "INSTITUICAO_DE_ENSINO": [
-                    "Escola Pública",
-                    "Rede Decisão",
-                    "Escola JP II",
-                    "Escola Pública",
-                ]
-            }
-        )
-
-        result = map_instituicao_ensino(df)
-
-        assert result["INSTITUICAO_ENSINO_MAPPED"].tolist() == [0, 1, 1, 0]
-
-    def test_map_instituicao_ensino_case_insensitive(self):
-        """Testa que mapeamento funciona com diferentes caixas."""
-        df = pd.DataFrame(
-            {
-                "INSTITUICAO_DE_ENSINO": [
-                    "ESCOLA PÚBLICA",
-                    "escola pública",
-                    "REDE DECISÃO",
-                    "rede decisão",
-                ]
-            }
-        )
-
-        result = map_instituicao_ensino(df)
-
-        assert result["INSTITUICAO_ENSINO_MAPPED"].tolist() == [0, 0, 1, 1]
-
-    def test_map_instituicao_ensino_missing_column_uses_default(self):
-        """Testa que usa valor padrão 0 quando coluna não existe."""
-        df = pd.DataFrame({"OUTROS_DADOS": [1, 2, 3]})
-
-        result = map_instituicao_ensino(df)
-
-        assert "INSTITUICAO_ENSINO_MAPPED" in result.columns
-        assert result["INSTITUICAO_ENSINO_MAPPED"].tolist() == [0, 0, 0]
-
-    def test_map_instituicao_ensino_unmapped_values_default_to_zero(self):
-        """Testa que valores não mapeados usam valor padrão 0 (pública)."""
-        df = pd.DataFrame({"INSTITUICAO_DE_ENSINO": ["Escola Desconhecida", "Outra Escola"]})
-
-        result = map_instituicao_ensino(df)
-
-        assert result["INSTITUICAO_ENSINO_MAPPED"].tolist() == [0, 0]
-
-    def test_map_instituicao_ensino_returns_int_type(self):
-        """Testa que retorna valores inteiros."""
-        df = pd.DataFrame({"INSTITUICAO_DE_ENSINO": ["Escola Pública", "Rede Decisão"]})
-
-        result = map_instituicao_ensino(df)
-
-        assert result["INSTITUICAO_ENSINO_MAPPED"].dtype == int
-
-    def test_map_instituicao_ensino_not_inplace(self):
-        """Testa que não modifica DataFrame original."""
-        df = pd.DataFrame({"INSTITUICAO_DE_ENSINO": ["Escola Pública"]})
-        original_columns = df.columns.tolist()
-
-        result = map_instituicao_ensino(df)
-
-        assert df.columns.tolist() == original_columns
-        assert result is not df
-
-    def test_map_instituicao_ensino_invalid_input_type(self):
-        """Testa erro quando input não é DataFrame."""
-        with pytest.raises(TypeError, match="Esperado pd.DataFrame"):
-            map_instituicao_ensino("not a dataframe")
 
 
 @pytest.mark.unit

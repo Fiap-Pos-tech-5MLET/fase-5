@@ -335,7 +335,6 @@ class TestPredictRoute:
                 "veterano",
                 "em_fase",
                 "qtde_aval_realizadas",
-                "instituicao_ensino_mapped",
                 "iaa",
                 "ieg",
                 "ips",
@@ -344,7 +343,7 @@ class TestPredictRoute:
                 "ian",
             ]
         )
-        model.feature_importances_ = np.ones(14)
+        model.feature_importances_ = np.ones(13)
 
         test_df = pd.DataFrame(valid_student_data["data"], index=[0])
         mock_clean.return_value = test_df
