@@ -128,9 +128,7 @@ def analise_nulos(df: pd.DataFrame) -> pd.DataFrame:
         {"coluna": nulos.index, "qtd_nulos": nulos.values, "perc_nulos": perc_nulos.values}
     )
 
-    resultado = resultado[resultado["qtd_nulos"] > 0].sort_values(
-        by="perc_nulos", ascending=False
-    )
+    resultado = resultado[resultado["qtd_nulos"] > 0].sort_values(by="perc_nulos", ascending=False)
 
     return resultado.reset_index(drop=True)
 
@@ -259,7 +257,7 @@ def consolidar_dataframes(
     df_consolidado = dfs[0].copy()
 
     for i, df in enumerate(dfs[1:], start=1):
-        sufixo_esq = sufixos[i - 1] if i - 1 < len(sufixos) else f"_{i-1}"
+        sufixo_esq = sufixos[i - 1] if i - 1 < len(sufixos) else f"_{i - 1}"
         sufixo_dir = sufixos[i] if i < len(sufixos) else f"_{i}"
 
         df_consolidado = df_consolidado.merge(

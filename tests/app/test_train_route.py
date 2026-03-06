@@ -488,16 +488,19 @@ class TestTrainRouteImports:
     def test_router_imported(self) -> None:
         """Testa que router está disponível."""
         from app.routes.train_route import router
+
         assert router is not None
 
     def test_mlflow_available(self) -> None:
         """Testa que MLflow está disponível."""
         import mlflow
+
         assert mlflow is not None
 
     def test_api_key_validation_available(self) -> None:
         """Testa que validação de API Key está disponível."""
         from app.utils.security import validate_api_key
+
         assert validate_api_key is not None
 
 
@@ -543,6 +546,7 @@ class TestErrorResponses:
         """Testa resposta 401 sem API Key."""
         app = FastAPI()
         from app.routes.train_route import router
+
         app.include_router(router)
         client = TestClient(app, raise_server_exceptions=False)
 
@@ -562,7 +566,7 @@ class TestErrorResponses:
                     "n_estimators": 100,
                     "max_depth": None,
                     "min_samples_split": 2,
-                }
+                },
             )
 
             # Deve ser um erro HTTP

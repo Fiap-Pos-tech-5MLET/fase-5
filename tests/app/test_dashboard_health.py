@@ -16,7 +16,7 @@ import pytest
 # Mock streamlit primeiro
 if "streamlit" not in sys.modules:
     streamlit_stub = types.ModuleType("streamlit")
-    streamlit_stub.cache_data = lambda _ttl=None: lambda func: func
+    streamlit_stub.cache_data = lambda *_args, **_kwargs: lambda func: func
     sys.modules["streamlit"] = streamlit_stub
 
 from app.dashboard.health import check_api_health, get_api_status
@@ -62,6 +62,7 @@ class TestCheckAPIHealth:
         """Deve retornar False quando ocorre timeout de conexão."""
         # Arrange
         import requests
+
         mock_get.side_effect = requests.exceptions.Timeout("Connection timeout")
 
         # Act
@@ -75,6 +76,7 @@ class TestCheckAPIHealth:
         """Deve retornar False quando ocorre erro de conexão."""
         # Arrange
         import requests
+
         mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
 
         # Act
@@ -88,6 +90,7 @@ class TestCheckAPIHealth:
         """Deve retornar False para qualquer exceção RequestException."""
         # Arrange
         import requests
+
         mock_get.side_effect = requests.exceptions.RequestException("Generic error")
 
         # Act
@@ -188,6 +191,7 @@ class TestGetAPIStatus:
         """Deve retornar None quando ocorre timeout."""
         # Arrange
         import requests
+
         mock_get.side_effect = requests.exceptions.Timeout()
 
         # Act
@@ -201,6 +205,7 @@ class TestGetAPIStatus:
         """Deve retornar None quando ocorre erro de conexão."""
         # Arrange
         import requests
+
         mock_get.side_effect = requests.exceptions.ConnectionError()
 
         # Act

@@ -40,6 +40,7 @@ class TestLoadEvidently:
 
     def test_load_evidently_import_error_handling(self) -> None:
         """Testa tratamento de ImportError."""
+
         def mock_import_fail(name):
             raise ImportError(f"Cannot import {name}")
 
@@ -100,14 +101,13 @@ class TestGenerateDriftReport:
     def test_drift_report_reference_current_split(self) -> None:
         """Testa que dados são divididos em reference (treino) e current."""
         # Simular DataFrame com 100 linhas
-        df = pd.DataFrame({
-            "feature1": range(100),
-            "feature2": range(100, 200),
-            "target": [0, 1] * 50
-        })
+        df = pd.DataFrame(
+            {"feature1": range(100), "feature2": range(100, 200), "target": [0, 1] * 50}
+        )
 
         # Split 80/20
         from sklearn.model_selection import train_test_split
+
         reference, current = train_test_split(df, test_size=0.2, random_state=42)
 
         assert len(reference) == 80
@@ -132,15 +132,11 @@ class TestGenerateDriftReport:
         assert result is not None
         assert hasattr(result, "save_html")
 
-    @patch('scripts.monitoring.logger')
+    @patch("scripts.monitoring.logger")
     def test_drift_report_logging(self, mock_logger, tmp_path) -> None:
         """Testa que eventos são logados."""
         # Os passos devem ser logados
-        log_messages = [
-            "Loading and preparing data",
-            "Calculating drift metrics",
-            "Report saved"
-        ]
+        log_messages = ["Loading and preparing data", "Calculating drift metrics", "Report saved"]
 
         for msg in log_messages:
             assert "Loading" in msg or "Calculating" in msg or "Report" in msg
@@ -159,7 +155,7 @@ class TestMonitoringDataProcessing:
             ("create_target", "create_target(df)"),
             ("handle_missing_values", "handle_missing_values(df)"),
             ("create_features", "create_features(df)"),
-            ("select_features", "select_features(df)")
+            ("select_features", "select_features(df)"),
         ]
 
         assert len(operations) == 6
@@ -169,12 +165,14 @@ class TestMonitoringDataProcessing:
     def test_features_selection_applied(self) -> None:
         """Testa que feature selection é aplicada ao DataFrame."""
         # Simular seleção
-        df = pd.DataFrame({
-            "feature1": range(10),
-            "feature2": range(10, 20),
-            "unused_feature": range(20, 30),
-            "target": [0, 1] * 5
-        })
+        df = pd.DataFrame(
+            {
+                "feature1": range(10),
+                "feature2": range(10, 20),
+                "unused_feature": range(20, 30),
+                "target": [0, 1] * 5,
+            }
+        )
 
         # Selecionar apenas features relevantes
         X = df[["feature1", "feature2"]]
@@ -187,10 +185,7 @@ class TestMonitoringDataProcessing:
         """Testa que split usa random_state para reprodutibilidade."""
         from sklearn.model_selection import train_test_split
 
-        df = pd.DataFrame({
-            "A": range(100),
-            "B": range(100, 200)
-        })
+        df = pd.DataFrame({"A": range(100), "B": range(100, 200)})
 
         # Dois splits com mesmo random_state devem ser idênticos
         ref1, curr1 = train_test_split(df, test_size=0.2, random_state=42)
@@ -210,6 +205,7 @@ class TestMonitoringErrorHandling:
 
         try:
             import pandas as pd
+
             pd.read_csv(data_path)
             pytest.fail("Deveria lançar FileNotFoundError")
         except FileNotFoundError:
@@ -218,9 +214,9 @@ class TestMonitoringErrorHandling:
     def test_import_error_evidently_missing(self) -> None:
         """Testa tratamento quando Evidently não está instalado."""
         # Simular ImportError
-        with patch('builtins.__import__', side_effect=ImportError("No module named 'evidently'")):
+        with patch("builtins.__import__", side_effect=ImportError("No module named 'evidently'")):
             try:
-                __import__('evidently.report')
+                __import__("evidently.report")
                 pytest.fail("Deveria lançar ImportError")
             except ImportError:
                 pass

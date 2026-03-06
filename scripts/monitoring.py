@@ -134,4 +134,5 @@ def generate_drift_report(data_path: str, report_path: str) -> None:
 if __name__ == "__main__":
     # Importa paths da config centralizada
     from app.config import DRIFT_REPORT_PATH, RAW_DATA_PATH
+
     generate_drift_report(RAW_DATA_PATH, DRIFT_REPORT_PATH)

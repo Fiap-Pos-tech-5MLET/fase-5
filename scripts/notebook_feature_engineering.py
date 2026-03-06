@@ -177,7 +177,9 @@ def obter_nova_turma_24(fase: str) -> str:
     return obter_nova_turma(fase)
 
 
-def criar_coluna_veterano(df: pd.DataFrame, col_ano_ingresso: str, ano_corte: int = 2022) -> pd.DataFrame:
+def criar_coluna_veterano(
+    df: pd.DataFrame, col_ano_ingresso: str, ano_corte: int = 2022
+) -> pd.DataFrame:
     """
     Cria coluna binária 'VETERANO' indicando se o aluno ingressou antes do ano de corte.
 
