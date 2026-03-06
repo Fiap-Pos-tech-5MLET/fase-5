@@ -46,16 +46,16 @@ def _load_evidently_classes() -> tuple[Any, Any]:
     try:
         report_module = import_module("evidently.report")
         metric_module = import_module("evidently.metric_preset")
-        Report = getattr(report_module, "Report")
-        DataDriftPreset = getattr(metric_module, "DataDriftPreset")
+        Report = report_module.Report
+        DataDriftPreset = metric_module.DataDriftPreset
 
         return Report, DataDriftPreset
     except ImportError:
         try:
             evidently_module = import_module("evidently")
             presets_module = import_module("evidently.presets")
-            Report = getattr(evidently_module, "Report")
-            DataDriftPreset = getattr(presets_module, "DataDriftPreset")
+            Report = evidently_module.Report
+            DataDriftPreset = presets_module.DataDriftPreset
 
             return Report, DataDriftPreset
         except ImportError as exc:
@@ -70,7 +70,7 @@ def generate_drift_report(data_path: str, report_path: str) -> None:
     Gera relatório de data drift comparando dados de referência vs atuais.
     Utiliza Evidently DataDriftPreset para detectar mudanças significativas
     na distribuição das features entre treino e produção.
-    
+
     Args:
         data_path (str): Caminho para o arquivo de dados.
         report_path (str): Diretório onde salvar o relatório HTML.
@@ -133,5 +133,5 @@ def generate_drift_report(data_path: str, report_path: str) -> None:
 
 if __name__ == "__main__":
     # Importa paths da config centralizada
-    from app.config import RAW_DATA_PATH, DRIFT_REPORT_PATH
+    from app.config import DRIFT_REPORT_PATH, RAW_DATA_PATH
     generate_drift_report(RAW_DATA_PATH, DRIFT_REPORT_PATH)

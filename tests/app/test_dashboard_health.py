@@ -16,7 +16,7 @@ import pytest
 # Mock streamlit primeiro
 if "streamlit" not in sys.modules:
     streamlit_stub = types.ModuleType("streamlit")
-    streamlit_stub.cache_data = lambda ttl=None: lambda func: func
+    streamlit_stub.cache_data = lambda _ttl=None: lambda func: func
     sys.modules["streamlit"] = streamlit_stub
 
 from app.dashboard.health import check_api_health, get_api_status
@@ -32,10 +32,10 @@ class TestCheckAPIHealth:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
-        
+
         # Act
         result = check_api_health("http://127.0.0.1:8000/api", timeout=5)
-        
+
         # Assert
         assert result is True
         mock_get.assert_called_once()
@@ -50,10 +50,10 @@ class TestCheckAPIHealth:
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_get.return_value = mock_response
-        
+
         # Act
         result = check_api_health("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert result is False
 
@@ -63,10 +63,10 @@ class TestCheckAPIHealth:
         # Arrange
         import requests
         mock_get.side_effect = requests.exceptions.Timeout("Connection timeout")
-        
+
         # Act
         result = check_api_health("http://127.0.0.1:8000/api", timeout=1)
-        
+
         # Assert
         assert result is False
 
@@ -76,10 +76,10 @@ class TestCheckAPIHealth:
         # Arrange
         import requests
         mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
-        
+
         # Act
         result = check_api_health("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert result is False
 
@@ -89,10 +89,10 @@ class TestCheckAPIHealth:
         # Arrange
         import requests
         mock_get.side_effect = requests.exceptions.RequestException("Generic error")
-        
+
         # Act
         result = check_api_health("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert result is False
 
@@ -103,10 +103,10 @@ class TestCheckAPIHealth:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
-        
+
         # Act
         check_api_health("http://127.0.0.1:8000/api", timeout=15)
-        
+
         # Assert
         call_args = mock_get.call_args
         assert call_args[1]["timeout"] == 15
@@ -118,12 +118,12 @@ class TestCheckAPIHealth:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
-        
+
         api_url = "https://example.com/api"
-        
+
         # Act
         check_api_health(api_url)
-        
+
         # Assert
         called_url = mock_get.call_args[0][0]
         assert called_url == f"{api_url}/model-info"
@@ -135,10 +135,10 @@ class TestCheckAPIHealth:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
-        
+
         # Act
         check_api_health("http://127.0.0.1:8000/api")
-        
+
         # Assert
         call_kwargs = mock_get.call_args[1]
         assert "headers" in call_kwargs
@@ -161,10 +161,10 @@ class TestGetAPIStatus:
         mock_response.status_code = 200
         mock_response.json.return_value = expected_status
         mock_get.return_value = mock_response
-        
+
         # Act
         result = get_api_status("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert result == expected_status
         assert result["model_id"] == "rf-2024-03-05"
@@ -176,10 +176,10 @@ class TestGetAPIStatus:
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_get.return_value = mock_response
-        
+
         # Act
         result = get_api_status("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert result is None
 
@@ -189,10 +189,10 @@ class TestGetAPIStatus:
         # Arrange
         import requests
         mock_get.side_effect = requests.exceptions.Timeout()
-        
+
         # Act
         result = get_api_status("http://127.0.0.1:8000/api", timeout=2)
-        
+
         # Assert
         assert result is None
 
@@ -202,10 +202,10 @@ class TestGetAPIStatus:
         # Arrange
         import requests
         mock_get.side_effect = requests.exceptions.ConnectionError()
-        
+
         # Act
         result = get_api_status("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert result is None
 
@@ -217,10 +217,10 @@ class TestGetAPIStatus:
         mock_response.status_code = 200
         mock_response.json.return_value = {}
         mock_get.return_value = mock_response
-        
+
         # Act
         get_api_status("http://127.0.0.1:8000/api", timeout=10)
-        
+
         # Assert
         call_kwargs = mock_get.call_args[1]
         assert call_kwargs["timeout"] == 10
@@ -239,10 +239,10 @@ class TestGetAPIStatus:
         mock_response.status_code = 200
         mock_response.json.return_value = status_data
         mock_get.return_value = mock_response
-        
+
         # Act
         result = get_api_status("http://127.0.0.1:8000/api")
-        
+
         # Assert
         assert isinstance(result, dict)
         assert result["features"] == 25
@@ -256,12 +256,12 @@ class TestGetAPIStatus:
         mock_response.status_code = 200
         mock_response.json.return_value = {}
         mock_get.return_value = mock_response
-        
+
         api_url = "https://prod.example.com/api"
-        
+
         # Act
         get_api_status(api_url)
-        
+
         # Assert
         called_url = mock_get.call_args[0][0]
         assert called_url == f"{api_url}/model-info"

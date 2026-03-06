@@ -427,4 +427,4 @@ class TestPredictRoute:
             "top_features",
         }
         assert isinstance(data["risk_prediction"], int)
-        assert isinstance(data["risk_probability"], (int, float))
+        assert isinstance(data["risk_probability"], int | float)

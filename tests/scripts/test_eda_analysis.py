@@ -41,7 +41,7 @@ class TestVerificarNormalidade:
         # Assert
         assert isinstance(resultado, dict)
         assert "normal" in resultado
-        assert isinstance(resultado["normal"], (bool, np.bool_))
+        assert isinstance(resultado["normal"], bool | np.bool_)
 
     def test_distribuicao_nao_normal(self):
         """Testa detecção de distribuição não normal (exponencial)."""
@@ -53,7 +53,7 @@ class TestVerificarNormalidade:
         resultado = verificar_normalidade(dados_exponenciais, alpha=0.05, verbose=False)
 
         # Assert
-        assert isinstance(resultado["normal"], (bool, np.bool_))
+        assert isinstance(resultado["normal"], bool | np.bool_)
         assert not resultado["normal"]
 
     def test_com_valores_nan(self):
@@ -92,8 +92,8 @@ class TestVerificarNormalidade:
         resultado_001 = verificar_normalidade(dados, alpha=0.01, verbose=False)
 
         # Assert: diferentes alphas podem dar resultados diferentes
-        assert isinstance(resultado_005["normal"], (bool, np.bool_))
-        assert isinstance(resultado_001["normal"], (bool, np.bool_))
+        assert isinstance(resultado_005["normal"], bool | np.bool_)
+        assert isinstance(resultado_001["normal"], bool | np.bool_)
 
 
 @pytest.mark.unit

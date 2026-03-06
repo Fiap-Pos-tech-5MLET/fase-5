@@ -479,3 +479,91 @@ class TestModelMetricsRoute:
         assert data["source"] == "local"
         assert data["run_id"] == "missing_run_id"
         assert "Run do MLflow não encontrada" in data["message"]
+
+
+@pytest.mark.unit
+class TestTrainRouteImports:
+    """Testes para validação de imports da rota."""
+
+    def test_router_imported(self) -> None:
+        """Testa que router está disponível."""
+        from app.routes.train_route import router
+        assert router is not None
+
+    def test_mlflow_available(self) -> None:
+        """Testa que MLflow está disponível."""
+        import mlflow
+        assert mlflow is not None
+
+    def test_api_key_validation_available(self) -> None:
+        """Testa que validação de API Key está disponível."""
+        from app.utils.security import validate_api_key
+        assert validate_api_key is not None
+
+
+@pytest.mark.unit
+class TestTrainRouteParameters:
+    """Testes para validação de parâmetros."""
+
+    def test_retrain_request_structure(self) -> None:
+        """Testa estrutura de RetrainRequest."""
+
+        # Deve ter estes atributos
+        fields = RetrainRequest.model_fields.keys()
+        assert "requested_by" in fields
+        assert "n_estimators" in fields
+        assert "max_depth" in fields
+        assert "min_samples_split" in fields
+
+    def test_retrain_with_default_k(self) -> None:
+        """Testa que k padrão é None quando não fornecido."""
+
+        # Sem fornecer k
+        params = RetrainRequest(
+            requested_by="lucas_admin",
+            n_estimators=100,
+            max_depth=15,
+            min_samples_split=2,
+        )
+        assert params.k is None
+
+    def test_retrain_with_custom_k(self, valid_retrain_params) -> None:
+        """Testa que k pode ser um inteiro customizado."""
+
+        # valid_retrain_params já tem k=10
+        params = RetrainRequest(**valid_retrain_params)
+        assert params.k == 10
+
+
+@pytest.mark.unit
+class TestErrorResponses:
+    """Testes para respostas de erro."""
+
+    def test_unauthorized_without_api_key(self) -> None:
+        """Testa resposta 401 sem API Key."""
+        app = FastAPI()
+        from app.routes.train_route import router
+        app.include_router(router)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        # Sem header de API Key
+        response = client.post("/retrain", json={"requested_by": "test"})
+
+        # Deve retornar 403 ou 401
+        assert response.status_code in [401, 403]
+
+    def test_error_response_format(self, api_client) -> None:
+        """Testa que erros retornam formato esperado."""
+        with patch("app.routes.train_route.run_training", side_effect=Exception("Training failed")):
+            response = api_client.post(
+                "/retrain",
+                json={
+                    "requested_by": "test",
+                    "n_estimators": 100,
+                    "max_depth": None,
+                    "min_samples_split": 2,
+                }
+            )
+
+            # Deve ser um erro HTTP
+            assert response.status_code >= 400

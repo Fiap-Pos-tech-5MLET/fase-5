@@ -11,7 +11,7 @@ Cobre:
 import sys
 import types
 from datetime import datetime
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -41,7 +41,7 @@ class TestDashboardInitialization:
         """Testa que raiz do projeto é adicionada ao sys.path."""
         from pathlib import Path
         project_root = Path(__file__).resolve().parent.parent.parent
-        
+
         # Verificar que path existe
         assert project_root.exists()
         assert (project_root / "app").exists()
@@ -50,10 +50,10 @@ class TestDashboardInitialization:
         """Testa que imports necessários estão disponíveis."""
         try:
             from app.dashboard.config import API_URL, configure_page
-            from app.dashboard.data import load_model, load_dataset
+            from app.dashboard.data import load_dataset, load_model
             from app.dashboard.health import check_api_health
             from app.dashboard.pages.prediction import render_prediction_page
-            
+
             assert API_URL is not None
             assert callable(configure_page)
             assert callable(load_model)
@@ -71,36 +71,36 @@ class TestSessionStateInitialization:
     def test_last_refresh_initialized(self, streamlit_mock) -> None:
         """Testa que last_refresh é inicializado."""
         streamlit_mock.session_state = {}
-        
+
         # Simular inicialização
         if "last_refresh" not in streamlit_mock.session_state:
             streamlit_mock.session_state["last_refresh"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-        
+
         assert "last_refresh" in streamlit_mock.session_state
         assert isinstance(streamlit_mock.session_state["last_refresh"], str)
 
     def test_api_healthy_initialized(self, streamlit_mock) -> None:
         """Testa que api_healthy é inicializado."""
         streamlit_mock.session_state = {}
-        
+
         # Simular inicialização
         if "api_healthy" not in streamlit_mock.session_state:
             streamlit_mock.session_state["api_healthy"] = True
-        
+
         assert "api_healthy" in streamlit_mock.session_state
         assert isinstance(streamlit_mock.session_state["api_healthy"], bool)
 
     def test_session_state_persistence(self, streamlit_mock) -> None:
         """Testa que valores de session_state persistem."""
         streamlit_mock.session_state["custom_key"] = "custom_value"
-        
+
         # Simular acesso posterior
         assert streamlit_mock.session_state["custom_key"] == "custom_value"
 
     def test_last_refresh_timestamp_format(self) -> None:
         """Testa formato do timestamp de last_refresh."""
         timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-        
+
         # DD/MM/YYYY HH:MM
         assert len(timestamp) == 16
         assert "/" in timestamp
@@ -114,61 +114,52 @@ class TestPageRouting:
     def test_prediction_page_routing(self, streamlit_mock) -> None:
         """Testa roteamento para página de Predição."""
         selected_page = "🔮 Predição"
-        
+
         # Simular seleção
-        if selected_page == "🔮 Predição":
-            should_render_prediction = True
-        else:
-            should_render_prediction = False
-        
+        should_render_prediction = selected_page == "🔮 Predição"
+
         assert should_render_prediction
 
     def test_metrics_page_routing(self, streamlit_mock) -> None:
         """Testa roteamento para página de Métricas."""
         selected_page = "📊 Métricas do Modelo"
-        
+
         if selected_page == "📊 Métricas do Modelo":
             should_load_model = True
             should_render_metrics = True
         else:
             should_load_model = False
             should_render_metrics = False
-        
+
         assert should_load_model and should_render_metrics
 
     def test_drift_page_routing(self, streamlit_mock) -> None:
         """Testa roteamento para página de Drift."""
         selected_page = "🔄 Monitoramento de Drift"
-        
-        if selected_page == "🔄 Monitoramento de Drift":
-            should_render_drift = True
-        else:
-            should_render_drift = False
-        
+
+        should_render_drift = selected_page == "🔄 Monitoramento de Drift"
+
         assert should_render_drift
 
     def test_retrain_page_routing(self, streamlit_mock) -> None:
         """Testa roteamento para página de Retreinamento."""
         selected_page = "⚙️ Retreinamento"
-        
+
         if selected_page == "⚙️ Retreinamento":
             should_load_model = True
             should_render_retrain = True
         else:
             should_load_model = False
             should_render_retrain = False
-        
+
         assert should_load_model and should_render_retrain
 
     def test_about_page_routing(self, streamlit_mock) -> None:
         """Testa roteamento para página Sobre."""
         selected_page = "ℹ️ Sobre o Projeto"
-        
-        if selected_page == "ℹ️ Sobre o Projeto":
-            should_render_about = True
-        else:
-            should_render_about = False
-        
+
+        should_render_about = selected_page == "ℹ️ Sobre o Projeto"
+
         assert should_render_about
 
     def test_all_pages_routable(self) -> None:
@@ -180,7 +171,7 @@ class TestPageRouting:
             "⚙️ Retreinamento",
             "ℹ️ Sobre o Projeto"
         ]
-        
+
         assert len(pages) == 5
         assert all(isinstance(p, str) for p in pages)
 
@@ -192,7 +183,7 @@ class TestDashboardHealthCheck:
     def test_api_health_stored_in_session(self, streamlit_mock) -> None:
         """Testa que health check é armazenado em session_state."""
         streamlit_mock.session_state["api_healthy"] = True
-        
+
         assert streamlit_mock.session_state["api_healthy"] is True
 
     def test_api_health_boolean_value(self, streamlit_mock) -> None:
@@ -204,10 +195,10 @@ class TestDashboardHealthCheck:
     def test_api_health_used_in_routing(self, streamlit_mock) -> None:
         """Testa que api_healthy influencia renderização."""
         streamlit_mock.session_state["api_healthy"] = False
-        
+
         # Algumas páginas podem usar api_healthy para alertas
         api_healthy = streamlit_mock.session_state.get("api_healthy", False)
-        
+
         assert api_healthy is False
 
 
@@ -220,7 +211,7 @@ class TestDashboardConfiguration:
         # Espera-se que configure_page() foi chamado
         try:
             from app.dashboard.config import configure_page
-            
+
             # Deve ser callable
             assert callable(configure_page)
         except ImportError:
@@ -230,7 +221,7 @@ class TestDashboardConfiguration:
         """Testa que CSS customizado é aplicado."""
         try:
             from app.dashboard.styles import apply_custom_css
-            
+
             assert callable(apply_custom_css)
         except ImportError:
             pytest.fail("apply_custom_css não pode ser importado")
@@ -239,10 +230,13 @@ class TestDashboardConfiguration:
         """Testa que arquivos de configuração existem."""
         try:
             from app.dashboard.config import (
-                API_URL, CLASS_REPORT_PATH, DRIFT_REPORT_PATH,
-                FEATURE_IMP_PATH, ROC_CURVE_PATH
+                API_URL,
+                CLASS_REPORT_PATH,
+                DRIFT_REPORT_PATH,
+                FEATURE_IMP_PATH,
+                ROC_CURVE_PATH,
             )
-            
+
             # Todos devem ser strings (paths)
             assert isinstance(API_URL, str)
             assert isinstance(CLASS_REPORT_PATH, str)
@@ -258,42 +252,33 @@ class TestDashboardDataLoading:
     def test_model_loaded_for_metrics_page(self) -> None:
         """Testa que modelo é carregado para página de métricas."""
         page = "📊 Métricas do Modelo"
-        
-        if page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]:
-            load_model_needed = True
-        else:
-            load_model_needed = False
-        
+
+        load_model_needed = page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]
+
         assert load_model_needed
 
     def test_model_loaded_for_retrain_page(self) -> None:
         """Testa que modelo é carregado para página de retreinamento."""
         page = "⚙️ Retreinamento"
-        
-        if page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]:
-            load_model_needed = True
-        else:
-            load_model_needed = False
-        
+
+        load_model_needed = page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]
+
         assert load_model_needed
 
     def test_model_not_loaded_for_prediction(self) -> None:
         """Testa que modelo NÃO é carregado para aplicação de predição."""
         page = "🔮 Predição"
-        
+
         # Predição usa API, não carregamento local
-        if page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]:
-            load_model_needed = True
-        else:
-            load_model_needed = False
-        
+        load_model_needed = page in ["📊 Métricas do Modelo", "⚙️ Retreinamento"]
+
         assert not load_model_needed
 
     def test_dataset_loading_function_available(self) -> None:
         """Testa que função de carregamento de dataset está disponível."""
         try:
             from app.dashboard.data import load_dataset
-            
+
             assert callable(load_dataset)
         except ImportError:
             pytest.fail("load_dataset não pode ser importado")
@@ -307,7 +292,7 @@ class TestDashboardPageComponents:
         """Testa que sidebar é renderizado."""
         try:
             from app.dashboard.sidebar import render_sidebar
-            
+
             assert callable(render_sidebar)
         except ImportError:
             pytest.fail("render_sidebar não pode ser importado")
@@ -321,7 +306,7 @@ class TestDashboardPageComponents:
             ("render_retrain_page", "app.dashboard.pages.retrain"),
             ("render_about_page", "app.dashboard.pages.about"),
         ]
-        
+
         for renderer_name, module_path in renderers:
             try:
                 module = __import__(module_path, fromlist=[renderer_name])
@@ -334,7 +319,7 @@ class TestDashboardPageComponents:
         """Testa que API_URL é configurada."""
         try:
             from app.dashboard.config import API_URL
-            
+
             assert isinstance(API_URL, str)
             assert len(API_URL) > 0
         except ImportError:
@@ -344,7 +329,7 @@ class TestDashboardPageComponents:
         """Testa que RAW_DATA_PATH é configurada."""
         try:
             from app.config import RAW_DATA_PATH
-            
+
             assert isinstance(RAW_DATA_PATH, str)
             assert len(RAW_DATA_PATH) > 0
         except ImportError:

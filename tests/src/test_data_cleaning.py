@@ -9,8 +9,8 @@ Organização:
 """
 
 import os
-import types
 import tempfile
+import types
 from unittest.mock import MagicMock, patch
 
 import numpy as np
