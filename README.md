@@ -617,7 +617,10 @@ Para informações mais detalhadas sobre estratégias e boas práticas de testes
 
 ## 2. 🔄 Esteira CI/CD (Fluxo GitFlow Horizontal)
 
-O projeto adota pipelines GitHub Actions por branch, alinhados ao fluxo GitFlow.
+O projeto adota pipelines GitHub Actions por branch, alinhados ao fluxo GitFlow. Cada branch tem sua própria estratégia de validação, com gatilhos progressivos de qualidade e segurança.
+
+### 📊 Fluxo de Pipelines
+
 ```mermaid
 flowchart LR
     classDef event fill:#f5f5f5,stroke:#424242,stroke-width:2px,color:#000;
@@ -653,27 +656,296 @@ flowchart LR
     end
   P3_6 --> F([API em Produção]):::event
 ```
-### Workflows ativos
 
-1. **Feature Pipeline** (`feature-pipeline.yml`)
-  - Executa em `feature/*` e `bugfix/*`
-  - Valida qualidade, testes rápidos e build Docker
-  - Pode abrir PR automático para `develop`
+### 🚀 1. Pipeline Feature (Desenvolvimento Rápido)
 
-2. **Develop Pipeline** (`develop-pipeline.yml`)
-  - Executa em `push` na branch `develop`
-  - Executa qualidade, testes completos, segurança e build Docker
-  - Pode abrir PR de release para `main`
+**Acionado por:** `push` em branches `feature/*` ou `bugfix/*`
 
-3. **Main Pipeline** (`main-pipeline.yml`)
-  - Executa apenas em `push` na branch `main`
-  - Valida `render.yaml`, executa smoke tests, build Docker e deploy no Render via deploy hook
-  - Executa smoke pós-deploy e rollback automático em falhas
+**Objetivo:** Validação rápida durante desenvolvimento, feedback imediato para desenvolvedor.
 
-4. **IssueOps Rollback** (`issue-ops-rollback.yml`)
-  - Workflow de rollback emergencial acionado por label `ops:rollback` em issue
+**Jobs paralelos:**
 
-### 3. 🚑 Gestão de Incidentes e Rollback (Resiliência)
+1. **Linting e Formatação (Ruff)**
+   ```bash
+   python -m ruff check app tests scripts src
+   python -m ruff format --check app tests scripts src
+   ```
+   - Detecta erros de sintaxe, imports não usados, estilo
+   - Falha rápida se código não segue padrão
+
+2. **Type Checking (MyPy)**
+   ```bash
+   python -m mypy app scripts src --ignore-missing-imports
+   ```
+   - Valida type hints e previne bugs de tipo
+   - Necessário para confiabilidade em produção
+
+3. **Testes Rápidos (Pytest)**
+   ```bash
+   pytest tests/ -m "not slow" --no-cov -x
+   ```
+   - Executa testes unitários (excludi testes slow)
+   - `--no-cov` para speed (cobertura é na develop)
+   - `-x` para falhar no primeiro erro
+
+4. **Build Docker**
+   ```bash
+   docker build -t datathon-app:feature .
+   ```
+   - Valida se Dockerfile está correto
+   - Detecta problemas de build cedo
+
+**Resultado:** 
+- ✅ Passa: Feedback imediato no PR
+- ❌ Falha: Bloqueia merge, mostra erro em detail job
+
+**Tempo típico:** ~5-7 minutos
+
+### 📋 2. Pipeline Develop (Validação Completa)
+
+**Acionado por:** `push` direto na branch `develop` (após merge de feature PR)
+
+**Objetivo:** Validação final antes de enviar para main, garante qualidade completa.
+
+**Jobs sequenciais com gating:**
+
+1. **Qualidade Completa**
+   ```bash
+   python -m ruff check app tests scripts src
+   python -m mypy app scripts src --ignore-missing-imports
+   ```
+   - Ruff check rígido (sem `--fix`)
+   - MyPy com verificação completa
+
+2. **Testes Completos + Cobertura**
+   ```bash
+   pytest tests/ --cov=app --cov=src --cov-fail-under=85
+   ```
+   - Executa 100% dos testes (inclusive slow)
+   - Exige cobertura mínima de 85%
+   - Gera relatório HTML (htmlcov/)
+
+3. **Segurança**
+   ```bash
+   bandit -r app scripts src -ll
+   ```
+   - Detecta vulnerabilidades comuns (SQL injection, secrets hardcoded, etc.)
+   - Falha se encontrar issues médias/altas
+
+4. **Detecção de Secrets**
+   ```bash
+   # Verifica se há API keys, tokens, senhas commitados
+   git secrets check
+   # ou
+   detect-secrets scan
+   ```
+   - Previne vazamento de credenciais
+
+5. **Build e Push Docker**
+   ```bash
+   docker build -t datathon-app:develop .
+   docker push ghcr.io/fiap/datathon-app:develop
+   ```
+   - Cria imagem com tag `develop`
+   - Pusha para Container Registry (GitHub Packages)
+
+6. **Automação: Abrir PR para Main**
+   - Se todos os testes passarem, abre automaticamente PR `develop → main`
+   - Título: "chore: release v[version]"
+   - Descrição: Changelog automático (commits desde última release)
+   - Pede review de code owners
+
+**Gating:** Cada etapa só executa se a anterior passou
+
+**Tempo típico:** ~12-15 minutos
+
+### 🛡️ 3. Pipeline Main (Deploy em Produção)
+
+**Acionado por:** `push` direto na branch `main` (após merge do PR de release)
+
+**Objetivo:** Deploy em produção com máxima segurança e validação.
+
+**Jobs com múltiplas validações:**
+
+1. **Validar Origem do PR**
+   ```bash
+   # Garante que main recebe apenas de develop
+   if [ "$GITHUB_BASE_REF" != "develop" ]; then exit 1; fi
+   ```
+   - Previne pushes acidentais diretos em main
+   - Garante historiadora de PRs
+
+2. **Validar Configuração (render.yaml)**
+   ```bash
+   # Valida schema de render.yaml
+   yamllint render.yaml
+   # Verifica se todas as env vars necessárias estão definidas
+   ```
+   - Detecta problemas de config antes de deploy
+   - Falha se render.yaml está malformado
+
+3. **Smoke Tests (Pré-Deploy)**
+   ```bash
+   pytest tests/ -m "integration" --tb=short
+   ```
+   - Testes de integração rápidos
+   - Validam que endpoints básicas funcionam
+   - Simula chamadas à API
+
+4. **Build Docker Final**
+   ```bash
+   docker build -t datathon-app:latest .
+   docker build -t datathon-app:v1.0.0 .
+   docker push ghcr.io/fiap/datathon-app:latest
+   docker push ghcr.io/fiap/datathon-app:v1.0.0
+   ```
+   - Tags: `latest`, `v[version]`
+   - Imagem é imutável em produção
+
+5. **Deploy para Render**
+   ```bash
+   # Usa Render Deploy Hook (secret integrado)
+   curl -X POST $RENDER_DEPLOY_HOOK_URL
+   ```
+   - Triggers deploy automático no Render
+   - Render puxa imagem do Container Registry
+   - Redeploy sem downtime (rolling)
+
+6. **Smoke Tests (Pós-Deploy)**
+   ```bash
+   # Aguarda 30s para API ficar online
+   sleep 30
+   pytest tests/ -m "integration" --tb=short
+   ```
+   - Valida que deploy foi bem-sucedido
+   - Testa endpoints pela URL de produção
+   - Verifica health check
+
+7. **Auto Rollback em Falhas**
+   ```python
+   if smoke_tests_fail():
+       git revert --no-edit HEAD  # Volta para commit anterior
+       git push origin main
+       # Deploy automático ejecutará novamente com código anterior
+   ```
+   - Se pós-deploy smoke tests falharem
+   - Reverte commit automaticamente
+   - Redeploy com versão anterior
+   - Notificação em Slack/GitHub
+
+**Gating:** Falha em qualquer etapa para pipeline (nenhum rollback automático até smoke pós-deploy)
+
+**Tempo típico:** ~15-20 minutos (incluindo deploy no Render)
+
+### 🚨 4. IssueOps Rollback (Emergencial)
+
+**Acionado por:** Label `ops:rollback` adicionado a issue no GitHub
+
+**Objetivo:** Rollback rápido em caso de incidente crítico.
+
+**Execução:**
+
+1. **Ler Issue Metadata**
+   - Identifica commit/tag a fazer rollback
+   - Default: último commit antes do evento
+
+2. **Git Revert**
+   ```bash
+   git revert --no-edit HEAD
+   git push origin main
+   ```
+   - Cria commit de revert
+   - Não deleta histórico
+
+3. **Trigger Main Pipeline**
+   - Deploy automático com versão anterior
+   - Smoke tests de validação
+   - Notificações enviadas
+
+**Tempo de ação:** < 5 minutos (manual + auto-deploy)
+
+### 📦 Variáveis de Ambiente nos Workflows
+
+**Necessárias em `.github/workflows/` ou `repo settings`:**
+
+```yaml
+# .github/workflows/develop-pipeline.yml
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: fiap/datathon-app
+  PYTHON_VERSION: 3.13
+
+# Segredos (definir em repo settings):
+# - GITHUB_TOKEN (automático)
+# - RENDER_DEPLOY_HOOK_URL (secret do Render)
+# - SLACK_WEBHOOK_URL (opcional, para notificações)
+```
+
+### 🔍 Monitoramento de Pipelines
+
+**Dashboard GitHub Actions:**
+- URL: `github.com/owner/repo/actions`
+- Mostra status de cada workflow
+- Logs detalhados por job
+- Histórico de runs
+
+**Filtros úteis:**
+- Branch: `develop`, `main`, `feature/*`
+- Status: `success`, `failure`, `in progress`
+- Event: `push`, `pull_request`, `workflow_dispatch`
+
+**Métricas rastreadas:**
+- Tempo total da pipeline
+- Tempo por job
+- Taxa de sucesso/falha
+- Triggers mais frequentes
+
+### ✅ Checklist: Antes de Abrir PR
+
+Para evitar falhas na pipeline:
+
+```bash
+# 1. Rodar linting localmente
+python -m ruff check app tests scripts src
+python -m ruff format app tests scripts src
+
+# 2. Rodar type checking
+python -m mypy app scripts src --ignore-missing-imports
+
+# 3. Rodar testes
+pytest tests/ -m "not slow" --tb=short
+
+# 4. Verificar se não há secrets
+git secrets check
+
+# 5. Build Docker local
+docker build -t datathon-app:local .
+
+# 6. Commitar e fazer push
+git add .
+git commit -m "feat: descrição clara"
+git push origin feature/seu-branch
+```
+
+### 📈 Métricas de Saúde da Pipeline
+
+**KPIs monitorados:**
+
+| Métrica | Alvo | Ação |
+|---------|------|------|
+| Taxa de sucesso feature | > 95% | Revisar testes flaky |
+| Tempo feature | < 10 min | Paralelizar jobs |
+| Taxa sucesso develop | > 98% | Melhorar qualidade |
+| Tempo develop | < 15 min | Otimizar cobertura |
+| Taxa sucesso main | 100% | Critical (reviewar) |
+| Tempo main | < 20 min | OK (deploy é slow) |
+| Rollback/mês | < 2 | Monitorar produção |
+
+---
+
+## 🚑 Gestão de Incidentes e Rollback (Resiliência)
+
+Em produção, problemas podem acontecer. O projeto tem protocolos estruturados para recuperação rápida e segura.
 
 ```mermaid
 flowchart LR
@@ -689,19 +961,305 @@ flowchart LR
 
     Type -- "Modelo" --> Model[Editar champion_run_id.txt]:::action
 
+    Type -- "Dados" --> Data[POST /discard + Retrain]:::action
+
     Revert --> MainPipeline
-    Model --> MainPipeline[3. Main Pipeline: Deploy]:::automation
+    Model --> MainPipeline[Main Pipeline: Deploy]:::automation
+    Data --> MainPipeline
     MainPipeline --> Success([✅ Estabilizado]):::final
-    Success --> Hotfix[Criar Branch: hotfix/*]:::action
-    Hotfix --> PR[Merge Main e Develop]:::automation
+    Success --> RootCause[Análise de Root Cause]:::action
+    RootCause --> Hotfix[Criar Branch: hotfix/*]:::action
+    Hotfix --> PRFIX[Merge Main e Develop]:::automation
 ```
 
-### Características
+### 📋 Tipos de Incidentes
 
-- Logs e summaries detalhados por etapa
-- Jobs paralelos para reduzir tempo de execução
-- Gating por qualidade/segurança antes de avançar de estágio
-- Governança de origem de PR entre branches
+#### 1️⃣ **Incidente de Código** (Bug / Crash em Produção)
+
+**Sintomas:**
+- API retorna 500 Internal Server Error
+- Endpoint específico falha
+- Erro em logs: `Exception: ...`
+
+**Procedimento:**
+
+1. **Identificar o problema**
+   ```bash
+   # Acessar logs via Render dashboard ou:
+   # Menu: Services → datathon → Logs
+   
+   # Ver últimos eventos
+   curl https://datathon-app.onrender.com/health
+   ```
+
+2. **Criar Issue de Incidente**
+   - GitHub repo → Issues → New Issue
+   - Título: `[INCIDENT] API crashes on /predict endpoint`
+   - Body: Incluir stack trace, frequência, contexto
+
+3. **Adicionar Label `ops:rollback`**
+   - Clica em Labels
+   - Seleciona `ops:rollback`
+   - Issue automaticamente trigga workflow
+
+4. **Workflow Automático**
+   ```
+   IssueOps Rollback Job:
+   1. Identifica último commit ok
+   2. Executa: git revert --no-edit HEAD
+   3. Faz push em main
+   4. Main Pipeline dispara (com código anterior)
+   5. Deploy Render com versão estável
+   ```
+
+5. **Validação Pós-Rollback**
+   ```bash
+   # CURL simples
+   curl https://datathon-app.onrender.com/health
+   
+   # Ou teste de smoke via CLI
+   pytest tests/ -m "integration" --tb=short
+   ```
+
+6. **Post-Mortem (após stabilizar)**
+   - Analisar root cause
+   - Criar hotfix branch: `hotfix/fix-predict-endpoint`
+   - Implementar fix
+   - Merge em develop + main
+   - Deploy via main pipeline
+
+**Tempo RTO (Recovery Time Objective):** < 10 minutos
+**Tempo RPO (Recover Point Objective):** último commit funcional
+
+---
+
+#### 2️⃣ **Incidente de Modelo** (Predictions Incorretas / Modelo Degradado)
+
+**Sintomas:**
+- Métricas do modelo caem
+- Data drift detectorado (> 30% features)
+- Usuários reportam predições erradas
+
+**Procedimento:**
+
+1. **Identificar o modelo ruim**
+   ```bash
+   # Acessar dashboard
+   curl https://datathon-app.onrender.com/model-info
+   
+   # Verificar métricas
+   curl https://datathon-app.onrender.com/model-metrics
+   ```
+
+2. **Reverter para modelo anterior (Champion)**
+   ```bash
+   # Via terminal SSH em produção:
+   cd /app
+   cat app/models/champion_run_id.txt
+   # Exemplo: abc123def456
+   
+   # Editar arquivo para versão anterior
+   echo "xyz789abc123" > app/models/champion_run_id.txt
+   ```
+
+3. **Reiniciar API**
+   ```bash
+   # Via Render dashboard:
+   # Services → datathon → Manual Deploy
+   # Ou via CLI:
+   curl -X POST https://api.render.com/deploys/xxxx...
+   ```
+
+4. **Validar Reversão**
+   ```bash
+   # Verificar que champion_run_id mudou
+   curl https://datathon-app.onrender.com/model-info
+   
+   # Testar predição
+   curl -X POST https://datathon-app.onrender.com/predict \
+     -d '{"data": {...}}'
+   ```
+
+5. **Chamar POST /discard** (se havia candidato ruim)
+   ```bash
+   curl -X POST 'https://datathon-app.onrender.com/discard' \
+     -H 'x-api-key: SUA_CHAVE_API'
+   ```
+
+6. **Root Cause Analysis**
+   - Acessar MLflow local
+   - Comparar runs (novo vs antigo)
+   - Identificar diferença em features/dados
+   - Planar retreino com dados mais recentes/limpos
+
+**Tempo RTO:** < 5 minutos (manual file edit + restart)
+**Impacto:** Zero downtime (modelo swapped in-memory)
+
+---
+
+#### 3️⃣ **Incidente de Dados** (Dataset Corrupto / Ingestão Falha)
+
+**Sintomas:**
+- `/update-data` retorna erro
+- Dashboard não carrega features
+- Relatório de drift com NaN
+
+**Procedimento:**
+
+1. **Validar Arquivo Subido**
+   ```bash
+   # SSH em produção
+   ls -la /app/data/raw/
+   
+   # Verificar conteúdo
+   head -20 /app/data/raw/dados_2024.xlsx
+   
+   # Validar schema
+   python scripts/validate_data.py /app/data/raw/dados_2024.xlsx
+   ```
+
+2. **Se Corrupto: Restaurar Versão Anterior**
+   ```bash
+   # Ver versões versionadas
+   ls -la /app/data/raw/dados_*_*.xlsx
+   
+   # Restaurar:
+   cp /app/data/raw/dados_2024_20240301_143000.xlsx \
+      /app/data/raw/dados_2024.xlsx
+   ```
+
+3. **Re-executar Deriva (Drift)**
+   ```bash
+   # Via API
+   curl -X GET 'https://datathon-app.onrender.com/drift' \
+     -o drift_report.html
+   
+   # Verificar se está OK
+   ```
+
+4. **Investigar Root Cause**
+   - Arquivo original estava corrupto?
+   - Validação de upload falhou?
+   - Erro de encoding (XLSX vs CSV)?
+
+5. **Criar Hotfix**
+   - Melhorar validação em `/update-data`
+   - Adicionar testes de schema
+   - Deploy via main pipeline
+
+**Tempo RTO:** < 10 minutos (file restoration)
+**Prevenção:** Validação de schema antes de ingerir
+
+---
+
+### 🔄 Fluxo de Recuperação Passo a Passo
+
+```
+1. DETECTAR (alert/usuário reporta)
+   ↓
+2. CLASSIFICAR (código, modelo, dados)
+   ↓
+3. RESPONDER (execute procedimento do tipo)
+   ↓
+4. VALIDAR (health check, smoke tests)
+   ↓
+5. COMUNICAR (notificar stakeholders)
+   ↓
+6. ANALISAR (root cause analysis)
+   ↓
+7. OTIMIZAR (hotfix, testes, prevenção)
+   ↓
+8. MERGE (hotfix → main/develop)
+```
+
+### 🔔 Notificações e Alertas
+
+**Canais de notificação:**
+
+| Tipo | Canal | Quem |
+|------|-------|------|
+| Falha Pipeline | GitHub Comments na PR | Dev team |
+| Deploy OK | GitHub Release | Dev team |
+| Smoke Test Falha | GitHub Issues automático | Ops team |
+| Rollback Automático | Slack webhook | Toda equipe |
+| Modelo Degradado | Email alert | Data scientists |
+
+**Configurar Slack Webhook:**
+```yaml
+# .github/workflows/main-pipeline.yml
+- name: Notificar Falha em Slack
+  if: failure()
+  run: |
+    curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "text": "🚨 Deploy FAILED: ${{ job.status }}",
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Deployment Failed*\nBranch: ${{ github.ref }}\nCommit: ${{ github.sha }}"
+            }
+          }
+        ]
+      }'
+```
+
+### 📊 Monitoring Pós-Incidente
+
+**Métricas críticas a monitorar após recuperação:**
+
+```python
+# Exemplo: Dashboard de Health
+{
+  "api_status": "online",
+  "modelo_em_producao": "champion_v2",
+  "run_id_mlflow": "abc123def456",
+  "health_check_latency_ms": 45,
+  "predicts_por_minuto": 120,
+  "taxa_erro_ultima_hora": 0.2,  # 0.2% = OK
+  "tempo_medio_predicao_ms": 150,
+  "memoria_usado_mb": 512,
+  "ultimas_logs_criticas": []
+}
+```
+
+### ✅ Checklist Pós-Incidente
+
+```bash
+# 1. Validar que sistema está ok
+curl https://datathon-app.onrender.com/health
+
+# 2. Rodar smoke tests
+pytest tests/ -m "integration"
+
+# 3. Verificar métricas
+curl https://datathon-app.onrender.com/model-metrics
+
+# 4. Checar logs de erro
+# Dashboard Render → Logs
+
+# 5. Notificar stakeholders
+# Email ou Slack message
+
+# 6. Agendar post-mortem
+# Meeting com equipe (24-48h após)
+
+# 7. Criar issue de acompanhamento
+# GitHub Issues: "Investigar causa de incident XYZ"
+```
+
+### 🎯 Metas de Resiliência
+
+| SLA | Target | Métrica |
+|-----|--------|---------|
+| **Availability** | 99.9% | Uptime |
+| **MTTR** | < 10 min | Tempo até voltar online |
+| **MTBF** | > 720 h | Tempo entre incidentes |
+| **RTO** | < 15 min | Objetivo de recuperação |
+| **RPO** | 0 h | Perda de dados (zero) |
+| **Rollback Success** | 100% | Taxa de sucesso |
 
 ---
 
@@ -725,56 +1283,178 @@ no runbook operacional [.github/copilot-operational-runbook.md](.github/copilot-
 
 ## 📖 Documentação da API
 
-A API oferece endpoints para predição, auditoria e gestão do ciclo de modelos.
+A API oferece endpoints para predição, auditoria e gestão do ciclo de modelos (champion/challenger com MLflow).
 
-### Documentação interativa
+### 🔗 Acesso à Documentação Interativa
 
 - **Swagger UI (local direto na API):** `http://127.0.0.1:8000/docs`
 - **Swagger UI (via Nginx):** `http://localhost/api/docs`
 - **ReDoc (local direto na API):** `http://127.0.0.1:8000/redoc`
+- **ReDoc (via Nginx):** `http://localhost/api/redoc`
 
-### Endpoints principais
+### 🛣️ Mapa de Endpoints
 
-```http
-GET  /health
-GET  /
-POST /predict
-POST /update-data
-GET  /model-info
-GET  /drift
-POST /retrain
-POST /promote
-POST /discard
-GET  /model-metrics
-GET  /model-artifact/{name}
+**Saúde e Informações:**
+- `GET  /health` — Status da API e modelo
+- `GET  /` — Informações da aplicação
+- `GET  /model-info` — Metadados do modelo (versão, threshold, rastreabilidade)
+
+**Predição e Análise:**
+- `POST /predict` — Predição de risco para um aluno com explicabilidade (SHAP)
+- `GET  /drift` — Relatório de data drift (HTML renderizável)
+- `GET  /model-metrics` — Métricas do modelo (acurácia, AUC, F1, matriz confusão)
+
+**Governança de Dados:**
+- `POST /update-data` — Ingestão de novo dataset (com versionamento e auditoria)
+- `GET  /model-artifact/{name}` — Download de artefatos (gráficos, relatórios)
+
+**MLOps (Champion/Challenger):**
+- `POST /retrain` — Criar modelo candidato (challenger)
+- `POST /promote` — Promover candidato para produção (champion)
+- `POST /discard` — Descartar candidato rejeitado
+
+### 🔐 Autorização em Rotas Sensíveis
+
+As rotas de escrita, retreinamento e governança exigem o header `X-API-KEY` com o valor configurado na variável de ambiente `API_KEY`:
+
+**Rotas protegidas:**
+- `POST /retrain` — Criar novo modelo candidato
+- `POST /promote` — Promover modelo para produção
+- `POST /discard` — Descartar modelo candidato
+- `POST /update-data` — Ingerir novo dataset
+- `GET  /model-artifact/{name}` — Download de artefatos
+
+**Erro de autenticação:**
+```json
+{
+  "detail": "Invalid or missing X-API-KEY header"
+}
+```
+Status: `401 Unauthorized`
+
+---
+
+### 🏥 GET /health — Status da API
+
+Verifica a saúde da API e se o modelo está carregado corretamente.
+
+**Requisição:**
+
+```bash
+curl -X GET 'http://localhost/api/health' \
+  -H 'accept: application/json'
 ```
 
-### Autorização em rotas sensíveis
+**Resposta (200 OK):**
 
-As rotas de escrita e retreinamento exigem o header `X-API-KEY` com o valor configurado na variável de ambiente `API_KEY`:
+```json
+{
+  "status": "healthy",
+  "api": "online",
+  "modelo": "loaded",
+  "versao_api": "1.0.0",
+  "timestamp": "2024-03-05T14:30:00Z"
+}
+```
 
-- `POST /retrain`
-- `POST /promote`
-- `POST /discard`
+**Resposta (503 Service Unavailable):**
 
-Sem chave válida, a API responde `401 Unauthorized`.
+```json
+{
+  "status": "unhealthy",
+  "erros": [
+    "Modelo não carregado",
+    "Conexão com MLflow falhou"
+  ]
+}
+```
 
-### Ingestão de Dataset (POST /update-data)
+---
 
-O endpoint `/update-data` permite que a ONG envie novos datasets para serem usados no próximo retreinamento.
+### ℹ️ GET / — Informações da Aplicação
+
+Retorna descrição e versão da aplicação.
+
+**Requisição:**
+
+```bash
+curl -X GET 'http://localhost/api/' \
+  -H 'accept: application/json'
+```
+
+**Resposta (200 OK):**
+
+```json
+{
+  "titulo": "API Datathon Passos Mágicos",
+  "versao": "1.0.0",
+  "descricao": "Predição de risco de defasagem escolar com governança de modelos (champion/challenger)"
+}
+```
+
+---
+
+### 📤 POST /predict — Predição com Explicabilidade
+
+Realiza predição de risco de defasagem para um aluno com explicabilidade SHAP. Retorna a classe prevista e a probabilidade de risco, além de features mais importantes.
+
+**Requisição:**
+
+```bash
+curl -X POST 'http://localhost/api/predict' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "data": {
+      "IDADE": 16,
+      "FASE": "Fase 1 (3° e 4° ano)",
+      "INDE_22": 6.5,
+      "INDE_23": 7.1,
+      "ANO_INGRESSO": 2022,
+      "GENERO": "Feminino",
+      "ETAPA": "Cursando"
+    }
+  }'
+```
+
+**Resposta (200 OK):**
+
+```json
+{
+  "classe": 0,
+  "probabilidade_risco": 0.25,
+  "explicabilidade": {
+    "tipo": "SHAP",
+    "features_importantes": [
+      {"feature": "INDE_23", "impacto": 0.18},
+      {"feature": "INDE_22", "impacto": 0.15},
+      {"feature": "ANO_INGRESSO", "impacto": 0.12}
+    ]
+  },
+  "rastreabilidade": {
+    "modelo_usado": "champion",
+    "run_id_mlflow": "abc123def456"
+  }
+}
+```
+
+---
+
+### 📊 POST /update-data — Ingestão de Dataset
+
+O endpoint `/update-data` permite que a ONG envie novos datasets para serem usados no próximo retreinamento. **Protegido por API Key.**
 
 **Características:**
 - ✅ Validação de API Key (governança de acesso)
 - ✅ Validação de formato (`.csv` ou `.xlsx`)
 - ✅ Versionamento automático com timestamp
 - ✅ Logging de auditoria completo
-- ✅ Redirecionamento para próximo passo (drift monitor)
+- ✅ Rastreabilidade dataset→modelo para cada ingestão
 
 **Requisição:**
 
 ```bash
-curl -X POST \
-  'http://localhost/api/update-data' \
+curl -X POST 'http://localhost/api/update-data' \
   -H 'x-api-key: SUA_CHAVE_API' \
   -F 'file=@dados_2024.xlsx'
 ```
@@ -788,22 +1468,24 @@ curl -X POST \
   "arquivo_versionado": "dados_2024_20240305_143000.xlsx",
   "timestamp": "20240305_143000",
   "tamanho_bytes": 245632,
+  "linhas_processadas": 450,
   "proximo_passo": "Acesse GET /drift para monitorar degradação e decida se retreino é necessário.",
   "auditoria": {
     "acao": "ingestao_dados",
     "timestamp": "20240305_143000",
-    "arquivo": "dados_2024.xlsx"
+    "arquivo": "dados_2024.xlsx",
+    "origem_ip": "192.168.1.100"
   }
 }
 ```
 
 **Fluxo pós-ingestão:**
 1. Arquivo é salvo com versão: `dados_2024_YYYYMMDD_HHMMSS.xlsx`
-2. Arquivo atual sobrescrito: `dados_2024.xlsx`
-3. Log gerado para auditoria
+2. Arquivo atual sobrescrito: `app/data/raw/dados_2024.xlsx`
+3. Log gerado para auditoria (com timestamp e IP)
 4. Usuário redirecionado a `/drift` para monitorar
 
-**Exemplos de exemplo: Requisição via Python**
+**Requisição via Python:**
 
 ```python
 import requests
@@ -817,45 +1499,258 @@ response = requests.post(
     headers=headers
 )
 
-print(response.json())
-# {
-#   "status": "sucesso",
-#   "arquivo_versionado": "dados_2024_20240305_143000.xlsx",
-#   ...
-# }
+if response.status_code == 201:
+    data = response.json()
+    print(f"Sucesso! Arquivo: {data['arquivo_versionado']}")
+else:
+    print(f"Erro: {response.json()['detail']}")
 ```
 
 ---
 
-## Exemplo de ingestão via cURL
+### 🔄 GET /drift — Monitoramento de Data Drift
+
+Retorna um relatório HTML interativo de data drift gerado pelo Evidently. Compara distribuições de features dos dados atuais com dados históricos.
+
+**Requisição:**
 
 ```bash
-curl -X POST \
-  'http://localhost/api/predict' \
-  -H 'accept: application/json' \
-  -H 'x-requested-by: banca_fiap' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "data": {
-    "IDADE": 16,
-    "FASE": "Fase 1 (3° e 4° ano)",
-    "INDE_22": 6.5,
-    "INDE_23": 7.1,
-    "ANO_INGRESSO": 2022,
-    "GÊNERO": "Feminino"
-  }
-}'
+curl -X GET 'http://localhost/api/drift' \
+  -H 'accept: text/html'
 ```
 
-> Se estiver usando Docker com Nginx local, utilize `http://localhost/api/predict`.
+**Resposta (200 OK):**
+- Retorna HTML renderizável contendo:
+  - Histogramas de distribuição (antes/depois)
+  - Testes estatísticos por feature (KS, chi-squared)
+  - Resumo de features com drift
+  - Recomendação automática (retreinar ou monitorar)
 
-### Estratégia Champion/Challenger (rastreabilidade)
+**Via Dashboard:**
+- Acesso: `http://localhost/` → Aba "🔄 Monitoramento de Drift"
+- Renderiza o relatório em tempo real
 
-- O endpoint `/retrain` gera um **candidato** e grava o `run_id` em `app/models/candidate_run_id.txt`.
-- O endpoint `/promote` só promove para produção após validação, copiando o `run_id` para `app/models/champion_run_id.txt`.
-- O endpoint `/model-metrics` usa `app/models/champion_run_id.txt` para consultar a run exata no MLflow.
+---
 
-Com isso, apenas modelos validados viram champion, e cada promoção fica auditável por `run_id`.
+### 🤖 POST /retrain — Criar Modelo Candidato (Champion/Challenger)
+
+Cria um novo modelo candidato (challenger) usando dados atuais. **Protegido por API Key.** O modelo não afeta produção até ser promovido.
+
+**Requisição:**
+
+```bash
+curl -X POST 'http://localhost/api/retrain' \
+  -H 'x-api-key: SUA_CHAVE_API' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "dataset_path": "app/data/raw/dados_2024.xlsx",
+    "test_size": 0.2,
+    "hyperparameters": {
+      "max_depth": 10,
+      "min_samples_split": 5
+    }
+  }'
+```
+
+**Resposta (202 Accepted):**
+
+```json
+{
+  "status": "retreinamento_iniciado",
+  "candidate_run_id": "abc123def456",
+  "timestamp": "20240305_143000",
+  "proximo_passo": "Acesse POST /promote para validar e promover, ou POST /discard para descartar.",
+  "metricas_candidato": {
+    "acuracia": 0.87,
+    "auc": 0.92,
+    "f1": 0.85
+  }
+}
+```
+
+---
+
+### ✅ POST /promote — Promover Candidato para Produção
+
+Promove o modelo candidato (challenger) para produção, substituindo o modelo atual (champion). **Protegido por API Key.**
+
+**Requisição:**
+
+```bash
+curl -X POST 'http://localhost/api/promote' \
+  -H 'x-api-key: SUA_CHAVE_API'
+```
+
+**Resposta (200 OK):**
+
+```json
+{
+  "status": "sucesso",
+  "mensagem": "Modelo promovido com sucesso.",
+  "novo_champion_run_id": "abc123def456",
+  "anterior_champion_run_id": "xyz789abc123",
+  "timestamp": "20240305_145000",
+  "auditoria": {
+    "acao": "promocao_modelo",
+    "usuario": (inferred from API_KEY),
+    "timestamp": "20240305_145000"
+  }
+}
+```
+
+---
+
+### ❌ POST /discard — Descartar Modelo Candidato
+
+Descarta o modelo candidato rejeitado. **Protegido por API Key.**
+
+**Requisição:**
+
+```bash
+curl -X POST 'http://localhost/api/discard' \
+  -H 'x-api-key: SUA_CHAVE_API'
+```
+
+**Resposta (200 OK):**
+
+```json
+{
+  "status": "sucesso",
+  "mensagem": "Modelo candidato descartado.",
+  "discarded_run_id": "abc123def456",
+  "timestamp": "20240305_145000"
+}
+```
+
+---
+
+### 📈 GET /model-metrics — Métricas do Modelo em Produção
+
+Retorna as métricas de desempenho do modelo current (champion) armazenadas no MLflow.
+
+**Requisição:**
+
+```bash
+curl -X GET 'http://localhost/api/model-metrics' \
+  -H 'accept: application/json'
+```
+
+**Resposta (200 OK):**
+
+```json
+{
+  "metricas": {
+    "acuracia": 0.87,
+    "auc": 0.92,
+    "f1": 0.85,
+    "recall": 0.84,
+    "precisao": 0.86,
+    "matriz_confusao": {
+      "tn": 185,
+      "fp": 14,
+      "fn": 16,
+      "tp": 135
+    }
+  },
+  "timestamp_treino": "20240301_120000",
+  "run_id_mlflow": "abc123def456"
+}
+```
+
+---
+
+### ℹ️ GET /model-info — Metadados do Modelo
+
+Retorna informações de rastreabilidade e governança do modelo em produção.
+
+**Requisição:**
+
+```bash
+curl -X GET 'http://localhost/api/model-info' \
+  -H 'accept: application/json'
+```
+
+**Resposta (200 OK):**
+
+```json
+{
+  "versao": "champion_v2",
+  "run_id_mlflow": "abc123def456",
+  "data_treino": "20240301_120000",
+  "features": [
+    "IDADE",
+    "FASE",
+    "INDE_22",
+    "INDE_23",
+    "ANO_INGRESSO",
+    "GENERO",
+    "ETAPA"
+  ],
+  "threshold_risco": 0.5,
+  "degradacao_do_modelo": {
+    "descricao": "Perfil dos alunos muda significativamente ao longo dos anos",
+    "deteccao": "Monitoramento de Data Drift via Evidently. Se > 30% das features apresentarem drift estatístico, disparar alerta.",
+    "acao": "Retreinar o modelo com os dados mais recentes."
+  }
+}
+```
+
+---
+
+### 📎 GET /model-artifact/{name} — Download de Artefatos
+
+Retorna artefatos gerados durante o treinamento: gráficos, relatórios e dados auxiliares. **Protegido por API Key** para gerenciamento de versões.
+
+**Artefatos disponíveis:**
+- `roc_curve.png` — Curva ROC do modelo
+- `classification_report.png` — Relatório de classificação (precisão, recall, F1)
+- `feature_importance.png` — Importância das features
+- `confusion_matrix.png` — Matriz de confusão
+- `data_drift_report.html` — Relatório detalhado de drift
+
+**Requisição:**
+
+```bash
+curl -X GET 'http://localhost/api/model-artifact/roc_curve.png' \
+  -H 'x-api-key: SUA_CHAVE_API' \
+  -o roc_curve.png
+```
+
+**Resposta (200 OK):**
+- Arquivo binário (imagem PNG ou HTML)
+
+**Resposta (404 Not Found):**
+
+```json
+{
+  "detail": "Artefato não encontrado: feature_importance.png"
+}
+```
+
+---
+
+### Estratégia Champion/Challenger na API
+
+Os endpoints `/retrain`, `/promote` e `/discard` implementam o padrão **champion/challenger** com rastreabilidade total:
+
+1. **`POST /retrain`** — Cria um modelo **candidato** (challenger)
+   - Salva o `run_id` em `app/models/candidate_run_id.txt`
+   - Modelo não afeta produção ainda
+
+2. **`POST /promote`** — Promove candidato para produção
+   - Valida as métricas do candidato
+   - Move `run_id` para `app/models/champion_run_id.txt`
+   - Apenas modelos validados viram champion
+
+3. **`POST /discard`** — Descarta candidato rejeitado
+   - Remove arquivos temporários
+   - Registra auditoria da rejeição
+
+4. **`GET /model-metrics`** — Retorna métricas do champion em produção
+   - Consulta MLflow usando `app/models/champion_run_id.txt`
+   - Garante rastreabilidade completa
+
+**Cada operação é auditada e rastreável por `run_id` no MLflow.**
 
 ---
 
@@ -1011,30 +1906,298 @@ Logs auxiliam em auditorias futuras (quem acessou drift, quando, por quê).
 
 ## �📊 Monitoramento e MLflow
 
-O projeto utiliza **MLflow** para rastrear experimentos, parâmetros, métricas e artefatos de treinamento.
+O projeto utiliza **MLflow** como plataforma central de rastreamento de experimentos, métricas, parâmetros e artefatos de treinamento. Garante **reprodutibilidade**, **auditoria** e **rastreabilidade** de cada modelo treinado.
 
-### Como acessar
+### 🎯 O que é MLflow?
 
-**Execução local (manual):**
+**MLflow** é uma plataforma open-source para gerenciar o ciclo de vida completo de projetos Machine Learning:
+
+1. **Experiment Tracking** — Registra parâmetros, métricas e artefatos de cada execução
+2. **Model Registry** — Versiona modelos e controla promoção entre estágios
+3. **Projects** — Padroniza execução de projetos ML
+4. **Model Serving** — Disponibiliza modelos para predição
+
+No projeto, usamos principalmente **Experiment Tracking** e **Model Registry**.
+
+### 🔗 Acessar MLflow
+
+**Localmente (desenvolvimento):**
 
 ```bash
 mlflow ui --port 5000
 ```
 
-MLflow local: `http://127.0.0.1:5000`
+- Acesso: `http://127.0.0.1:5000`
+- Visualiza todos os experimentos e runs
+- Compara métricas entre execuções
 
-> Em produção no Render, o foco principal é API + Dashboard. O uso de MLflow na nuvem depende do perfil de recursos e da configuração do ambiente.
+**Via Docker (com docker-compose):**
 
-### Racional de segurança e recursos em produção
+```bash
+docker-compose up
+# MLflow estará em http://localhost:5000
+```
 
-No deploy de produção, o serviço de MLflow foi desativado para reduzir consumo de memória/CPU e evitar pressão de recursos no container principal (API + Dashboard + Nginx). O roteamento permanece centralizado no Nginx (`nginx.conf`) e a execução de processos é controlada pelo Supervisor (`supervisord.conf`), onde o bloco do MLflow fica desabilitado por padrão.
+**Em Produção (Render):**
 
-### Métricas rastreadas
+O MLflow não roda no container de produção (economia de recursos). A rastreabilidade de modelos é mantida via:
+- `app/models/champion_run_id.txt` — ID do modelo em produção
+- `app/models/candidate_run_id.txt` — ID do modelo candidato
+- Logs de auditoria na API
 
-- Acurácia, precisão, recall e F1-score
-- Curvas e artefatos de avaliação
-- Hiperparâmetros de treinamento
-- Metadados de execução e versionamento de modelo
+Cada modelo promovido fica rastreável pelo seu `run_id` no MLflow local/backend.
+
+### 📋 Estrutura de Experiments
+
+No projeto, configuramos hierarchias de experiments:
+
+```
+📁 Experiments
+├─ 📊 datathon-training (ID: 0)
+│  ├─ 🏃 run: LSTM com INDE features
+│  │  └─ Métricas: acurácia, AUC, F1, etc.
+│  ├─ 🏃 run: Random Forest
+│  │  └─ Métricas: comparativo
+│  ├─ 🏃 run: XGBoost
+│  │  └─ Métricas: melhor performance
+│  └─ 🏃 run: (futuro) Tree-based ensemble
+│
+├─ 📊 datathon-drift-monitoring (ID: 1)
+│  └─ 📈 Drift reports por período
+│
+└─ 📊 datathon-retrain (ID: 2)
+   └─ 🏃 runs de retreinamento com novos dados
+```
+
+Cada `run` é uma execução de treinamento com seu próprio:
+- **ID único** (`run_id`)
+- **Parâmetros** (max_depth, learning_rate, etc.)
+- **Métricas** (acurácia, AUC, F1, recall, precisão)
+- **Artefatos** (modelo .pkl, gráficos, relatórios)
+- **Tags** (dataset_version, modelo_tipo, etc.)
+
+### 📊 Métricas Rastreadas por Run
+
+**Métricas de desempenho:**
+- `acuracia` — Porcentagem de predições corretas
+- `auc` — Área sob a curva ROC
+- `f1` — F1-score (balanço entre precisão e recall)
+- `precisao` — Verdadeiros positivos / todos os positivos preditos
+- `recall` — Verdadeiros positivos / todos os positivos reais
+- `loss` — Perda de treinamento
+
+**Artefatos gerados:**
+- `modelo.pkl` — Modelo treinado serializado
+- `roc_curve.png` — Gráfico da curva ROC
+- `confusion_matrix.png` — Matriz de confusão
+- `classification_report.png` — Relatório detalhado
+- `feature_importance.png` — Importância das features
+- `treinamento_log.txt` — Log estruturado da execução
+
+**Parâmetros registrados:**
+- `test_size` — Proporção de dados de teste
+- `max_depth` — Profundidade máxima (árvores)
+- `n_estimators` — Número de árvores/estimadores
+- `learning_rate` — Taxa de aprendizado
+- `hyperparameters` — JSON com config completa
+
+**Tags e Metadados:**
+- `dataset_version` — Versão do dataset usado
+- `modelo_tipo` — Tipo de modelo (LSTM, Random Forest, XGBoost, etc.)
+- `status` — candidate | champion | archived
+- `data_treinamento` — Data/hora da execução
+
+### 💾 Armazenamento de Artefatos
+
+MLflow armazena artefatos (modelos, gráficos, dados) em:
+
+**Localmente:**
+```
+mlruns/
+  0/  (experiment ID)
+    abc123def456/  (run ID)
+      artifacts/
+        modelo.pkl
+        roc_curve.png
+        confusion_matrix.png
+        feature_importance.png
+        classification_report.png
+      metrics/
+        acuracia
+        auc
+        f1
+      params/
+        test_size
+        max_depth
+      tags/
+        dataset_version
+        modelo_tipo
+```
+
+**Em Produção:**
+
+Antes de promover para `champion`, o modelo é copiado para `app/models/champion/modelo.pkl` para rápido acesso na API.
+
+### 🔄 Workflow: Retrain → Promote → Discard
+
+1. **POST /retrain** chama `scripts/train.py`
+   - Treina novo modelo
+   - Registra nova run no MLflow
+   - Salva `run_id` em `app/models/candidate_run_id.txt`
+
+2. **`scripts/train.py main()`** executa:
+   ```python
+   mlflow.start_run(experiment_id=0)  # datathon-training
+   mlflow.log_param("test_size", 0.2)
+   mlflow.log_param("hyperparameters", {...})
+   mlflow.log_metric("acuracia", 0.87)
+   mlflow.log_artifact("roc_curve.png")
+   mlflow.end_run()
+   ```
+
+3. **POST /promote** lê `candidate_run_id.txt`
+   - Valida métricas do candidato
+   - Copia modelo para `app/models/champion/`
+   - Atualiza `champion_run_id.txt` no MLflow
+   - Registra em run metadata: `status: champion`
+
+4. **GET /model-metrics** lê `champion_run_id.txt`
+   - Busca no MLflow a run exata
+   - Retorna métricas auditáveis
+
+5. **POST /discard** remove arquivos do candidato
+   - Registra em MLflow: `status: discarded`
+
+### 📈 Visualização no MLflow UI
+
+**Tela Principal:**
+- Lista de experiments com número de runs
+- Data/hora das execuções mais recentes
+- Status dos modelos
+
+**Detalhe de Experiment:**
+- Comparação visual de métricas entre runs
+- Gráficos de scatter/parallel coordinates
+- Tabela com todos os parâmetros
+
+**Detalhe de Run:**
+- Parâmetros utilizados
+- Métricas registradas (com valores finais)
+- Artefatos disponíveis para download
+- Tags e notas
+
+**Exemplo de Busca:**
+
+```
+# Filtrar runs com acurácia > 85%
+metrics.acuracia > 0.85
+
+# Filtrar por tag
+tags.status = "champion"
+
+# Filtrar por data
+start_time > 2024-03-01 AND end_time < 2024-03-05
+```
+
+### 🔐 Integração com API
+
+A API expõe o rastreamento de MLflow:
+
+**GET /model-info**
+```json
+{
+  "versao": "champion_v2",
+  "run_id_mlflow": "abc123def456",
+  "data_treino": "20240301_120000",
+  "features": [...],
+  "parametros_mlflow": {...},
+  "metricas_mlflow": {...}
+}
+```
+
+**GET /model-metrics**
+Busca métricas armazenadas na run do MLflow:
+```json
+{
+  "metricas": {
+    "acuracia": 0.87,
+    "auc": 0.92,
+    "f1": 0.85,
+    "precisao": 0.86,
+    "recall": 0.84,
+    "matriz_confusao": {...}
+  },
+  "run_id_mlflow": "abc123def456"
+}
+```
+
+### 📊 Como Iniciar o Treinamento com MLflow
+
+**Manualmente (desenvolvedores):**
+
+```bash
+# Treinar novo modelo e registrar no MLflow
+python scripts/train.py \
+  --dataset_path app/data/raw/dados_2024.xlsx \
+  --test_size 0.2 \
+  --hyperparameters '{"max_depth": 10, "n_estimators": 100}'
+
+# MLflow automaticamente:
+# 1. Cria nova run em experiment "datathon-training"
+# 2. Registra parâmetros e métricas
+# 3. Salva artifacts e modelo
+# 4. Atualiza candidate_run_id.txt
+```
+
+**Via API (produção):**
+
+```bash
+curl -X POST 'http://localhost/api/retrain' \
+  -H 'x-api-key: SUA_CHAVE_API' \
+  -H 'Content-Type: application/json' \
+  -d '{"dataset_path": "app/data/raw/dados_2024.xlsx"}'
+
+# Internamente chama scripts/train.py
+# Retorna candidate_run_id na resposta
+```
+
+**Via Dashboard:**
+1. Acesse `http://localhost/` → Aba "🤖 Retreinamento"
+2. Selecione dataset
+3. Clique "Iniciar Retreinamento"
+4. Acompanhe progresso (integra com MLflow backend)
+
+### 🎛️ Variáveis de Ambiente (MLflow)
+
+```bash
+# Arquivo: .env ou render.yaml
+
+MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+# Em produção, pode apontar para servidor remoto
+
+MLFLOW_EXPERIMENT_NAME=datathon-training
+# Experiment onde as runs são registradas
+```
+
+### ⚠️ Notas Operacionais
+
+1. **Em desenvolvimento:** MLflow UI está sempre acessível em `http://127.0.0.1:5000`
+
+2. **Em produção (Render):** 
+   - MLflow UI não roda para economizar recursos
+   - Rastreabilidade é mantida via `run_id` armazenado em txt
+   - Cada promoção de modelo fica auditável
+
+3. **Backup de Runs:**
+   - Diretório `mlruns/` contém histórico local
+   - Antes de fazer deploy, fazer backup de `mlruns/`
+
+4. **Limpeza:**
+   ```bash
+   # Remover runs antigos (desenvolvimento)
+   rm -rf mlruns/0/  # Remove experiment 0
+   rm -rf .mlflow/  # Remove cache
+   ```
 
 ---
 
