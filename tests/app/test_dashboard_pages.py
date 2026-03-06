@@ -399,13 +399,15 @@ def test_render_metrics_page_local(monkeypatch) -> None:
 
 
 def test_render_prediction_page_model_none(monkeypatch) -> None:
-    """Deve interromper se modelo não carregado."""
+    """Deve interromper se API não está saudável."""
     st = make_streamlit_mock()
     st.stop.side_effect = RuntimeError("stop")
     monkeypatch.setattr(prediction_page, "st", st)
 
     with pytest.raises(RuntimeError):
-        prediction_page.render_prediction_page(None, lambda _data: (0, 0.0))
+        prediction_page.render_prediction_page(
+            predict_func=lambda _data: (0, 0.0), api_healthy=False
+        )
 
 
 def test_render_prediction_page_success(monkeypatch) -> None:
@@ -435,8 +437,8 @@ def test_render_prediction_page_success(monkeypatch) -> None:
     ]
 
     prediction_page.render_prediction_page(
-        model=MagicMock(),
         predict_func=lambda _data: (1, 0.7),
+        api_healthy=True,
     )
 
     st.warning.assert_called()
@@ -471,7 +473,7 @@ def test_render_prediction_page_error(monkeypatch) -> None:
     def _raise(_data: Dict[str, Any]) -> tuple[int, float]:
         raise ConnectionError("fail")
 
-    prediction_page.render_prediction_page(model=MagicMock(), predict_func=_raise)
+    prediction_page.render_prediction_page(predict_func=_raise, api_healthy=True)
 
     st.error.assert_called()
 
