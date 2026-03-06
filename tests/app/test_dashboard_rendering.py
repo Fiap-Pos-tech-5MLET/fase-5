@@ -185,7 +185,7 @@ class TestDashboardPages:
         predict_func = MagicMock(return_value=(1, 0.7))
 
         with patch.object(prediction, "st", st_mock), patch.object(prediction, "go", MagicMock()):
-            prediction.render_prediction_page(MagicMock(), predict_func)
+            prediction.render_prediction_page(predict_func=predict_func, api_healthy=True)
 
         predict_func.assert_called()
 
@@ -197,7 +197,7 @@ class TestDashboardPages:
         predict_func = MagicMock(return_value=(0, 0.2))
 
         with patch.object(prediction, "st", st_mock), patch.object(prediction, "go", MagicMock()):
-            prediction.render_prediction_page(MagicMock(), predict_func)
+            prediction.render_prediction_page(predict_func=predict_func, api_healthy=True)
 
         predict_func.assert_called()
 
@@ -450,8 +450,8 @@ class TestDashboardPages:
         # Create robust mocks
         streamlit_stub = types.ModuleType("streamlit")
         streamlit_stub.session_state = {}
-        streamlit_stub.cache_resource = lambda func: func
-        streamlit_stub.cache_data = lambda func: func
+        streamlit_stub.cache_resource = lambda *_args, **_kwargs: lambda func: func
+        streamlit_stub.cache_data = lambda *_args, **_kwargs: lambda func: func
         streamlit_stub.error = MagicMock()
 
         # Clear all dashboard modules to force fresh import
