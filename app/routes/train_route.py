@@ -33,7 +33,7 @@ from app.models.schemas import (
     RetrainRequest,
 )
 from app.utils.model_loader import get_model_paths, reload_model
-from app.utils.security import validate_api_key
+from app.utils.security import validate_api_key, validate_requested_by
 from app.utils.structured_logging import log_with_request
 from scripts.train import main as run_training
 
@@ -70,8 +70,26 @@ def _get_latest_dataset_path() -> str:
 
 @router.post("/retrain")
 async def retrain(
-    params: Annotated[RetrainRequest, Body(...)],
+    params: Annotated[
+        RetrainRequest,
+        Body(
+            ...,
+            examples=[
+                {
+                    "requested_by": "dashboard-teste",
+                    "n_estimators": 100,
+                    "max_depth": None,
+                    "learning_rate": 0.1,
+                    "num_leaves": 31,
+                    "subsample": 1.0,
+                    "colsample_bytree": 1.0,
+                    "test_size": 0.2,
+                }
+            ],
+        ),
+    ],
     request: Request,
+    requested_by: Annotated[str, Depends(validate_requested_by)],
     _authenticated: Annotated[None, Depends(validate_api_key)],
 ) -> Dict[str, Any]:
     """
@@ -208,6 +226,7 @@ async def retrain(
 @router.post("/promote", response_model=PromoteResponse)
 async def promote(
     request: Request,
+    _requested_by: Annotated[str, Depends(validate_requested_by)],
     _authenticated: Annotated[None, Depends(validate_api_key)],
 ) -> PromoteResponse:
     """
@@ -291,6 +310,7 @@ async def promote(
 
 @router.post("/discard", response_model=DiscardResponse)
 async def discard(
+    _requested_by: Annotated[str, Depends(validate_requested_by)],
     _authenticated: Annotated[None, Depends(validate_api_key)],
 ) -> DiscardResponse:
     """
@@ -331,7 +351,9 @@ async def discard(
 
 
 @router.get("/model-metrics", response_model=ModelMetricsResponse)
-async def model_metrics() -> ModelMetricsResponse:
+async def model_metrics(
+    _requested_by: Annotated[str, Depends(validate_requested_by)],
+) -> ModelMetricsResponse:
     """
     Retorna métricas, parâmetros e artefatos do modelo champion em produção.
 
@@ -419,7 +441,10 @@ async def model_metrics() -> ModelMetricsResponse:
 
 
 @router.get("/model-artifact/{artifact_name}")
-async def model_artifact(artifact_name: str) -> FileResponse:
+async def model_artifact(
+    artifact_name: str,
+    _requested_by: Annotated[str, Depends(validate_requested_by)],
+) -> FileResponse:
     """
     Serve um artefato (imagem) da run do champion no MLflow.
 

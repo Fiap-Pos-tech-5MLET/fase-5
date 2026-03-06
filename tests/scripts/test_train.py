@@ -18,6 +18,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+# Import das funções reais para cobertura
+from scripts.train import plot_classification_report, plot_feature_importance, plot_roc_curve
+
 
 @pytest.mark.unit
 class TestPlotClassificationReport:
@@ -30,10 +33,9 @@ class TestPlotClassificationReport:
         y_pred = np.array([0, 1, 0, 0, 1])
         output_path = str(tmp_path / "report.png")
 
-        # Mock da função
+        # Chamar função real com mock de plt.savefig
         with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
-            # Simular geração
-            mock_savefig(output_path)
+            plot_classification_report(y_true, y_pred, output_path)
             mock_savefig.assert_called_once_with(output_path)
 
     def test_classification_report_metrics_included(self) -> None:
@@ -92,12 +94,27 @@ class TestPlotROCCurve:
 
     def test_roc_curve_plot_created(self, tmp_path) -> None:
         """Testa criação de plot ROC."""
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+        
         output_path = str(tmp_path / "roc.png")
-
-        # Mock
+        
+        # Criar dados sintéticos
+        X = pd.DataFrame({"f1": [1, 2, 3, 4, 5, 6], "f2": [2, 3, 4, 5, 6, 7]})
+        y = pd.Series([0, 0, 0, 1, 1, 1])
+        
+        # Treinar modelo simples
+        estimator = Pipeline([
+            ("scaler", StandardScaler()),
+            ("classifier", RandomForestClassifier(n_estimators=10, random_state=42))
+        ])
+        estimator.fit(X, y)
+        
+        # Chamar função real com mock de plt.savefig
         with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
-            mock_savefig(output_path)
-            mock_savefig.assert_called()
+            plot_roc_curve(estimator, X, y, output_path)
+            mock_savefig.assert_called_once_with(output_path)
 
     def test_roc_auc_score_range(self) -> None:
         """Testa que ROC-AUC está no intervalo [0, 1]."""
@@ -171,10 +188,29 @@ class TestPlotFeatureImportance:
 
     def test_feature_importance_file_saved(self, tmp_path) -> None:
         """Testa que arquivo de feature importance é salvo."""
-        output_path = tmp_path / "feature_importance.png"
-        output_path.write_bytes(b"fake PNG")
-
-        assert output_path.exists()
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
+        
+        output_path = str(tmp_path / "feature_importance.png")
+        
+        # Criar dados sintéticos
+        X = pd.DataFrame({"f1": [1, 2, 3, 4], "f2": [2, 3, 4, 5], "f3": [3, 4, 5, 6]})
+        y = pd.Series([0, 0, 1, 1])
+        
+        # Treinar modelo simples
+        model = Pipeline([
+            ("scaler", StandardScaler()),
+            ("classifier", RandomForestClassifier(n_estimators=10, random_state=42))
+        ])
+        model.fit(X, y)
+        
+        feature_names = np.array(["f1", "f2", "f3"])
+        
+        # Chamar função real com mock de plt.savefig
+        with patch("matplotlib.pyplot.savefig") as mock_savefig, patch("matplotlib.pyplot.close"):
+            plot_feature_importance(model, feature_names, output_path, top_n=3)
+            mock_savefig.assert_called_once_with(output_path)
 
     def test_missing_feature_importances_warning(self) -> None:
         """Testa aviso quando modelo não tem feature_importances_."""

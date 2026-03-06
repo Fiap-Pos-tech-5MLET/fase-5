@@ -98,6 +98,33 @@ ignore_missing_imports = true
 module = "tests.*"
 ignore_errors = true
 
+[tool.coverage.run]
+source = ["src", "app"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "scripts/train.py",
+    "scripts/monitoring.py",
+    "scripts/cleanup_repo.py",
+]
+
+[tool.coverage.report]
+precision = 2
+skip_covered = false
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
 [[tool.mypy.overrides]]
 module = [
     "numpy",
@@ -110,22 +137,3 @@ module = [
     "matplotlib",
 ]
 ignore_missing_imports = true
-
-[tool.coverage.run]
-source = ["src", "app"]
-omit = [
-    "*/tests/*",
-    "*/__init__.py",
-    "*/migrations/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
-]
-precision = 2

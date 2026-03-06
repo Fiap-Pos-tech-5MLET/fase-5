@@ -118,6 +118,9 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
         "ian": float(ian),
     }
 
+    with st.expander("Ver formato JSON enviado para /predict", expanded=False):
+        st.json({"data": student_data})
+
     with st.spinner("Processando predição via API..."):
         try:
             prediction, probability = predict_func(student_data)

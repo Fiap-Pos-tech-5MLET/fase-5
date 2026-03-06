@@ -25,7 +25,7 @@ def api_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app, raise_server_exceptions=False)
-    client.headers.update({"X-API-KEY": "test-api-key"})
+    client.headers.update({"X-API-KEY": "test-api-key", "x-requested-by": "test-suite"})
     return client
 
 
@@ -94,6 +94,7 @@ class TestTrainRetrain:
         app = FastAPI()
         app.include_router(router)
         client = TestClient(app, raise_server_exceptions=False)
+        client.headers.update({"x-requested-by": "test-suite"})
 
         response = client.post("/retrain", json=valid_retrain_params)
 
@@ -561,6 +562,7 @@ class TestErrorResponses:
 
         app.include_router(router)
         client = TestClient(app, raise_server_exceptions=False)
+        client.headers.update({"x-requested-by": "test-suite"})
 
         # Sem header de API Key
         response = client.post("/retrain", json={"requested_by": "test"})

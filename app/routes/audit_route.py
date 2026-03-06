@@ -18,7 +18,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import ModelInfoResponse
 from app.utils.model_loader import get_current_model, get_model_info, get_model_paths
-from app.utils.security import validate_api_key
+from app.utils.security import validate_api_key, validate_requested_by
 from app.utils.structured_logging import log_with_request
 
 logger = logging.getLogger("audit_route")
@@ -28,7 +28,8 @@ router = APIRouter()
 
 @router.get("/")
 async def health_check(
-    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
+    request: Request,
+    requested_by: str = Depends(validate_requested_by),  # noqa: B008
 ) -> Dict[str, bool]:
     """
     Health check endpoint.
@@ -53,7 +54,8 @@ async def health_check(
 
 @router.get("/model-info", response_model=ModelInfoResponse)
 async def model_info(
-    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
+    request: Request,
+    requested_by: str = Depends(validate_requested_by),  # noqa: B008
 ) -> ModelInfoResponse:
     """
     Retorna metadados do modelo em produção, incluindo estratégia de
@@ -158,7 +160,8 @@ async def model_info(
 
 @router.get("/drift", response_class=HTMLResponse)
 async def drift_report(
-    request: Request, requested_by: str = Header(default="unknown", alias="x-requested-by")
+    request: Request,
+    requested_by: str = Depends(validate_requested_by),  # noqa: B008
 ) -> HTMLResponse:
     """
     Serve o relatório de data drift como HTML.
@@ -208,6 +211,7 @@ async def drift_report(
 async def update_dataset(
     request: Request,
     file: UploadFile = File(...),  # noqa: B008
+    requested_by: str = Depends(validate_requested_by),  # noqa: B008
     _authenticated: Any = Depends(validate_api_key),  # noqa: B008
 ) -> JSONResponse:
     """
@@ -268,6 +272,7 @@ async def update_dataset(
             level=logging.INFO,
             event="data_ingestion_success",
             request=request,
+            requested_by=requested_by,
             filename=file.filename,
             versioned_filename=versioned_filename,
             file_size_bytes=len(content),
@@ -298,6 +303,7 @@ async def update_dataset(
             level=logging.ERROR,
             event="data_ingestion_file_error",
             request=request,
+            requested_by=requested_by,
             filename=file.filename,
             error=str(e),
         )
