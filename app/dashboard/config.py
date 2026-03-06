@@ -9,6 +9,7 @@ from typing import Final
 
 import streamlit as st
 
+
 def _pick_path(candidates: list[str]) -> str:
     """Seleciona o primeiro caminho existente; fallback para o primeiro candidato válido."""
     sanitized = [path for path in candidates if path]

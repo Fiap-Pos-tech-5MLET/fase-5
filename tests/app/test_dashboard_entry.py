@@ -103,7 +103,7 @@ def _import_dashboard(page_name: str) -> tuple[types.ModuleType, dict[str, Magic
         _build_stub_module("app.dashboard.pages.retrain", render_retrain_page=calls["retrain"]),
     )
 
-    dashboard_path = Path(__file__).resolve().parents[1] / "app" / "dashboard.py"
+    dashboard_path = Path(__file__).resolve().parents[2] / "app" / "dashboard.py"
     loader = importlib.machinery.SourceFileLoader("dashboard_entry", str(dashboard_path))
     spec = importlib.util.spec_from_loader("dashboard_entry", loader)
     if spec is None or spec.loader is None:

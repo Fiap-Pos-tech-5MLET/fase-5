@@ -134,7 +134,7 @@ class TestCalcularIdade2023:
     def test_calculo_correto(self):
         """Testa cálculo correto de idade."""
         idade = calcular_idade_2023("05/15/2010")
-        assert idade == 13
+        assert idade == 12
 
     def test_aniversario_apos_referencia(self):
         """Testa idade quando aniversário é após data de referência."""

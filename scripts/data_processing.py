@@ -182,7 +182,7 @@ def obter_elementos_comuns(df1: pd.DataFrame, df2: pd.DataFrame, coluna: str) ->
     """
     set1 = set(df1[coluna].unique())
     set2 = set(df2[coluna].unique())
-    return sorted(list(set1.intersection(set2)))
+    return sorted(set1.intersection(set2))
 
 
 def renomear_colunas_ano(df: pd.DataFrame, mapeamento: dict) -> pd.DataFrame:

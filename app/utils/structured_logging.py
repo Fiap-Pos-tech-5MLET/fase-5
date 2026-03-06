@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from fastapi import Request
@@ -25,7 +25,7 @@ def log_json(logger: logging.Logger, level: int, event: str, **fields: Any) -> N
     """
     payload: dict[str, Any] = {
         "event": event,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         **fields,
     }
     logger.log(level, json.dumps(payload, ensure_ascii=False, default=str))
