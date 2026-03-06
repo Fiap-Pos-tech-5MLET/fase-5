@@ -176,6 +176,23 @@ def main(
         run_id = run.info.run_id
         logger.info(f"MLflow run started: {run_id}")
 
+        # Log dataset path and metadata
+        from pathlib import Path
+        logger.info(f"Loading data from: {DATA_PATH}")
+        data_file_path = Path(DATA_PATH)
+        dataset_metadata = {
+            "dataset_file": data_file_path.name,
+            "dataset_path": DATA_PATH,
+        }
+        if data_file_path.exists():
+            dataset_metadata["dataset_size_bytes"] = data_file_path.stat().st_size
+            dataset_metadata["dataset_modified_at"] = data_file_path.stat().st_mtime
+            logger.info(
+                f"Dataset: {data_file_path.name} (size: {dataset_metadata['dataset_size_bytes']} bytes)"
+            )
+        else:
+            logger.warning(f"Dataset file not found at {DATA_PATH}")
+
         logger.info("Loading data...")
         try:
             df = load_data(DATA_PATH)
@@ -215,6 +232,10 @@ def main(
         mlflow.log_param("n_samples", X.shape[0])
         mlflow.log_param("n_features", X.shape[1])
         mlflow.log_param("dataset_version", dataset_version)
+        mlflow.log_param("dataset_file", dataset_metadata["dataset_file"])
+        mlflow.log_param("dataset_path", dataset_metadata["dataset_path"])
+        if "dataset_size_bytes" in dataset_metadata:
+            mlflow.log_param("dataset_size_bytes", dataset_metadata["dataset_size_bytes"])
 
         logger.info(f"Training on {X.shape[0]} samples and {X.shape[1]} features...")
         model, metrics, X_test, y_test = train_model(
