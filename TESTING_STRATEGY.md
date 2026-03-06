@@ -581,9 +581,3 @@ def test_processar_idades_sempre_valida(idade):
 - [Ruff](https://docs.astral.sh/ruff/) - Linter e formatter
 - [Mypy](https://mypy.readthedocs.io/) - Type checking
 - [Bandit](https://bandit.readthedocs.io/) - Security scanning
-
----
-
-**Última atualização:** 2024-12-20  
-**Versão:** 2.0  
-**Responsável:** Time de Engenharia Fase 5

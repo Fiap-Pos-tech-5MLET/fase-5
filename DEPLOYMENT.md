@@ -823,10 +823,6 @@ logger.info("Predição realizada", extra={"aluno_id": 123, "resultado": "aprova
 
 ---
 
-**Última atualização:** 2024-12-20  
-**Versão do guia:** 2.0  
-**Ambiente de referência:** Render Free Tier com Docker
-
 ## 7) Validação Pós-Deploy
 
 ```bash

@@ -574,11 +574,6 @@ curl https://api-url/dashboard/ | grep "Painel de Predições"
 
 ---
 
-**Última atualização:** 2024-12-20  
-**Versão do guia:** 2.0
-| `chore` | Tarefas de manutenção | `chore(deps): atualizar requirements.txt` |
-| `ci` | Mudanças em CI/CD | `ci: adicionar step de security scan` |
-
 **Exemplos Completos:**
 ```bash
 feat(api): implementar sistema champion/challenger
