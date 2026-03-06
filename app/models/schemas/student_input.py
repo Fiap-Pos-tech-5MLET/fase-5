@@ -1,7 +1,7 @@
 """
 Schema para dados de entrada do aluno.
 
-Define o contrato das 13 variáveis do modelo atual de predição.
+Define o contrato das 14 variáveis do modelo atual de predição.
 """
 
 from typing import Optional
@@ -39,6 +39,12 @@ class StudentInput(BaseModel):
         None,
         ge=0,
         description="Quantidade total de avaliações realizadas no período",
+    )
+    instituicao_ensino_mapped: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Tipo de instituição mapeada para binário: 0=Pública, 1=Privada",
     )
     iaa: Optional[float] = Field(None, ge=0, le=10, description="Índice de Autoavaliação")
     ieg: Optional[float] = Field(None, ge=0, le=10, description="Índice de Engajamento")

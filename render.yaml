@@ -27,6 +27,8 @@ services:
         value: 600
       - key: MLFLOW_TRACKING_URI
         value: file:./mlruns
+      - key: DASHBOARD_REQUESTED_BY
+        value: dashboard_app
       - key: API_KEY
         sync: false
     healthCheckPath: /health
