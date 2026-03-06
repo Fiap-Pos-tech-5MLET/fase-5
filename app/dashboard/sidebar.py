@@ -13,14 +13,16 @@ def render_sidebar(
     model: Any,
     load_model_func: Callable[[], Any],
     load_dataset_func: Callable[[], Any],
+    api_healthy: bool = False,
 ) -> str:
     """
     Renderiza a barra lateral e retorna a página selecionada.
 
     Args:
-        model (Any): Modelo carregado.
+        model (Any): Modelo carregado (None para usar health check via API).
         load_model_func (Callable[[], Any]): Função de carregamento do modelo.
         load_dataset_func (Callable[[], Any]): Função de carregamento do dataset.
+        api_healthy (bool): Status de saúde da API. Default: False.
 
     Returns:
         str: Página selecionada.
@@ -44,7 +46,11 @@ def render_sidebar(
 
         st.markdown("---")
 
-        if model is not None:
+        # Mostra status da API (novo) ou do modelo (legado)
+        if api_healthy:
+            st.success("✅ API disponível")
+            st.caption("Status: Modelo carregado na API")
+        elif model is not None:
             st.success("✅ Modelo carregado")
             try:
                 n_features = len(model.feature_names_in_)
@@ -54,18 +60,18 @@ def render_sidebar(
             except (AttributeError, KeyError, TypeError):
                 pass
         else:
-            st.error("❌ Modelo não encontrado")
+            st.error("❌ API/Modelo não disponível")
+            st.caption("Verifique a conexão e se a API está em execução.")
 
         st.markdown("---")
 
         if st.button(
             "🔄 Recarregar Modelo",
             use_container_width=True,
-            help="Limpa o cache e recarrega o modelo do disco. Use após retreinar.",
+            help="Limpa o cache e recarrega o modelo. Use após retreinar.",
         ):
             load_model_func.clear()
             load_dataset_func.clear()
-            st.success("Cache limpo! Recarregando...")
             st.rerun()
 
         st.caption("Última atualização: " + st.session_state.get("last_refresh", ""))

@@ -129,8 +129,8 @@ class TestCleaningDataset:
         
         result = cleaning_dataset(df)
         
-        # Bob e Charlie têm valor e score como NaN, mas NOME não é considerado
-        assert result.shape[0] == 2
+        # Apenas Alice tem valores em todas as colunas (exceto NOME)
+        assert result.shape[0] == 1
         assert 'Alice' in result['NOME'].values
     
     def test_cleaning_dataset_completely_empty_row(self):

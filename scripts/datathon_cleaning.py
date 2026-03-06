@@ -185,9 +185,18 @@ def analyze_student_continuity(
             raise KeyError(f"Coluna '{nome_col}' não encontrada em df_{year}")
     
     # Extrair conjuntos de alunos únicos
-    alunos_2020 = set(df_2020[nome_col].dropna().str.strip().unique())
-    alunos_2021 = set(df_2021[nome_col].dropna().str.strip().unique())
-    alunos_2022 = set(df_2022[nome_col].dropna().str.strip().unique())
+    def extract_unique_names(series: pd.Series) -> set:
+        """Extrai nomes únicos de uma série com tratamento seguro."""
+        if len(series) == 0:
+            return set()
+        # Converter para string se necessário
+        if series.dtype not in ['object', 'string']:
+            series = series.astype(str)
+        return set(series.dropna().str.strip().unique())
+    
+    alunos_2020 = extract_unique_names(df_2020[nome_col])
+    alunos_2021 = extract_unique_names(df_2021[nome_col])
+    alunos_2022 = extract_unique_names(df_2022[nome_col])
     
     # Calcular continuidade
     continuidade_2020_2021 = len(alunos_2020 & alunos_2021)

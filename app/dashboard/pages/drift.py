@@ -11,13 +11,14 @@ import streamlit as st
 from scripts.monitoring import generate_drift_report
 
 
-def render_drift_page(data_path: str, drift_report_path: str) -> None:
+def render_drift_page(data_path: str, drift_report_path: str, api_healthy: bool = False) -> None:
     """
     Renderiza a página de monitoramento de data drift.
 
     Args:
         data_path (str): Caminho do arquivo de dados.
         drift_report_path (str): Caminho do relatório de drift.
+        api_healthy (bool): Status de saúde da API (não usado nesta página). Default: False.
 
     Returns:
         None

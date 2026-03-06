@@ -47,7 +47,7 @@ Em **2016**, o programa foi ampliado para alcançar mais jovens, sustentado por 
 - **Predição de desempenho** com modelos de Machine Learning.
 - **Identificação de padrões** que influenciam o progresso escolar.
 - **API REST** para predição, auditoria, monitoramento e ciclo de retreinamento.
-- **Dashboard interativo** em Streamlit para visualização e exploração dos dados.
+- **Dashboard interativo** em Streamlit para visualização e exploração dos dados (com health check de API).
 - **Pipeline de treinamento** com estratégia champion/challenger.
 - **Monitoramento com MLflow** para métricas, parâmetros e artefatos.
 - **Containerização com Docker** para execução padronizada.

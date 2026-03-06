@@ -25,6 +25,12 @@ pytest tests/ --cov=src --cov=app --cov-report=html
 # Teste específico
 pytest tests/test_predict_route.py -v
 
+# Testes de dashboard
+pytest tests/app/test_dashboard*.py -v
+
+# Testes de health check da API
+pytest tests/app/test_dashboard_health.py -v
+
 # Testes com palavra-chave
 pytest -k "test_predict" -v
 ```
@@ -136,6 +142,7 @@ Os testes do diretório `tests/` cobrem os seguintes diretórios e módulos:
 - `test_dashboard.py` — testes gerais
 - `test_dashboard_config.py` — configuração (API_URL, etc.)
 - `test_dashboard_data.py` — funções de carregamento de dados
+- `test_dashboard_health.py` — health check da API e status do modelo ⭐ **NOVO**
 - `test_dashboard_pages.py` — páginas (prediction, metrics, drift, retrain, about)
 - `test_dashboard_sidebar.py` — barra lateral
 - `test_dashboard_styles.py` — estilos CSS customizados

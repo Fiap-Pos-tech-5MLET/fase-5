@@ -8,18 +8,19 @@ Este diretório contém notebooks Jupyter para análise exploratória de dados (
 
 ### Notebooks Principais (Refatorados) ✨
 
-| Notebook | Propósito | Status | Código |
-|----------|-----------|--------|--------|
-| **`data_preprocessing_passos_magicos_refactored.ipynb`** | Pipeline de consolidação de dados 2022-2024 | ✅ Prod | `scripts/data_processing.py` |
-| **`eda_passos_magicos.ipynb`** | Análise exploratória detalhada com testes estatísticos | 🔄 Legado | Código inline |
-| **`EDA_and_Training.ipynb`** | Pipeline completo: EDA → Treino → Avaliação | ✅ Prod | `src/*` |
+| Notebook | Propósito | Status | Código | Testes |
+|----------|-----------|--------|--------|--------|
+| **`data_preprocessing_passos_magicos_refactored.ipynb`** | Pipeline de consolidação de dados 2022-2024 | ✅ Prod | `scripts/data_processing.py` | 5+ testes |
+| **`eda_passos_magicos_refactored.ipynb`** | Análise exploratória com testes estatísticos | ✅ Prod | `scripts/eda_analysis.py` + `scripts/visualization.py` | Inclusos |
+| **`DATATHON-PASSOS-MÁGICOS_refactored.ipynb`** | Exploração e análise de continuidade 2020-2022 | ✅ Prod | `scripts/datathon_cleaning.py` | 38 testes |
+| **`EDA_and_Training_refactored.ipynb`** | Pipeline completo: EDA → Treino → Avaliação | ✅ Prod | `src/data_cleaning.py` + `src/feature_engineering.py` + `scripts/visualization.py` | Inclusos |
 
 ### Notebooks Legados 📦
 
 | Notebook | Propósito | Status |
 |----------|-----------|--------|
-| `DATATHON-PASSOS-MÁGICOS.ipynb` | Exploração inicial 2020-2022 | 📦 Arquivo |
 | `data_preprocessing_passos_magicos.ipynb` | Versão original (pré-refactor) | 📦 Legado |
+| `DATATHON-PASSOS-MÁGICOS.ipynb` | Versão original (pré-refactor) | 📦 Legado |
 
 ---
 
@@ -37,18 +38,28 @@ Este diretório contém notebooks Jupyter para análise exploratória de dados (
 **Saída:** `app/data/processed/dataset_consolidado_2022_2024.parquet`
 
 ### 2. Para Análise Exploratória
-**Use:** `eda_passos_magicos.ipynb`
+**Use:** `eda_passos_magicos_refactored.ipynb`
 
 **Características:**
-- Testes de normalidade (Shapiro-Wilk, D'Agostino K²)
-- Análise de correlação e coeficiente de variação
-- Validação cruzada estratificada  
-- Feature importance e análise univariada
+- ✅ Código modularizado em `scripts/eda_analysis.py` e `scripts/visualization.py`
+- ✅ Funções testadas (testes inclusos)
+- ✅ Testes de normalidade (Shapiro-Wilk, D'Agostino K²)
+- ✅ Análise de correlação e coeficiente de variação
+- ✅ Validação cruzada estratificada  
+- ✅ Feature importance e análise univariada
 
-**Potencial de Refatoração:** Alto (funções podem ser movidas para `scripts/eda_analysis.py`)
+### 3. Para Análise de Continuidade Estudantil
+**Use:** `DATATHON-PASSOS-MÁGICOS_refactored.ipynb`
 
-### 3. Para Treinamento de Modelos
-**Use:** `EDA_and_Training.ipynb`
+**Características:**
+- ✅ Código modularizado em `scripts/datathon_cleaning.py`
+- ✅ 38 testes unitários em `tests/scripts/test_datathon_cleaning.py`
+- Análise de continuidade estudantil 2020-2022
+- Filtragem e limpeza de datasets
+- Contagem de novos alunos e taxas de permanência
+
+### 4. Para Treinamento de Modelos
+**Use:** `EDA_and_Training_refactored.ipynb`
 
 **Características:**
 - ✅ Usa módulos `src/data_cleaning.py`, `src/feature_engineering.py`, `src/model.py`
@@ -108,9 +119,9 @@ def test_padronizacao_basica():
 flowchart LR
     A[Dados Brutos] --> B[data_preprocessing_refactored.ipynb]
     B --> C[dataset_consolidado.parquet]
-    C --> D[eda_passos_magicos.ipynb]
+    C --> D[eda_passos_magicos_refactored.ipynb]
     D --> E[Insights e Features]
-    E --> F[EDA_and_Training.ipynb]
+    E --> F[EDA_and_Training_refactored.ipynb]
     F --> G[Modelo Treinado]
 ```
 
@@ -124,13 +135,13 @@ flowchart LR
 
 2. **Análise Exploratória**
    ```bash
-   jupyter notebook eda_passos_magicos.ipynb
+   jupyter notebook eda_passos_magicos_refactored.ipynb
    ```
    Saída: Visualizações, testes estatísticos, feature selection
 
 3. **Treinamento de Modelo**
    ```bash
-   jupyter notebook EDA_and_Training.ipynb
+   jupyter notebook EDA_and_Training_refactored.ipynb
    ```
    Saída: `app/models/model.pkl`, métricas, artefatos
 
@@ -144,10 +155,14 @@ Funções extraídas dos notebooks possuem testes unitários:
 # Teste funções de processamento de dados
 pytest tests/test_data_processing.py -v
 
+# Teste funções de limpeza de dados (DATATHON)
+pytest tests/scripts/test_datathon_cleaning.py -v
+
 # Teste funções de feature engineering
 pytest tests/test_notebook_feature_engineering.py -v
 
-# Teste com cobertura
+# Teste com cobertura completa
+pytest tests/scripts/ --cov=scripts.datathon_cleaning
 pytest tests/test_data_processing.py --cov=scripts.data_processing
 ```
 
@@ -157,6 +172,7 @@ pytest tests/test_data_processing.py --cov=scripts.data_processing
 
 ### scripts/
 - **`data_processing.py`** — ETL, padronização, análise de qualidade
+- **`datathon_cleaning.py`** — Limpeza e análise de continuidade estudantil (filter_columns, cleaning_dataset, create_annual_datasets, analyze_student_continuity)
 - **`notebook_feature_engineering.py`** — Transformações de FASE, TURMA, flags derivadas
 - **`eda_analysis.py`** — Testes estatísticos, validação cruzada
 - **`visualization.py`** — Gráficos e visualizações
@@ -195,10 +211,17 @@ pytest tests/test_data_processing.py --cov=scripts.data_processing
 
 ## 🚀 Próximos Passos
 
+### Completado ✅
+- [x] Refatorar todos os 4 notebooks principais
+- [x] Extrair funções de `DATATHON` para `scripts/datathon_cleaning.py`
+- [x] Criar 38 testes unitários para `datathon_cleaning.py`
+- [x] Refatorar `eda_passos_magicos.ipynb` para `eda_passos_magicos_refactored.ipynb`
+- [x] Refatorar `EDA_and_Training.ipynb` para `EDA_and_Training_refactored.ipynb`
+
 ### Curto Prazo
-- [ ] Refatorar `eda_passos_magicos.ipynb` movendo funções para `scripts/eda_analysis.py`
+- [ ] Executar notebooks refatorados para validação end-to-end
 - [ ] Adicionar testes para funções de `visualization.py`
-- [ ] Criar notebook de exemplo para uso das funções
+- [ ] Criar notebook de exemplo para uso das funções extraídas
 
 ### Médio Prazo
 - [ ] Integrar notebooks no pipeline CI/CD (executar como smoke tests)
@@ -207,5 +230,5 @@ pytest tests/test_data_processing.py --cov=scripts.data_processing
 
 ---
 
-**Última atualização:** 05/03/2026  
+**Última atualização:** 05/03/2026 — Refatoração completa de todos os 4 notebooks com extração de funções e testes
 **Responsável**: Equipe 5MLET — Tech Challenge Fase 5
