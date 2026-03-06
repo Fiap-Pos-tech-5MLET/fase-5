@@ -188,7 +188,7 @@ def render_retrain_page(
 
     requested_by_input = st.text_input(
         "Solicitado por (nome ou e-mail)",
-        value="",
+        value="dashboard-teste",
         max_chars=120,
         help="Obrigatório para auditoria de governança do retreinamento.",
     )
@@ -206,6 +206,20 @@ def render_retrain_page(
     )
     api_key = api_key_input.strip() if isinstance(api_key_input, str) else ""
     st.session_state["dashboard_api_key"] = api_key
+
+    retrain_payload_preview = {
+        "requested_by": requested_by,
+        "n_estimators": n_estimators,
+        "max_depth": max_depth,
+        "learning_rate": learning_rate,
+        "num_leaves": num_leaves,
+        "subsample": subsample,
+        "colsample_bytree": colsample_bytree,
+        "test_size": test_size_float,
+    }
+
+    with st.expander("Ver formato JSON enviado para /retrain", expanded=False):
+        st.json(retrain_payload_preview)
 
     st.markdown("")
 
@@ -235,16 +249,7 @@ def render_retrain_page(
         try:
             progress_bar.progress(20, text="📡 Enviando requisição para a API...")
 
-            retrain_payload = {
-                "requested_by": requested_by,
-                "n_estimators": n_estimators,
-                "max_depth": max_depth,
-                "learning_rate": learning_rate,
-                "num_leaves": num_leaves,
-                "subsample": subsample,
-                "colsample_bytree": colsample_bytree,
-                "test_size": test_size_float,
-            }
+            retrain_payload = retrain_payload_preview
 
             progress_bar.progress(
                 40,

@@ -9,9 +9,10 @@ treinado para reduzir erros de schema e garantir consistencia.
 """
 
 import logging
+from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import FeatureContribution, PredictionResponse, StudentData
@@ -31,7 +32,33 @@ router = APIRouter()
 
 
 @router.post("/predict", response_model=PredictionResponse)
-async def predict(student: StudentData, request: Request) -> PredictionResponse:
+async def predict(
+    student: Annotated[
+        StudentData,
+        Body(
+            examples=[
+                {
+                    "data": {
+                        "nivel_de_defasagem": 0.0,
+                        "idade": 12.0,
+                        "genero": 0.0,
+                        "ano_de_ingresso": 2022.0,
+                        "veterano": 0.0,
+                        "em_fase": 1.0,
+                        "qtde_aval_realizadas": 4.0,
+                        "iaa": 6.0,
+                        "ieg": 6.0,
+                        "ips": 6.0,
+                        "ida": 6.0,
+                        "ipv": 6.0,
+                        "ian": 6.0,
+                    }
+                }
+            ]
+        ),
+    ],
+    request: Request,
+) -> PredictionResponse:
     """
     Realiza predicao de risco de defasagem escolar.
 

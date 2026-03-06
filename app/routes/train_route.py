@@ -70,7 +70,24 @@ def _get_latest_dataset_path() -> str:
 
 @router.post("/retrain")
 async def retrain(
-    params: Annotated[RetrainRequest, Body(...)],
+    params: Annotated[
+        RetrainRequest,
+        Body(
+            ...,
+            examples=[
+                {
+                    "requested_by": "dashboard-teste",
+                    "n_estimators": 100,
+                    "max_depth": None,
+                    "learning_rate": 0.1,
+                    "num_leaves": 31,
+                    "subsample": 1.0,
+                    "colsample_bytree": 1.0,
+                    "test_size": 0.2,
+                }
+            ],
+        ),
+    ],
     request: Request,
     _authenticated: Annotated[None, Depends(validate_api_key)],
 ) -> Dict[str, Any]:
