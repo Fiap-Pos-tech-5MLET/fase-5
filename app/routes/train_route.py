@@ -19,10 +19,10 @@ from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 try:
-    from mlflow.exceptions import MlflowException  # type: ignore[import-untyped]
+    from mlflow.exceptions import MlflowException
 except (ImportError, ModuleNotFoundError, AttributeError):
 
-    class MlflowException(Exception):  # noqa: N818
+    class MlflowException(Exception):  # type: ignore[no-redef]  # noqa: N818
         """Fallback para ambientes sem pacote mlflow.exceptions disponível."""
 
 
