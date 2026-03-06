@@ -47,6 +47,7 @@ async def predict(
                         "veterano": 0.0,
                         "em_fase": 1.0,
                         "qtde_aval_realizadas": 4.0,
+                        "instituicao_ensino": 0.0,
                         "iaa": 6.0,
                         "ieg": 6.0,
                         "ips": 6.0,
@@ -111,7 +112,7 @@ async def predict(
         df = handle_missing_values(df)
         df = create_features(df)
 
-        # Caminho principal do modelo atual: 13 variáveis canônicas
+        # Caminho principal do modelo atual: 14 variáveis canônicas
         feature_matrix = build_feature_matrix_for_model(df)
 
         # Feature Alignment
