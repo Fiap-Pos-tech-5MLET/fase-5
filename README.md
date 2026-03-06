@@ -606,13 +606,6 @@ O arquivo **`tests/conftest.py`** contém:
 
 Esta abordagem garante que os testes executem rapidamente sem dependências externas pesadas.
 
-### 📚 Documentação Adicional
-
-Para informações mais detalhadas sobre estratégias e boas práticas de testes:
-
-- **[TESTING.md](TESTING.md)** — Guia completo de testes e cobertura
-- **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** — Estratégia e arquitetura de testes
-
 ---
 
 ## 2. 🔄 Esteira CI/CD (Fluxo GitFlow Horizontal)
