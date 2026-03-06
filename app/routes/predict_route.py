@@ -47,6 +47,7 @@ async def predict(
                         "veterano": 0.0,
                         "em_fase": 1.0,
                         "qtde_aval_realizadas": 4.0,
+                        "instituicao_ensino": 0.0,
                         "iaa": 6.0,
                         "ieg": 6.0,
                         "ips": 6.0,
@@ -111,7 +112,7 @@ async def predict(
         df = handle_missing_values(df)
         df = create_features(df)
 
-        # Caminho principal do modelo atual: 13 variáveis canônicas
+        # Caminho principal do modelo atual: 14 variáveis canônicas
         feature_matrix = build_feature_matrix_for_model(df)
 
         # Feature Alignment
@@ -141,6 +142,12 @@ async def predict(
             missing_cols = set(expected_cols) - set(feature_matrix.columns)
             for col_name in missing_cols:
                 feature_matrix[col_name] = 0
+
+            # Remove features extras que o modelo atual não espera
+            # (ex: instituicao_ensino se o modelo foi treinado antes dessa feature)
+            extra_cols = set(feature_matrix.columns) - set(expected_cols)
+            if extra_cols:
+                feature_matrix = feature_matrix.drop(columns=list(extra_cols))
 
             feature_matrix = feature_matrix[expected_cols]
 

@@ -33,6 +33,7 @@ def valid_student_input_dict():
         "veterano": 1.0,
         "em_fase": 1.0,
         "qtde_aval_realizadas": 8,
+        "instituicao_ensino": 2.0,
         "iaa": 6.5,
         "ieg": 7.1,
         "ips": 6.8,
