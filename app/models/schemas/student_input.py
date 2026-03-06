@@ -40,10 +40,11 @@ class StudentInput(BaseModel):
         ge=0,
         description="Quantidade total de avaliações realizadas no período",
     )
-    instituicao_ensino: Optional[float] = Field(
+    instituicao_ensino_mapped: Optional[float] = Field(
         None,
         ge=0,
-        description="Código numérico da instituição de ensino no dataset",
+        le=1,
+        description="Tipo de instituição mapeada para binário: 0=Pública, 1=Privada",
     )
     iaa: Optional[float] = Field(None, ge=0, le=10, description="Índice de Autoavaliação")
     ieg: Optional[float] = Field(None, ge=0, le=10, description="Índice de Engajamento")

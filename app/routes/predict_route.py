@@ -47,7 +47,7 @@ async def predict(
                         "veterano": 0.0,
                         "em_fase": 1.0,
                         "qtde_aval_realizadas": 4.0,
-                        "instituicao_ensino": 0.0,
+                        "instituicao_ensino_mapped": 0.0,
                         "iaa": 6.0,
                         "ieg": 6.0,
                         "ips": 6.0,
@@ -144,7 +144,7 @@ async def predict(
                 feature_matrix[col_name] = 0
 
             # Remove features extras que o modelo atual não espera
-            # (ex: instituicao_ensino se o modelo foi treinado antes dessa feature)
+            # (ex: instituicao_ensino_mapped se o modelo foi treinado antes dessa feature)
             extra_cols = set(feature_matrix.columns) - set(expected_cols)
             if extra_cols:
                 feature_matrix = feature_matrix.drop(columns=list(extra_cols))
