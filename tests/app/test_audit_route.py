@@ -19,11 +19,14 @@ from app.routes.audit_route import router
 
 
 @pytest.fixture
-def api_client() -> TestClient:
+def api_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """TestClient para a API FastAPI com rotas de auditoria."""
+    monkeypatch.setenv("API_KEY", "test-api-key")
     app = FastAPI()
     app.include_router(router)
-    return TestClient(app, raise_server_exceptions=False)
+    client = TestClient(app, raise_server_exceptions=False)
+    client.headers.update({"X-API-KEY": "test-api-key"})
+    return client
 
 
 @pytest.fixture
@@ -315,8 +318,8 @@ class TestUpdateDataRoute:
             assert response.status_code == 201
             data = response.json()
             assert data["status"] == "sucesso"
-            assert "versioned_filename" in data
-            assert "dados_" in data["versioned_filename"]
+            assert "arquivo_versionado" in data
+            assert "dados_" in data["arquivo_versionado"]
 
     def test_update_data_success_xlsx(self, api_client) -> None:
         """Testa ingestão bem-sucedida de arquivo XLSX."""
@@ -344,18 +347,21 @@ class TestUpdateDataRoute:
         assert response.status_code == 400
         assert "Formato inválido" in response.text
 
-    def test_update_data_missing_api_key(self, api_client) -> None:
+    def test_update_data_missing_api_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Testa rejeição sem API Key válida."""
         from io import BytesIO
 
+        monkeypatch.setenv("API_KEY", "test-api-key")
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app, raise_server_exceptions=False)
+        # ⚠️ NO header - will be rejected since X-API-KEY is not set
+        
         files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
+        response = client.post("/update-data", files=files)
 
-        with patch("app.routes.audit_route.validate_api_key", return_value=None) as mock_validate:
-            response = api_client.post("/update-data", files=files)
-
-            # Deve retornar erro de autenticação
-            assert response.status_code in [401, 403]
-            mock_validate.assert_called()
+        # Deve retornar erro de autenticação
+        assert response.status_code in [401, 403]
 
     def test_update_data_versioning_adds_timestamp(self, api_client) -> None:
         """Testa que arquivo versionado inclui timestamp no nome."""
@@ -371,7 +377,7 @@ class TestUpdateDataRoute:
             if response.status_code == 201:
                 data = response.json()
                 # Nome versionado deve seguir pattern: dados_YYYYMMDD_HHMMSS.csv
-                assert "_" in data.get("versioned_filename", "")
+                assert "_" in data.get("arquivo_versionado", "")
                 assert len(data.get("timestamp", "")) == 15  # YYYYMMDD_HHMMSS
 
     def test_update_data_logs_auditoria(self, api_client) -> None:

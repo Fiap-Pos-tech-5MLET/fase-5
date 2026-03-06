@@ -206,9 +206,9 @@ async def drift_report(
 
 @router.post("/update-data")
 async def update_dataset(
-    file: UploadFile = File(...),
-    request: Request = None,
-    _authenticated: Any = Depends(validate_api_key),
+    request: Request,
+    file: UploadFile = File(...),  # noqa: B008
+    _authenticated: Any = Depends(validate_api_key),  # noqa: B008
 ) -> JSONResponse:
     """
     Ingere um novo dataset bruto enviado pela Associação Passos Mágicos.
@@ -303,5 +303,5 @@ async def update_dataset(
         )
         raise HTTPException(
             status_code=422,
-            detail=f"Erro ao salvar arquivo: {str(e)}",
-        )
+            detail=f"Erro ao salvar arquivo: {e!s}",
+        ) from e
