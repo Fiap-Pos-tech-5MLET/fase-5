@@ -256,19 +256,31 @@ jobs:
             echo "Predict HTTP status (tentativa ${i}/12): ${HTTP_CODE}"
             cat /tmp/predict_response.json
 
+            if [[ "${HTTP_CODE}" == "200" ]]; then
+              PREDICT_OK=true
+              echo "✅ Predict respondeu 200 com sucesso"
+              break
+            fi
+
             if [[ "${HTTP_CODE}" =~ ^5 ]]; then
               if [[ "${HTTP_CODE}" == "503" ]] && grep -qiE "model not loaded|model not found" /tmp/predict_response.json; then
                 echo "⏳ Modelo ainda não carregado. Nova tentativa em 15s..."
-                sleep 15
-                continue
+              else
+                echo "⚠️ Predict retornou ${HTTP_CODE}. Tentativa ${i}/12 falhou; retry em 15s..."
               fi
 
-              echo "❌ Predict retornou ${HTTP_CODE} em produção"
-              exit 1
+              if [[ "${i}" == "12" ]]; then
+                echo "❌ Predict retornou erro 5xx em todas as tentativas"
+                exit 1
+              fi
+
+              sleep 15
+              continue
             fi
 
-            PREDICT_OK=true
-            break
+            # 4xx e demais códigos não são transitórios para este smoke.
+            echo "❌ Predict retornou código inesperado: ${HTTP_CODE}"
+            exit 1
           done
 
           if [[ "${PREDICT_OK}" != "true" ]]; then
