@@ -145,16 +145,29 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
                         unsafe_allow_html=True,
                     )
                 else:
-                    st.markdown(
-                        f"""
-                    <div class="risk-low">
-                        <div class="risk-title">✅ SEM RISCO</div>
-                        <div class="risk-prob" style="color: #22C55E;">{1 - probability:.1%}</div>
-                        <p class="risk-desc">Probabilidade de estar adequado</p>
-                    </div>
-                    """,
-                        unsafe_allow_html=True,
-                    )
+                        # Mostrar resultado baseado na probabilidade real, não apenas no prediction
+                        if probability > 0.5:
+                            st.markdown(
+                                f"""
+                            <div class="risk-high">
+                                <div class="risk-title">⚠️ EM RISCO</div>
+                                <div class="risk-prob" style="color: #EF4444;">{probability:.1%}</div>
+                                <p class="risk-desc">Probabilidade de defasagem escolar</p>
+                            </div>
+                            """,
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.markdown(
+                                f"""
+                            <div class="risk-low">
+                                <div class="risk-title">✅ SEM RISCO</div>
+                                <div class="risk-prob" style="color: #22C55E;">{1 - probability:.1%}</div>
+                                <p class="risk-desc">Probabilidade de estar adequado</p>
+                            </div>
+                            """,
+                                unsafe_allow_html=True,
+                            )
 
             with col_gauge:
                 fig = go.Figure(
