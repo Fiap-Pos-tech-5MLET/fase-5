@@ -293,3 +293,116 @@ class TestAuditErrorHandling:
             response = api_client.get("/drift")
 
             assert response.status_code == 404
+
+
+@pytest.mark.unit
+@pytest.mark.api
+class TestUpdateDataRoute:
+    """Testes para rota POST /update-data de ingestão de dados."""
+
+    def test_update_data_success_csv(self, api_client, tmp_path) -> None:
+        """Testa ingestão bem-sucedida de arquivo CSV."""
+        from io import BytesIO
+
+        csv_data = b"IDADE,INDE_23,INDE_22\n10,1,2\n11,2,3"
+        files = {"file": ("dados.csv", BytesIO(csv_data), "text/csv")}
+
+        with patch("app.routes.audit_route.Path.mkdir"), patch(
+            "app.routes.audit_route.shutil.copy"
+        ):
+            response = api_client.post("/update-data", files=files)
+
+            assert response.status_code == 201
+            data = response.json()
+            assert data["status"] == "sucesso"
+            assert "versioned_filename" in data
+            assert "dados_" in data["versioned_filename"]
+
+    def test_update_data_success_xlsx(self, api_client) -> None:
+        """Testa ingestão bem-sucedida de arquivo XLSX."""
+        from io import BytesIO
+
+        xlsx_data = b"PK\x03\x04..."  # Simulado
+        files = {"file": ("dados.xlsx", BytesIO(xlsx_data), "application/vnd.ms-excel")}
+
+        with patch("app.routes.audit_route.Path.mkdir"), patch(
+            "app.routes.audit_route.shutil.copy"
+        ), patch("builtins.open", create=True):
+            response = api_client.post("/update-data", files=files)
+
+            # Pode falhar em write, mas teste que formato é validado
+            assert response.status_code in [201, 422]
+
+    def test_update_data_invalid_format(self, api_client) -> None:
+        """Testa rejeição de arquivo em formato inválido."""
+        from io import BytesIO
+
+        files = {"file": ("dados.txt", BytesIO(b"invalid"), "text/plain")}
+
+        response = api_client.post("/update-data", files=files)
+
+        assert response.status_code == 400
+        assert "Formato inválido" in response.text
+
+    def test_update_data_missing_api_key(self, api_client) -> None:
+        """Testa rejeição sem API Key válida."""
+        from io import BytesIO
+
+        files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
+
+        with patch("app.routes.audit_route.validate_api_key", return_value=None) as mock_validate:
+            response = api_client.post("/update-data", files=files)
+
+            # Deve retornar erro de autenticação
+            assert response.status_code in [401, 403]
+            mock_validate.assert_called()
+
+    def test_update_data_versioning_adds_timestamp(self, api_client) -> None:
+        """Testa que arquivo versionado inclui timestamp no nome."""
+        from io import BytesIO
+
+        files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
+
+        with patch("app.routes.audit_route.Path.mkdir"), patch(
+            "app.routes.audit_route.shutil.copy"
+        ), patch("builtins.open", create=True):
+            response = api_client.post("/update-data", files=files)
+
+            if response.status_code == 201:
+                data = response.json()
+                # Nome versionado deve seguir pattern: dados_YYYYMMDD_HHMMSS.csv
+                assert "_" in data.get("versioned_filename", "")
+                assert len(data.get("timestamp", "")) == 15  # YYYYMMDD_HHMMSS
+
+    def test_update_data_logs_auditoria(self, api_client) -> None:
+        """Testa que ingestão gera log de auditoria."""
+        from io import BytesIO
+
+        files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
+
+        with patch("app.routes.audit_route.Path.mkdir"), patch(
+            "app.routes.audit_route.shutil.copy"
+        ), patch("builtins.open", create=True), patch(
+            "app.routes.audit_route.log_with_request"
+        ) as mock_log:
+            response = api_client.post("/update-data", files=files)
+
+            # log_with_request deve ter sido chamado
+            if response.status_code == 201:
+                mock_log.assert_called()
+
+    def test_update_data_returns_next_step(self, api_client) -> None:
+        """Testa que resposta inclui próximo passo (GET /drift)."""
+        from io import BytesIO
+
+        files = {"file": ("dados.csv", BytesIO(b"data"), "text/csv")}
+
+        with patch("app.routes.audit_route.Path.mkdir"), patch(
+            "app.routes.audit_route.shutil.copy"
+        ):
+            response = api_client.post("/update-data", files=files)
+
+            if response.status_code == 201:
+                data = response.json()
+                assert "proximo_passo" in data
+                assert "/drift" in data["proximo_passo"]

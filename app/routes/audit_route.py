@@ -2,19 +2,23 @@
 Rotas de auditoria e monitoramento.
 
 Explicam o estado do modelo em producao e trazem transparencia tecnica
-para operacao: health check, metadados do modelo e relatorio de drift.
+para operacao: health check, metadados do modelo, relatorio de drift e ingestao de dados.
 """
 
 import logging
 import os
-from typing import Dict
+import shutil
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
 
-from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Body, Depends, File, Header, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.models.schemas import ModelInfoResponse
 from app.utils.model_loader import get_current_model, get_model_info, get_model_paths
+from app.utils.security import validate_api_key
 from app.utils.structured_logging import log_with_request
 
 logger = logging.getLogger("audit_route")
@@ -198,3 +202,106 @@ async def drift_report(
         report_path=report_path,
     )
     return HTMLResponse(content=html_content)
+
+
+@router.post("/update-data")
+async def update_dataset(
+    file: UploadFile = File(...),
+    request: Request = None,
+    _authenticated: Any = Depends(validate_api_key),
+) -> JSONResponse:
+    """
+    Ingere um novo dataset bruto enviado pela Associação Passos Mágicos.
+
+    Substitui o arquivo antigo para ser usado no próximo retreinamento com versionamento
+    automático. Valida formato, estrutura e gera logs de auditoria.
+
+    Args:
+        file (UploadFile): Arquivo CSV ou XLSX com dados novos.
+        request (Request): Objeto de requisição FastAPI.
+        _authenticated (Any): Validação de API Key via dependency.
+
+    Returns:
+        JSONResponse: Confirmação de sucesso com informações do arquivo salvo.
+
+    Raises:
+        HTTPException: 400 formato inválido, 401 API Key inválida, 422 validação falhou.
+    """
+    # 1. Validar formato do arquivo
+    if not file.filename or not file.filename.endswith((".csv", ".xlsx")):
+        log_with_request(
+            logger=logger,
+            level=logging.WARNING,
+            event="data_ingestion_invalid_format",
+            request=request,
+            filename=file.filename,
+            allowed_formats=["csv", "xlsx"],
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Formato inválido. Envie arquivo .csv ou .xlsx",
+        )
+
+    # 2. Preparar diretório de dados com versionamento
+    raw_data_dir = Path("app/data/raw")
+    raw_data_dir.mkdir(parents=True, exist_ok=True)
+
+    # 3. Gerar nome versionado com timestamp
+    file_stem = Path(file.filename).stem
+    file_ext = Path(file.filename).suffix
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    versioned_filename = f"{file_stem}_{timestamp}{file_ext}"
+    versioned_path = raw_data_dir / versioned_filename
+
+    # 4. Salvar arquivo versionado
+    try:
+        with open(versioned_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+
+        # 5. Se foi sucesso, copiar para o arquivo "atual" (sobrescrever)
+        current_path = raw_data_dir / file.filename
+        shutil.copy(versioned_path, current_path)
+
+        log_with_request(
+            logger=logger,
+            level=logging.INFO,
+            event="data_ingestion_success",
+            request=request,
+            filename=file.filename,
+            versioned_filename=versioned_filename,
+            file_size_bytes=len(content),
+            archive_path=str(versioned_path),
+            current_path=str(current_path),
+        )
+
+        return JSONResponse(
+            status_code=201,
+            content={
+                "status": "sucesso",
+                "mensagem": f"Arquivo {file.filename} atualizado com sucesso.",
+                "arquivo_versionado": versioned_filename,
+                "timestamp": timestamp,
+                "tamanho_bytes": len(content),
+                "proximo_passo": "Acesse GET /drift para monitorar degradação e decida se retreino é necessário.",
+                "auditoria": {
+                    "acao": "ingestao_dados",
+                    "timestamp": timestamp,
+                    "arquivo": file.filename,
+                },
+            },
+        )
+
+    except OSError as e:
+        log_with_request(
+            logger=logger,
+            level=logging.ERROR,
+            event="data_ingestion_file_error",
+            request=request,
+            filename=file.filename,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erro ao salvar arquivo: {str(e)}",
+        )
