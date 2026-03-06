@@ -56,7 +56,9 @@ def _resolve_feature_names(model: Pipeline, transformed_size: int) -> list[str]:
     if selector is not None and hasattr(selector, "get_support") and feature_names:
         support_mask = selector.get_support()
         if len(support_mask) == len(feature_names):
-            feature_names = [name for name, keep in zip(feature_names, support_mask, strict=False) if keep]
+            feature_names = [
+                name for name, keep in zip(feature_names, support_mask, strict=False) if keep
+            ]
 
     if len(feature_names) != transformed_size:
         feature_names = [f"feature_{idx}" for idx in range(transformed_size)]

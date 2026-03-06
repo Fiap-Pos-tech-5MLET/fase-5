@@ -193,11 +193,13 @@ class TestPerformCrossValidation:
         """Dataset sintético para classificação binária balanceada."""
         np.random.seed(42)
         n_samples = 200
-        X = pd.DataFrame({
-            "feat1": np.random.randn(n_samples),
-            "feat2": np.random.randn(n_samples),
-            "feat3": np.random.randn(n_samples),
-        })
+        X = pd.DataFrame(
+            {
+                "feat1": np.random.randn(n_samples),
+                "feat2": np.random.randn(n_samples),
+                "feat3": np.random.randn(n_samples),
+            }
+        )
         # Target: 50% classe 0, 50% classe 1
         y = pd.Series([0] * 100 + [1] * 100, name="target")
 
@@ -208,10 +210,12 @@ class TestPerformCrossValidation:
         """Dataset sintético desbalanceado (20% classe minoritária)."""
         np.random.seed(42)
         n_samples = 200
-        X = pd.DataFrame({
-            "feat1": np.random.randn(n_samples),
-            "feat2": np.random.randn(n_samples),
-        })
+        X = pd.DataFrame(
+            {
+                "feat1": np.random.randn(n_samples),
+                "feat2": np.random.randn(n_samples),
+            }
+        )
         y = pd.Series([0] * 160 + [1] * 40, name="target")
 
         return X, y
@@ -223,9 +227,7 @@ class TestPerformCrossValidation:
         model = LogisticRegression(random_state=42, max_iter=1000)
 
         # Act
-        resultado = perform_cross_validation(
-            model=model, X=X, y=y, n_folds=3, verbose=False
-        )
+        resultado = perform_cross_validation(model=model, X=X, y=y, n_folds=3, verbose=False)
 
         # Assert
         assert isinstance(resultado, dict)
@@ -247,14 +249,10 @@ class TestPerformCrossValidation:
         """Testa validação cruzada com RandomForest."""
         # Arrange
         X, y = dados_classificacao_desbalanceada
-        model = RandomForestClassifier(
-            n_estimators=50, max_depth=5, random_state=42, n_jobs=1
-        )
+        model = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42, n_jobs=1)
 
         # Act
-        resultado = perform_cross_validation(
-            model=model, X=X, y=y, n_folds=5, verbose=False
-        )
+        resultado = perform_cross_validation(model=model, X=X, y=y, n_folds=5, verbose=False)
 
         # Assert
         assert len(resultado["accuracy"]) == 5
@@ -282,9 +280,7 @@ class TestPerformCrossValidation:
         np.testing.assert_array_almost_equal(
             resultado1["accuracy"], resultado2["accuracy"], decimal=10
         )
-        np.testing.assert_array_almost_equal(
-            resultado1["f1"], resultado2["f1"], decimal=10
-        )
+        np.testing.assert_array_almost_equal(resultado1["f1"], resultado2["f1"], decimal=10)
 
     def test_n_folds_customizado(self, dados_classificacao_balanceada):
         """Testa diferentes valores de n_folds."""
@@ -293,9 +289,7 @@ class TestPerformCrossValidation:
         model = LogisticRegression(random_state=42, max_iter=1000)
 
         # Act
-        resultado_3folds = perform_cross_validation(
-            model=model, X=X, y=y, n_folds=3, verbose=False
-        )
+        resultado_3folds = perform_cross_validation(model=model, X=X, y=y, n_folds=3, verbose=False)
         resultado_10folds = perform_cross_validation(
             model=model, X=X, y=y, n_folds=10, verbose=False
         )

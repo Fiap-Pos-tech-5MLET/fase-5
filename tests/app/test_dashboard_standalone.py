@@ -33,6 +33,7 @@ class TestDashboardInitialization:
         """Testa que dashboard pode ser importado."""
         try:
             import app.dashboard
+
             assert app.dashboard is not None
         except ImportError as e:
             pytest.fail(f"Dashboard não pode ser importado: {e}")
@@ -40,6 +41,7 @@ class TestDashboardInitialization:
     def test_project_root_in_path(self) -> None:
         """Testa que raiz do projeto é adicionada ao sys.path."""
         from pathlib import Path
+
         project_root = Path(__file__).resolve().parent.parent.parent
 
         # Verificar que path existe
@@ -169,7 +171,7 @@ class TestPageRouting:
             "📊 Métricas do Modelo",
             "🔄 Monitoramento de Drift",
             "⚙️ Retreinamento",
-            "ℹ️ Sobre o Projeto"
+            "ℹ️ Sobre o Projeto",
         ]
 
         assert len(pages) == 5

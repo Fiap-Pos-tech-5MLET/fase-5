@@ -69,12 +69,12 @@ def cleaning_dataset(df: pd.DataFrame) -> pd.DataFrame:
         raise TypeError("df deve ser um pandas.DataFrame")
 
     # Remover linhas onde todas as colunas (exceto NOME) são NaN
-    cols_to_check = df.columns.difference(['NOME'])
+    cols_to_check = df.columns.difference(["NOME"])
     if len(cols_to_check) == 0:
         return df.copy()
 
     # Step 1: Remover onde todas as colunas exceto NOME são NaN
-    _df = df.dropna(subset=cols_to_check, how='all')
+    _df = df.dropna(subset=cols_to_check, how="all")
 
     # Step 2: Remover linhas completamente vazias
     _df = _df[~_df.isna().all(axis=1)]
@@ -114,30 +114,27 @@ def create_annual_datasets(df: pd.DataFrame) -> Dict[int, pd.DataFrame]:
     datasets = {}
 
     # Dataset 2020
-    df_2020 = filter_columns(df, ['2021', '2022'])
+    df_2020 = filter_columns(df, ["2021", "2022"])
     df_2020 = cleaning_dataset(df_2020)
     datasets[2020] = df_2020
 
     # Dataset 2021
-    df_2021 = filter_columns(df, ['2020', '2022'])
+    df_2021 = filter_columns(df, ["2020", "2022"])
     df_2021 = cleaning_dataset(df_2021)
-    df_2021.columns = df_2021.columns.str.replace('_2021', '', regex=False)
+    df_2021.columns = df_2021.columns.str.replace("_2021", "", regex=False)
     datasets[2021] = df_2021
 
     # Dataset 2022
-    df_2022 = filter_columns(df, ['2020', '2021'])
+    df_2022 = filter_columns(df, ["2020", "2021"])
     df_2022 = cleaning_dataset(df_2022)
-    df_2022.columns = df_2022.columns.str.replace('_2022', '', regex=False)
+    df_2022.columns = df_2022.columns.str.replace("_2022", "", regex=False)
     datasets[2022] = df_2022
 
     return datasets
 
 
 def analyze_student_continuity(
-    df_2020: pd.DataFrame,
-    df_2021: pd.DataFrame,
-    df_2022: pd.DataFrame,
-    nome_col: str = 'NOME'
+    df_2020: pd.DataFrame, df_2021: pd.DataFrame, df_2022: pd.DataFrame, nome_col: str = "NOME"
 ) -> Dict[str, Any]:
     """
     Analisar continuidade de alunos entre anos.
@@ -191,7 +188,7 @@ def analyze_student_continuity(
         if len(series) == 0:
             return set()
         # Converter para string se necessário
-        if series.dtype not in ['object', 'string']:
+        if series.dtype not in ["object", "string"]:
             series = series.astype(str)
         return set(series.dropna().str.strip().unique())
 
@@ -209,15 +206,15 @@ def analyze_student_continuity(
     novos_2022 = len(alunos_2022 - alunos_2021)
 
     return {
-        'alunos_2020': len(alunos_2020),
-        'alunos_2021': len(alunos_2021),
-        'alunos_2022': len(alunos_2022),
-        'continuidade_2020_2021': continuidade_2020_2021,
-        'taxa_2020_2021': taxa_2020_2021,
-        'continuidade_2021_2022': continuidade_2021_2022,
-        'taxa_2021_2022': taxa_2021_2022,
-        'novos_2022': novos_2022,
-        'alunos_2020_set': alunos_2020,
-        'alunos_2021_set': alunos_2021,
-        'alunos_2022_set': alunos_2022,
+        "alunos_2020": len(alunos_2020),
+        "alunos_2021": len(alunos_2021),
+        "alunos_2022": len(alunos_2022),
+        "continuidade_2020_2021": continuidade_2020_2021,
+        "taxa_2020_2021": taxa_2020_2021,
+        "continuidade_2021_2022": continuidade_2021_2022,
+        "taxa_2021_2022": taxa_2021_2022,
+        "novos_2022": novos_2022,
+        "alunos_2020_set": alunos_2020,
+        "alunos_2021_set": alunos_2021,
+        "alunos_2022_set": alunos_2022,
     }

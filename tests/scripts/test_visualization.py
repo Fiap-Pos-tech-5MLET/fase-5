@@ -82,9 +82,7 @@ class TestPlotExactCounter:
     def test_rotation_labels(self):
         """Testa rotação de labels do eixo X."""
         # Arrange
-        df = pd.DataFrame(
-            {"CATEGORIA": ["Categoria Muito Longa A"] * 10 + ["Categoria B"] * 5}
-        )
+        df = pd.DataFrame({"CATEGORIA": ["Categoria Muito Longa A"] * 10 + ["Categoria B"] * 5})
 
         # Act
         fig = plot_exact_counter(df, "CATEGORIA", rotation=90)
@@ -134,9 +132,7 @@ class TestAnalyseCorr:
     def test_correlacao_basica(self, capsys):
         """Testa análise de correlação básica."""
         # Arrange
-        df = pd.DataFrame(
-            {"A": [1, 2, 3, 4, 5], "B": [2, 4, 6, 8, 10], "C": [5, 4, 3, 2, 1]}
-        )
+        df = pd.DataFrame({"A": [1, 2, 3, 4, 5], "B": [2, 4, 6, 8, 10], "C": [5, 4, 3, 2, 1]})
 
         # Act
         fig = analyse_corr(df, threshold=0.5)
