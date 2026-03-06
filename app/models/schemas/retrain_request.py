@@ -59,3 +59,20 @@ class RetrainRequest(BaseModel):
         lt=0.5,
         description="Proporção de dados para teste (0.1 a 0.4)",
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "requested_by": "dashboard-teste",
+                    "n_estimators": 100,
+                    "max_depth": None,
+                    "learning_rate": 0.1,
+                    "num_leaves": 31,
+                    "subsample": 1.0,
+                    "colsample_bytree": 1.0,
+                    "test_size": 0.2,
+                }
+            ]
+        }
+    }

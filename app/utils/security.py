@@ -33,3 +33,36 @@ def validate_api_key(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: X-API-KEY inválida.",
         )
+
+
+def validate_requested_by(
+    x_requested_by: Annotated[str | None, Header(alias="x-requested-by")] = None,
+) -> str:
+    """Valida o header de autoria para auditoria das requisições.
+
+    Args:
+        x_requested_by (str | None): Valor enviado no header `x-requested-by`.
+
+    Returns:
+        str: Valor normalizado (sem espaços nas bordas).
+
+    Raises:
+        HTTPException: 422 quando ausente, vazio, somente espaços ou `unknown`.
+    """
+    if x_requested_by is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Validation error: x-requested-by é obrigatório.",
+        )
+
+    normalized = x_requested_by.strip()
+    if not normalized or normalized.lower() == "unknown":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Validation error: x-requested-by não pode ser vazio, apenas espaços "
+                "ou 'unknown'."
+            ),
+        )
+
+    return normalized

@@ -25,7 +25,9 @@ def api_client() -> TestClient:
     """TestClient para a API FastAPI com rota de predição."""
     app = FastAPI()
     app.include_router(router)
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers.update({"x-requested-by": "test-suite"})
+    return client
 
 
 @pytest.fixture

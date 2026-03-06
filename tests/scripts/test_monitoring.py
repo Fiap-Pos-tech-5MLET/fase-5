@@ -15,6 +15,9 @@ from unittest.mock import MagicMock, Mock, patch
 import pandas as pd
 import pytest
 
+# Import das funções reais para cobertura
+from scripts import monitoring
+
 
 @pytest.mark.unit
 class TestLoadEvidently:
