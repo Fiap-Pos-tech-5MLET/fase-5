@@ -453,4 +453,3 @@ class TestBuildFeatureMatrix:
         # Todas as colunas devem ser numéricas
         for col in result.columns:
             assert pd.api.types.is_numeric_dtype(result[col])
-
