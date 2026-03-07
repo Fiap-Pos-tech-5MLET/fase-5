@@ -71,15 +71,18 @@ jobs:
       - name: Verificar tipos com MyPy
         id: mypy-check
         run: |
-          if ! mypy src/ app/utils/ app/routes/ scripts/ --ignore-missing-imports 2>&1 | tee /tmp/mypy.log; then
+          echo "🔍 Verificando tipos com MyPy (usando mypy.ini)..."
+          if ! mypy app/ src/ scripts/ --config-file mypy.ini 2>&1 | tee /tmp/mypy.log; then
             {
-              echo "### ❌ Erro em MyPy"
+              echo "### ❌ Erro em MyPy - Type hints inválidos ou incompletos"
               echo '```text'
-              tail -n 120 /tmp/mypy.log
+              head -n 150 /tmp/mypy.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+          
+          echo "✅ Type hints validados com sucesso"
 
       - name: Resumo da etapa Qualidade
         if: always()
@@ -137,18 +140,32 @@ jobs:
           if ! pytest tests/ \
             --cov=app \
             --cov=src \
-            --cov=scripts \
-            --cov-report=term-missing \
-            --cov-report=xml 2>&1 | tee /tmp/pytest-coverage.log; then
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml \
+            --cov-branch 2>&1 | tee /tmp/pytest-coverage.log; then
             {
               echo "### ❌ Erro em Pytest + Coverage"
               echo '```text'
-              tail -n 120 /tmp/pytest-coverage.log
+              tail -n 200 /tmp/pytest-coverage.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "✅ Testes e coverage concluídos"
+          
+          # Validar cobertura mínima
+          echo "🔍 Validando cobertura de testes..."
+          COVERAGE=$(grep "TOTAL" /tmp/pytest-coverage.log | awk '{print $4}' | sed 's/%//')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            {
+              echo "### ⚠️ Cobertura abaixo do limite (${COVERAGE}% < 80%)"
+              echo '```text'
+              grep -A 50 "TOTAL" /tmp/pytest-coverage.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          
+          echo "✅ Testes e coverage validados (${COVERAGE}% >= 80%)"
 
       - name: Resumo da etapa Testes
         if: always()
@@ -394,6 +411,7 @@ jobs:
 
     steps:
       - name: Gerar relatório consolidado da Develop
+        if: always()
         run: |
           START_TIME=$(date +%s)
           QUALITY_STATUS="${{ needs.quality.result }}"
@@ -438,15 +456,27 @@ jobs:
 
           if [[ "${QUALITY_STATUS}" != "success" || "${TESTS_STATUS}" != "success" || "${SECURITY_STATUS}" != "success" || "${DOCKER_STATUS}" != "success" ]]; then
             {
-              echo "## ❌ Falhas detectadas"
-              echo "- **Etapas com falha**:${FAILED_STAGES}"
-              echo "- O erro detalhado foi publicado no summary do próprio job (bloco com stack/log)."
-              echo "- O erro detalhado está no log do job correspondente."
+              echo "## ❌ Falhas detectadas no pipeline"
+              echo ""
+              echo "**Etapas com problemas**:"
+              [[ "${QUALITY_STATUS}" != "success" ]] && echo "- ❌ Qualidade (${QUALITY_STATUS}): Verifique type hints e formatação"
+              [[ "${TESTS_STATUS}" != "success" ]] && echo "- ❌ Testes (${TESTS_STATUS}): Verifique cobertura e testes falhando"
+              [[ "${SECURITY_STATUS}" != "success" ]] && echo "- ❌ Segurança (${SECURITY_STATUS}): Verifique segredos e vulnerabilidades"
+              [[ "${DOCKER_STATUS}" != "success" ]] && echo "- ❌ Docker (${DOCKER_STATUS}): Verifique build da imagem"
+              echo ""
+              echo "⚡ **Ação**: Verifique os logs dos jobs individuais para detalhes específicos."
             } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           else
             {
-              echo "## ✅ Pipeline concluída com sucesso"
-              echo "- Branch develop validada e release pronta para main."
+              echo "## ✅ Pipeline concluído com sucesso"
+              echo ""
+              echo "- **Qualidade**: ${QUALITY_STATUS} ✔️"
+              echo "- **Testes**: ${TESTS_STATUS} ✔️"
+              echo "- **Segurança**: ${SECURITY_STATUS} ✔️"
+              echo "- **Docker**: ${DOCKER_STATUS} ✔️"
+              echo ""
+              echo "A branch develop está pronta para release."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
