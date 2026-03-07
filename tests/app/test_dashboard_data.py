@@ -187,20 +187,28 @@ def test_get_model_metrics_error(monkeypatch) -> None:
 
 
 def test_predict_via_api_success(monkeypatch) -> None:
-    """Deve retornar classe e probabilidade quando a API responde OK."""
+    """Deve retornar classe, probabilidade e explicações quando a API responde OK."""
     dashboard_data, _st = _load_dashboard_data_module()
     response = DummyResponse(
         status_code=200,
-        json_data={"risk_prediction": 1, "risk_probability": 0.7},
+        json_data={
+            "risk_prediction": 1,
+            "risk_probability": 0.7,
+            "top_features": [
+                {"feature_name": "ida", "feature_value": 6.0, "contribution": 0.15, "direction": "aumenta_risco"},
+            ],
+        },
     )
     monkeypatch.setattr(
         dashboard_data.requests, "post", lambda *_args, **_kwargs: response, raising=False
     )
 
-    pred, prob = dashboard_data.predict_via_api({"IDADE": 10})
+    pred, prob, expl = dashboard_data.predict_via_api({"IDADE": 10})
 
     assert pred == 1
     assert prob == 0.7
+    assert isinstance(expl, list)
+    assert len(expl) == 1
 
 
 def test_predict_via_api_connection_error(monkeypatch) -> None:

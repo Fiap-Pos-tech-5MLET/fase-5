@@ -182,7 +182,7 @@ class TestDashboardPages:
             return _kwargs.get("value", 0)
 
         st_mock.number_input.side_effect = _number_input
-        predict_func = MagicMock(return_value=(1, 0.7))
+        predict_func = MagicMock(return_value=(1, 0.7, []))
 
         with patch.object(prediction, "st", st_mock), patch.object(prediction, "go", MagicMock()):
             prediction.render_prediction_page(predict_func=predict_func, api_healthy=True)
@@ -194,7 +194,7 @@ class TestDashboardPages:
         from app.dashboard.pages import prediction
 
         st_mock = _make_streamlit_mock()
-        predict_func = MagicMock(return_value=(0, 0.2))
+        predict_func = MagicMock(return_value=(0, 0.2, []))
 
         with patch.object(prediction, "st", st_mock), patch.object(prediction, "go", MagicMock()):
             prediction.render_prediction_page(predict_func=predict_func, api_healthy=True)

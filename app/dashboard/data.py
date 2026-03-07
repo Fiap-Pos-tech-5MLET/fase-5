@@ -85,7 +85,7 @@ def get_model_metrics(model: Any, df: Optional[pd.DataFrame]) -> Optional[Dict[s
     try:
         X, y = select_features(df)
         _X_train, X_test, _y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
+
         # Remover features extras que o modelo não espera (compatibilidade 13 vs 14 features)
         if hasattr(model, "feature_names_in_"):
             expected_cols = list(model.feature_names_in_)
@@ -93,7 +93,7 @@ def get_model_metrics(model: Any, df: Optional[pd.DataFrame]) -> Optional[Dict[s
             if extra_cols:
                 X_test = X_test.drop(columns=list(extra_cols))
             X_test = X_test[expected_cols]
-        
+
         y_pred = model.predict(X_test)
         y_proba = model.predict_proba(X_test)[:, 1]
 
@@ -114,15 +114,16 @@ def get_model_metrics(model: Any, df: Optional[pd.DataFrame]) -> Optional[Dict[s
         return None
 
 
-def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float]:
+def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float, list[Dict[str, Any]]]:
     """
-    Chama o endpoint /predict da API.
+    Chama o endpoint /predict da API com explicabilidade.
 
     Args:
         student_data (Dict[str, Any]): Dados do aluno.
 
     Returns:
-        Tuple[int, float]: Classe prevista e probabilidade.
+        Tuple[int, float, list[Dict[str, Any]]]: Classe prevista, probabilidade e explicações das features.
+                                                  Cada explicação contém: feature_name, contribution, direction, feature_value.
 
     Raises:
         ConnectionError: Se a API não estiver disponível.
@@ -137,7 +138,13 @@ def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float]:
         )
         response.raise_for_status()
         result = response.json()
-        return int(result["risk_prediction"]), float(result["risk_probability"])
+        explanations = result.get("top_features", [])
+        explanation_method = result.get("explanation_method", "unavailable")
+
+        if not explanations:
+            st.warning(f"⚠️ Explicabilidade indisponível (método: {explanation_method})")
+
+        return int(result["risk_prediction"]), float(result["risk_probability"]), explanations
     except requests.exceptions.ConnectionError as exc:
         raise ConnectionError(
             f"Não foi possível conectar à API em {API_URL}. "
