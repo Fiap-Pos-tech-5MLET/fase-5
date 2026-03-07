@@ -161,4 +161,5 @@ app.include_router(train_router, tags=["Treinamento"])
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Binding em 0.0.0.0 é intencional para ambiente de desenvolvimento/container
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # nosec B104
