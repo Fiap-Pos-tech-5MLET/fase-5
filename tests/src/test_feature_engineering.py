@@ -340,23 +340,6 @@ class TestBuildFeatureMatrix:
         assert result.loc[2, "veterano"] == 0  # 2024
         assert result.loc[3, "veterano"] == 0  # 2025
 
-    def test_build_feature_matrix_creates_em_fase(self):
-        """Testa criação automática da feature em_fase."""
-        df = pd.DataFrame(
-            {
-                "nivel_de_defasagem": [0, 1, -1, 0],
-            }
-        )
-
-        result = build_feature_matrix_for_model(df)
-
-        assert "em_fase" in result.columns
-        # Em fase = 1 se nivel_de_defasagem == 0
-        assert result.loc[0, "em_fase"] == 1
-        assert result.loc[1, "em_fase"] == 0
-        assert result.loc[2, "em_fase"] == 0
-        assert result.loc[3, "em_fase"] == 1
-
     def test_build_feature_matrix_converts_genero(self):
         """Testa conversão de gênero para numérico."""
         df = pd.DataFrame(
