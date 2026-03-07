@@ -5,7 +5,7 @@ Verifica disponibilidade da API e se o modelo está carregado,
 sem necessidade de acessar o filesystem.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 import requests
 import streamlit as st
@@ -58,7 +58,7 @@ def check_api_health(api_url: str, timeout: int = 5) -> bool:
         return False
 
 
-def get_api_status(api_url: str, timeout: int = 5) -> Optional[dict]:
+def get_api_status(api_url: str, timeout: int = 5) -> Optional[dict[str, Any]]:
     """
     Obtém informações de status da API (versão do modelo, etc).
 
@@ -67,7 +67,7 @@ def get_api_status(api_url: str, timeout: int = 5) -> Optional[dict]:
         timeout (int): Timeout em segundos. Default: 5.
 
     Returns:
-        Optional[dict]: Dados do modelo ou None se indisponível.
+        Optional[dict[str, Any]]: Dados do modelo ou None se indisponível.
 
     Example:
         >>> status = get_api_status('http://127.0.0.1:8000/api')
@@ -84,7 +84,10 @@ def get_api_status(api_url: str, timeout: int = 5) -> Optional[dict]:
             },
         )
         if response.status_code == 200:
-            return response.json()
+            payload = response.json()
+            if isinstance(payload, dict):
+                return payload
+            return None
         return None
     except requests.exceptions.RequestException:
         return None

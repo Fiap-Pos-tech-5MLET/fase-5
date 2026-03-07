@@ -252,17 +252,21 @@ class TestDashboardPages:
             "params": {"model_type": "RF", "n_estimators": 100, "max_depth": 10},
         }
 
-        def _requests_get(url: str, timeout: int = 10) -> DummyResponse:
+        def _requests_get(url: str, timeout: int = 10, **kwargs) -> DummyResponse:
             if "model-metrics" in url:
                 return DummyResponse(200, mlflow_payload)
             return DummyResponse(200, {"ok": True}, content=b"img")
 
+        requests_mock = MagicMock()
+        requests_mock.get.side_effect = _requests_get
+        requests_mock.exceptions.RequestException = requests_exceptions.RequestException
+        requests_mock.exceptions.HTTPError = requests_exceptions.HTTPError
+
         with (
             patch.object(metrics, "st", st_mock),
             patch.object(metrics, "px", MagicMock()),
-            patch.object(metrics, "requests") as requests_mock,
+            patch.object(metrics, "requests", requests_mock),
         ):
-            requests_mock.get.side_effect = _requests_get
             metrics.render_metrics_page(
                 MagicMock(),
                 "http://api",

@@ -89,10 +89,19 @@ jobs:
         run: |
           END_TIME=$(date +%s)
           DURATION=$((END_TIME - STAGE_START))
+          STATUS="${{ job.status }}"
+          
+          # Verificar se algum step crítico falhou
+          if [[ "${{ steps.ruff-format.outcome }}" == "failure" ]] || \
+             [[ "${{ steps.ruff-check.outcome }}" == "failure" ]] || \
+             [[ "${{ steps.mypy-check.outcome }}" == "failure" ]]; then
+            STATUS="failure"
+          fi
+          
           {
             echo "## 🔎 Etapa: Qualidade de Código (Develop)"
             echo ""
-            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Status geral**: ${STATUS}"
             echo "- **Duração**: ${DURATION}s"
             echo ""
             echo "### Detalhamento"
@@ -140,6 +149,7 @@ jobs:
           if ! pytest tests/ \
             --cov=app \
             --cov=src \
+            --cov=scripts \
             --cov-report=term-missing:skip-covered \
             --cov-report=xml \
             --cov-branch 2>&1 | tee /tmp/pytest-coverage.log; then
@@ -164,7 +174,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          
+
           echo "✅ Testes e coverage validados (${COVERAGE}% >= 80%)"
 
       - name: Resumo da etapa Testes
@@ -172,10 +182,17 @@ jobs:
         run: |
           END_TIME=$(date +%s)
           DURATION=$((END_TIME - STAGE_START))
+          STATUS="${{ job.status }}"
+
+          # Verificar se pytest-coverage falhou
+          if [[ "${{ steps.pytest-coverage.outcome }}" == "failure" ]]; then
+            STATUS="failure"
+          fi
+
           {
             echo "## 🧪 Etapa: Testes Completos (Develop)"
             echo ""
-            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Status geral**: ${STATUS}"
             echo "- **Duração**: ${DURATION}s"
             echo ""
             echo "### Detalhamento"
@@ -229,7 +246,8 @@ jobs:
       - name: Executar Detect-Secrets
         id: detect-secrets-check
         run: |
-          if ! detect-secrets scan --all-files > .secrets.scan 2>/tmp/detect-secrets.log; then
+          # Escanear com baseline para ignorar falsos positivos já conhecidos
+          if ! detect-secrets scan --all-files --baseline .secrets.baseline > .secrets.scan 2>/tmp/detect-secrets.log; then
             {
               echo "### ❌ Erro em Detect-Secrets"
               echo '```text'
@@ -238,9 +256,10 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-
-          if ! python - <<'PY' 2>&1 | tee /tmp/detect-secrets-validate.log
+          
+          python - <<'PY' > /tmp/detect-secrets-validate.log 2>&1
           import json
+          import sys
 
           with open('.secrets.scan', encoding='utf-8') as f:
               report = json.load(f)
@@ -253,15 +272,19 @@ jobs:
               for file_path, items in results.items():
                   if items:
                       print(f'- {file_path}: {len(items)} ocorrência(s)')
-              raise SystemExit(1)
+              sys.exit(1)
 
           print('Nenhum segredo detectado.')
           PY
-          then
+          
+          EXIT_CODE=$?
+          cat /tmp/detect-secrets-validate.log
+          
+          if [ $EXIT_CODE -ne 0 ]; then
             {
               echo "### ❌ Detect-Secrets encontrou possíveis segredos"
               echo '```text'
-              tail -n 120 /tmp/detect-secrets-validate.log
+              cat /tmp/detect-secrets-validate.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -272,10 +295,18 @@ jobs:
         run: |
           END_TIME=$(date +%s)
           DURATION=$((END_TIME - STAGE_START))
+          STATUS="${{ job.status }}"
+          
+          # Verificar se algum step crítico falhou
+          if [[ "${{ steps.bandit-check.outcome }}" == "failure" ]] || \
+             [[ "${{ steps.detect-secrets-check.outcome }}" == "failure" ]]; then
+            STATUS="failure"
+          fi
+          
           {
             echo "## 🔐 Etapa: Segurança (Develop)"
             echo ""
-            echo "- **Status geral**: ${{ job.status }}"
+            echo "- **Status geral**: ${STATUS}"
             echo "- **Duração**: ${DURATION}s"
             echo ""
             echo "### Detalhamento"
