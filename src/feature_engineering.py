@@ -14,19 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 MODEL_FEATURE_COLUMNS: list[str] = [
-    "nivel_de_defasagem",
+    # Conjunto conservador para reduzir risco de leakage de indicadores finais.
     "idade",
     "genero",
     "ano_de_ingresso",
     "veterano",
-    "em_fase",
     "qtde_aval_realizadas",
-    "iaa",
-    "ieg",
-    "ips",
-    "ida",
-    "ipv",
-    "ian",
 ]
 
 _COLUMN_ALIASES: dict[str, str] = {
