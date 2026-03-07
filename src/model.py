@@ -36,13 +36,17 @@ def create_pipeline(
     numeric_features: List[str],
     categorical_features: List[str],
     n_estimators: int = 100,
-    max_depth: Optional[int] = None,
+    max_depth: Optional[int] = 5,
     min_samples_split: int = 2,
     learning_rate: float = 0.1,
     num_leaves: int = 31,
+    min_child_samples: int = 20,
+    reg_alpha: float = 0.1,
+    reg_lambda: float = 0.1,
     subsample: float = 1.0,
     colsample_bytree: float = 1.0,
     k: Union[int, str] = "all",
+    class_weight: Optional[str] = "balanced",
     random_state: int = 42,
 ) -> Pipeline:
     """
@@ -155,14 +159,30 @@ def create_pipeline(
 
     preprocessor = ColumnTransformer(transformers=transformers)
 
+    adjusted_num_leaves = num_leaves
+    if max_depth is not None:
+        max_logical_leaves = max(2, 2**max_depth)
+        if num_leaves > max_logical_leaves:
+            adjusted_num_leaves = max_logical_leaves
+            logger.warning(
+                "num_leaves=%d excede limite lógico para max_depth=%d; ajustado para %d",
+                num_leaves,
+                max_depth,
+                adjusted_num_leaves,
+            )
+
     if LGBMClassifier is not None:
         classifier = LGBMClassifier(
             n_estimators=n_estimators,
             max_depth=-1 if max_depth is None else max_depth,
             learning_rate=float(learning_rate),
-            num_leaves=num_leaves,
+            num_leaves=adjusted_num_leaves,
+            min_child_samples=min_child_samples,
+            reg_alpha=reg_alpha,
+            reg_lambda=reg_lambda,
             subsample=float(subsample),
             colsample_bytree=float(colsample_bytree),
+            class_weight=class_weight,
             random_state=random_state,
             n_jobs=-1,
             verbose=-1,
@@ -193,13 +213,17 @@ def train_model(
     X: pd.DataFrame,
     y: pd.Series,
     n_estimators: int = 100,
-    max_depth: Optional[int] = None,
+    max_depth: Optional[int] = 5,
     min_samples_split: int = 2,
     learning_rate: float = 0.1,
     num_leaves: int = 31,
+    min_child_samples: int = 20,
+    reg_alpha: float = 0.1,
+    reg_lambda: float = 0.1,
     subsample: float = 1.0,
     colsample_bytree: float = 1.0,
     k: Union[int, str] = "all",
+    class_weight: Optional[str] = "balanced",
     test_size: float = 0.2,
     random_state: int = 42,
 ) -> Tuple[Pipeline, Dict[str, float], pd.DataFrame, pd.Series]:
@@ -298,9 +322,13 @@ def train_model(
         max_depth=max_depth,
         learning_rate=learning_rate,
         num_leaves=num_leaves,
+        min_child_samples=min_child_samples,
+        reg_alpha=reg_alpha,
+        reg_lambda=reg_lambda,
         subsample=subsample,
         colsample_bytree=colsample_bytree,
         k=k,
+        class_weight=class_weight,
         random_state=random_state,
     )
 
