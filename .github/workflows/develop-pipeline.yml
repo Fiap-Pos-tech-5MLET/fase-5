@@ -251,49 +251,83 @@ jobs:
         id: detect-secrets-check
         run: |
           set -o pipefail
-          # Escanear com baseline para ignorar falsos positivos já conhecidos
-          if ! detect-secrets scan --all-files --baseline .secrets.baseline 2>&1 | tee .secrets.scan; then
-            {
-              echo "### ❌ Erro em Detect-Secrets"
-              echo '```text'
+          
+          echo "🔍 Escaneando repositório em busca de segredos..."
+          echo "📋 Usando baseline: .secrets.baseline"
+          
+          # Escanear repositório com baseline
+          if ! detect-secrets scan --all-files --baseline .secrets.baseline > .secrets.scan 2>&1; then
+            echo "❌ Falha ao executar detect-secrets scan"
+            if [ -f .secrets.scan ]; then
+              echo "Conteúdo do scan:"
               cat .secrets.scan
+            fi
+            {
+              echo "### ❌ Erro ao executar Detect-Secrets"
+              echo '```text'
+              cat .secrets.scan 2>/dev/null || echo "Arquivo .secrets.scan não gerado"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           
-          python - <<'PY' > /tmp/detect-secrets-validate.log 2>&1
+          echo "✅ Scan executado com sucesso"
+          
+          # Verificar se arquivo foi gerado corretamente
+          if [ ! -f .secrets.scan ] || [ ! -s .secrets.scan ]; then
+            echo "❌ Arquivo .secrets.scan não foi gerado ou está vazio"
+            exit 1
+          fi
+          
+          echo "📊 Analisando resultados..."
+          
+          # Validar resultados do scan
+          python - <<'PY'
           import json
           import sys
-
-          with open('.secrets.scan', encoding='utf-8') as f:
-              report = json.load(f)
-
+          
+          try:
+              with open('.secrets.scan', encoding='utf-8') as f:
+                  report = json.load(f)
+          except (json.JSONDecodeError, FileNotFoundError) as e:
+              print(f'❌ Erro ao ler .secrets.scan: {e}')
+              sys.exit(1)
+          
           results = report.get('results', {})
           findings = sum(len(v) for v in results.values())
-
+          total_files = len(results)
+          
+          print(f'\n📈 Estatísticas do scan:')
+          print(f'   - Arquivos escaneados: {total_files}')
+          print(f'   - Possíveis segredos encontrados: {findings}')
+          
           if findings > 0:
-              print(f'Foram detectados {findings} possíveis segredos no repositório.')
+              print(f'\n❌ FALHA: Foram detectados {findings} possíveis segredos:')
               for file_path, items in results.items():
                   if items:
-                      print(f'- {file_path}: {len(items)} ocorrência(s)')
+                      print(f'   - {file_path}: {len(items)} ocorrência(s)')
+                      for item in items:
+                          line = item.get('line_number', '?')
+                          type_ = item.get('type', 'Unknown')
+                          print(f'     └─ Linha {line}: {type_}')
               sys.exit(1)
-
-          print('Nenhum segredo detectado.')
+          
+          print('\n✅ Nenhum segredo detectado.')
           PY
           
-          EXIT_CODE=$?
-          cat /tmp/detect-secrets-validate.log
-          
-          if [ $EXIT_CODE -ne 0 ]; then
+          if [ $? -ne 0 ]; then
             {
               echo "### ❌ Detect-Secrets encontrou possíveis segredos"
-              echo '```text'
-              cat /tmp/detect-secrets-validate.log
+              echo ""
+              echo "Execute localmente para revisar:"
+              echo '```bash'
+              echo "detect-secrets scan --all-files --baseline .secrets.baseline"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+          
+          echo "✅ Verificação de segredos concluída com sucesso"
 
       - name: Resumo da etapa Segurança
         if: always()
