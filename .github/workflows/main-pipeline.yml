@@ -29,6 +29,7 @@ jobs:
       - name: Validar configuração de deploy (render.yaml)
         id: deploy-config-check
         run: |
+          set -o pipefail
           if ! python - <<'PY' 2>&1 | tee /tmp/deploy-config-check.log
           from pathlib import Path
 
@@ -79,6 +80,7 @@ jobs:
       - name: Validar importação e healthcheck da API
         id: smoke-check
         run: |
+          set -o pipefail
           echo "🚦 Executando smoke tests da API..."
           if ! python - <<'PY' 2>&1 | tee /tmp/smoke-check.log
           from fastapi.testclient import TestClient
@@ -136,6 +138,7 @@ jobs:
       - name: Build da imagem Docker
         id: docker-build
         run: |
+          set -o pipefail
           if ! docker build -f Dockerfile -t fase5-api:main . 2>&1 | tee /tmp/docker-build.log; then
             {
               echo "### ❌ Erro no Build Docker"
@@ -173,6 +176,7 @@ jobs:
       - name: Acionar Deploy Hook do Render
         id: render-deploy
         run: |
+          set -o pipefail
           if ! curl -s -S -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" 2>&1 | tee /tmp/render-deploy.log; then
             {
               echo "### ❌ Erro no Deploy Hook do Render"

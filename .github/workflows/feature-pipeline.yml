@@ -46,6 +46,7 @@ jobs:
       - name: Verificar formatação com Ruff
         id: ruff-format
         run: |
+          set -o pipefail
           if ! ruff format --check app/ src/ tests/ scripts/ 2>&1 | tee /tmp/ruff-format.log; then
             {
               echo "### ❌ Erro em Ruff Format"
@@ -59,6 +60,7 @@ jobs:
       - name: Verificar lint com Ruff
         id: ruff-check
         run: |
+          set -o pipefail
           if ! ruff check app/ src/ tests/ scripts/ 2>&1 | tee /tmp/ruff-check.log; then
             {
               echo "### ❌ Erro em Ruff Check"
@@ -170,6 +172,7 @@ jobs:
       - name: Build da imagem Docker
         id: docker-build
         run: |
+          set -o pipefail
           if ! docker build -f Dockerfile -t fase5-api:feature . 2>&1 | tee /tmp/docker-build-feature.log; then
             {
               echo "### ❌ Erro no Build Docker (Feature)"
