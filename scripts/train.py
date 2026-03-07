@@ -140,12 +140,16 @@ def main(
     model_path: Optional[str] = None,
     artifacts_dir: Optional[str] = None,
     n_estimators: int = 100,
-    max_depth: Optional[int] = None,
+    max_depth: Optional[int] = 4,
     learning_rate: float = 0.1,
-    num_leaves: int = 31,
+    num_leaves: int = 15,
+    min_child_samples: int = 25,
+    reg_alpha: float = 0.2,
+    reg_lambda: float = 0.2,
     subsample: float = 1.0,
     colsample_bytree: float = 1.0,
     k: Union[int, str] = "all",
+    class_weight: str = "balanced",
     test_size: float = 0.2,
 ) -> Tuple[Dict[str, Any], str]:
     """Executa o pipeline de treinamento com rastreabilidade completa.
@@ -252,9 +256,13 @@ def main(
             max_depth=max_depth,
             learning_rate=learning_rate,
             num_leaves=num_leaves,
+            min_child_samples=min_child_samples,
+            reg_alpha=reg_alpha,
+            reg_lambda=reg_lambda,
             subsample=subsample,
             colsample_bytree=colsample_bytree,
             k=k,
+            class_weight=class_weight,
             test_size=test_size,
         )
 
@@ -267,6 +275,9 @@ def main(
             mlflow.log_param("max_depth", max_depth)
             mlflow.log_param("learning_rate", learning_rate)
             mlflow.log_param("num_leaves", num_leaves)
+            mlflow.log_param("min_child_samples", min_child_samples)
+            mlflow.log_param("reg_alpha", reg_alpha)
+            mlflow.log_param("reg_lambda", reg_lambda)
             mlflow.log_param("subsample", subsample)
             mlflow.log_param("colsample_bytree", colsample_bytree)
             mlflow.log_param("test_size", test_size)
