@@ -149,9 +149,7 @@ def explain_prediction(
 
             proxy_contrib = row_values[:size] * importances[:size]
             return (
-                _build_contributions(
-                    feature_names[:size], row_values[:size], proxy_contrib, top_n
-                ),
+                _build_contributions(feature_names[:size], row_values[:size], proxy_contrib, top_n),
                 "feature_importance_proxy",
             )
 

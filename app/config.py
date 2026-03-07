@@ -15,7 +15,9 @@ MODEL_DIR: Path = BASE_DIR / "app" / "models"
 ARTIFACTS_DIR: Path = BASE_DIR / "app" / "artifacts"
 
 # Data paths
-RAW_DATA_PATH: str = str(BASE_DIR / "app" / "data" / "raw" / "BASE DE DADOS PEDE 2024 - DATATHON.xlsx")
+RAW_DATA_PATH: str = str(
+    BASE_DIR / "app" / "data" / "raw" / "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+)
 PROCESSED_DATA_PATH: str = str(DATA_DIR / "processed" / "processed_data.csv")
 
 # Model paths

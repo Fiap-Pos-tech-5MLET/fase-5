@@ -12,10 +12,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 import mlflow
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 

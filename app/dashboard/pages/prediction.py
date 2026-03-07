@@ -4,12 +4,12 @@ Página de predição.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict
 
 import plotly.graph_objects as go
 import streamlit as st
 
-PredictFunc = Callable[[Dict[str, Any]], Tuple[int, float, list]]
+PredictFunc = Callable[[Dict[str, Any]], tuple[Any, ...]]
 
 
 def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False) -> None:
@@ -123,7 +123,14 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
 
     with st.spinner("Processando predição via API..."):
         try:
-            prediction, probability, explanations = predict_func(student_data)
+            result = predict_func(student_data)
+            if len(result) == 3:
+                prediction, probability, explanations = result
+            elif len(result) == 2:
+                prediction, probability = result
+                explanations = []
+            else:
+                raise RuntimeError("Resposta de predição inválida da API")
 
             st.markdown("")
 
@@ -142,29 +149,29 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
                         unsafe_allow_html=True,
                     )
                 else:
-                        # Mostrar resultado baseado na probabilidade real, não apenas no prediction
-                        if probability > 0.5:
-                            st.markdown(
-                                f"""
+                    # Mostrar resultado baseado na probabilidade real, não apenas no prediction
+                    if probability > 0.5:
+                        st.markdown(
+                            f"""
                             <div class="risk-high">
                                 <div class="risk-title">⚠️ EM RISCO</div>
                                 <div class="risk-prob" style="color: #EF4444;">{probability:.1%}</div>
                                 <p class="risk-desc">Probabilidade de defasagem escolar</p>
                             </div>
                             """,
-                                unsafe_allow_html=True,
-                            )
-                        else:
-                            st.markdown(
-                                f"""
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.markdown(
+                            f"""
                             <div class="risk-low">
                                 <div class="risk-title">✅ SEM RISCO</div>
                                 <div class="risk-prob" style="color: #22C55E;">{1 - probability:.1%}</div>
                                 <p class="risk-desc">Probabilidade de estar adequado</p>
                             </div>
                             """,
-                                unsafe_allow_html=True,
-                            )
+                            unsafe_allow_html=True,
+                        )
 
             with col_gauge:
                 fig = go.Figure(
@@ -203,9 +210,7 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
             if explanations:
                 st.markdown("---")
                 st.markdown("### 🧠 Entenda os Motivos (Explicabilidade da IA)")
-                st.markdown(
-                    "Veja quais variáveis mais impactaram no cálculo deste risco:"
-                )
+                st.markdown("Veja quais variáveis mais impactaram no cálculo deste risco:")
 
                 # Preparar os dados para o gráfico de XAI
                 features = [item["feature_name"] for item in explanations]
@@ -220,9 +225,7 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
                 # Texto com valor da feature para tooltip
                 hover_text = [
                     f"<b>{feat}</b><br>Valor: {val}<br>Contribuição: {cont:.4f}"
-                    for feat, val, cont in zip(
-                        features, feature_values, contributions, strict=True
-                    )
+                    for feat, val, cont in zip(features, feature_values, contributions, strict=True)
                 ]
 
                 fig_xai = go.Figure(

@@ -121,7 +121,12 @@ jobs:
       - name: Executar testes rápidos
         id: pytest-fast
         run: |
-          if ! pytest tests/ -q --maxfail=1 --disable-warnings 2>&1 | tee /tmp/pytest-fast.log; then
+          if ! pytest tests/ -q --maxfail=1 --disable-warnings \
+            --cov=app \
+            --cov=src \
+            --cov=scripts \
+            --cov-report=term-missing:skip-covered \
+            --cov-branch 2>&1 | tee /tmp/pytest-fast.log; then
             {
               echo "### ❌ Erro em Pytest (rápido)"
               echo '```text'

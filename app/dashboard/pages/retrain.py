@@ -5,7 +5,7 @@ Página de retreinamento.
 from __future__ import annotations
 
 import traceback
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Protocol
 
 import pandas as pd
 import requests
@@ -14,16 +14,34 @@ import streamlit as st
 from app.dashboard.config import DASHBOARD_REQUESTED_BY
 
 MetricsFunc = Callable[[Any, Optional[pd.DataFrame]], Optional[Dict[str, Any]]]
-DatasetFunc = Callable[[], Optional[pd.DataFrame]]
-CacheClearFunc = Callable[[], Any]
+
+
+class DatasetCacheableLoader(Protocol):
+    """Contrato de função cacheada de dataset com método clear."""
+
+    def __call__(self) -> Optional[pd.DataFrame]:
+        """Executa carregamento cacheado do dataset."""
+
+    def clear(self) -> None:
+        """Limpa cache associado à função."""
+
+
+class CacheableLoader(Protocol):
+    """Contrato de função cacheada do Streamlit com método clear."""
+
+    def __call__(self) -> Any:
+        """Executa carregamento cacheado."""
+
+    def clear(self) -> None:
+        """Limpa cache associado à função."""
 
 
 def render_retrain_page(
     model: Any,
     api_url: str,
-    load_dataset_func: DatasetFunc,
+    load_dataset_func: DatasetCacheableLoader,
     metrics_func: MetricsFunc,
-    load_model_func: CacheClearFunc,
+    load_model_func: CacheableLoader,
 ) -> None:
     """
     Renderiza a página de retreinamento e comparação de modelos.
@@ -31,9 +49,9 @@ def render_retrain_page(
     Args:
         model (Any): Modelo carregado.
         api_url (str): URL da API.
-        load_dataset_func (DatasetFunc): Função de carregamento do dataset.
+        load_dataset_func (DatasetCacheableLoader): Função cacheada de carregamento do dataset.
         metrics_func (MetricsFunc): Função de cálculo de métricas.
-        load_model_func (CacheClearFunc): Função de cache do modelo para limpar.
+        load_model_func (CacheableLoader): Função cacheada do modelo para limpar.
 
     Returns:
         None
