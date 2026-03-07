@@ -114,15 +114,15 @@ def get_model_metrics(model: Any, df: Optional[pd.DataFrame]) -> Optional[Dict[s
         return None
 
 
-def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float]:
+def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float, list]:
     """
-    Chama o endpoint /predict da API.
+    Chama o endpoint /predict da API com explicabilidade.
 
     Args:
         student_data (Dict[str, Any]): Dados do aluno.
 
     Returns:
-        Tuple[int, float]: Classe prevista e probabilidade.
+        Tuple[int, float, list]: Classe prevista, probabilidade e explicações das features.
 
     Raises:
         ConnectionError: Se a API não estiver disponível.
@@ -137,7 +137,8 @@ def predict_via_api(student_data: Dict[str, Any]) -> Tuple[int, float]:
         )
         response.raise_for_status()
         result = response.json()
-        return int(result["risk_prediction"]), float(result["risk_probability"])
+        explanations = result.get("top_features", [])
+        return int(result["risk_prediction"]), float(result["risk_probability"]), explanations
     except requests.exceptions.ConnectionError as exc:
         raise ConnectionError(
             f"Não foi possível conectar à API em {API_URL}. "

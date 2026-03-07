@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Tuple
 import plotly.graph_objects as go
 import streamlit as st
 
-PredictFunc = Callable[[Dict[str, Any]], Tuple[int, float]]
+PredictFunc = Callable[[Dict[str, Any]], Tuple[int, float, list]]
 
 
 def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False) -> None:
@@ -123,7 +123,7 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
 
     with st.spinner("Processando predição via API..."):
         try:
-            prediction, probability = predict_func(student_data)
+            prediction, probability, explanations = predict_func(student_data)
 
             st.markdown("")
 
@@ -198,6 +198,58 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
                     margin=dict(t=60, b=30, l=30, r=30),
                 )
                 st.plotly_chart(fig, use_container_width=True)
+
+            # === Renderização da Explicabilidade (XAI) ===
+            if explanations:
+                st.markdown("---")
+                st.markdown("### 🧠 Entenda os Motivos (Explicabilidade da IA)")
+                st.markdown(
+                    "Veja quais variáveis mais impactaram no cálculo deste risco:"
+                )
+
+                # Preparar os dados para o gráfico de XAI
+                features = [item["feature_name"] for item in explanations]
+                contributions = [item["contribution"] for item in explanations]
+                directions = [item["direction"] for item in explanations]
+                colors = [
+                    "#EF4444" if direction == "aumenta_risco" else "#22C55E"
+                    for direction in directions
+                ]
+
+                fig_xai = go.Figure(
+                    go.Bar(
+                        x=contributions,
+                        y=features,
+                        orientation="h",
+                        marker_color=colors,
+                        text=[f"{abs(c):.3f}" for c in contributions],
+                        textposition="auto",
+                    )
+                )
+
+                fig_xai.update_layout(
+                    title="Impacto de cada variável na decisão",
+                    paper_bgcolor="#0E1117",
+                    plot_bgcolor="#0E1117",
+                    font={"color": "#E2E8F0"},
+                    yaxis={"categoryorder": "total ascending"},
+                    xaxis_title="Contribuição (valor absoluto)",
+                    margin=dict(t=60, b=30, l=150, r=30),
+                )
+                st.plotly_chart(fig_xai, use_container_width=True)
+
+                # Legenda de cores
+                col_legend1, col_legend2 = st.columns(2)
+                with col_legend1:
+                    st.markdown(
+                        '<p style="color: #EF4444;">🔴 Aumenta o risco</p>',
+                        unsafe_allow_html=True,
+                    )
+                with col_legend2:
+                    st.markdown(
+                        '<p style="color: #22C55E;">🟢 Reduz o risco</p>',
+                        unsafe_allow_html=True,
+                    )
 
             st.markdown("")
             if prediction == 1:
