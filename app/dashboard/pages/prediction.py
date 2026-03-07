@@ -209,11 +209,20 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
 
                 # Preparar os dados para o gráfico de XAI
                 features = [item["feature_name"] for item in explanations]
+                feature_values = [item.get("feature_value", "N/A") for item in explanations]
                 contributions = [item["contribution"] for item in explanations]
                 directions = [item["direction"] for item in explanations]
                 colors = [
                     "#EF4444" if direction == "aumenta_risco" else "#22C55E"
                     for direction in directions
+                ]
+
+                # Texto com valor da feature para tooltip
+                hover_text = [
+                    f"<b>{feat}</b><br>Valor: {val}<br>Contribuição: {cont:.4f}"
+                    for feat, val, cont in zip(
+                        features, feature_values, contributions, strict=True
+                    )
                 ]
 
                 fig_xai = go.Figure(
@@ -224,6 +233,8 @@ def render_prediction_page(predict_func: PredictFunc, api_healthy: bool = False)
                         marker_color=colors,
                         text=[f"{abs(c):.3f}" for c in contributions],
                         textposition="auto",
+                        hovertext=hover_text,
+                        hoverinfo="text",
                     )
                 )
 
