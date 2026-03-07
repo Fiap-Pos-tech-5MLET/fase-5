@@ -60,8 +60,13 @@ type-check:
 	mypy src/ app/utils/ app/routes/ scripts/ --ignore-missing-imports
 
 security:
+	@echo "🔒 Executando análise de segurança..."
+	@echo "🔍 Bandit - Análise de vulnerabilidades..."
 	bandit -r app/ src/
-	detect-secrets scan --all-files > .secrets.scan
+	@echo ""
+	@echo "🔑 Detect-Secrets - Detecção de segredos..."
+	detect-secrets scan --all-files --baseline .secrets.baseline > .secrets.scan
+	@python scripts/check_secrets.py
 
 quality: format lint type-check test security
 
