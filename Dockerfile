@@ -3,6 +3,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
+    PIP_ROOT_USER_ACTION=ignore \
     ENVIRONMENT=production
 
 WORKDIR /app
@@ -15,9 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     python3-dev \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalação das dependências
+# Instalação das dependências Python
 COPY requirements.txt ./requirements.txt
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt && \
@@ -31,11 +33,16 @@ COPY index.html /app/index.html
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Preparação do ambiente
-RUN mkdir -p /app/app/models /app/app/artifacts /app/mlruns /app/data && \
-    chmod -R 755 /app && \
-    pip install --no-cache-dir supervisor
+# Criação de usuário não-root para executar os serviços
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/app/models /app/app/artifacts /app/mlruns /app/data /var/log/supervisor && \
+    chown -R appuser:appuser /app /var/log/supervisor /var/log/nginx /var/lib/nginx && \
+    chmod -R 755 /app
+
+# Nginx precisa rodar como root para bind na porta 8080
+# mas os workers podem rodar como appuser (configurado no nginx.conf)
+USER root
 
 EXPOSE 8080
 
-CMD ["/usr/local/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

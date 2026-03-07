@@ -4,15 +4,25 @@ Sidebar do dashboard.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Protocol
 
 import streamlit as st
 
 
+class CacheableLoader(Protocol):
+    """Contrato de função cacheada do Streamlit com método clear."""
+
+    def __call__(self) -> Any:
+        """Executa carregamento cacheado."""
+
+    def clear(self) -> None:
+        """Limpa cache associado à função."""
+
+
 def render_sidebar(
     model: Any,
-    load_model_func: Callable[[], Any],
-    load_dataset_func: Callable[[], Any],
+    load_model_func: CacheableLoader,
+    load_dataset_func: CacheableLoader,
     api_healthy: bool = False,
 ) -> str:
     """
@@ -20,8 +30,8 @@ def render_sidebar(
 
     Args:
         model (Any): Modelo carregado (None para usar health check via API).
-        load_model_func (Callable[[], Any]): Função de carregamento do modelo.
-        load_dataset_func (Callable[[], Any]): Função de carregamento do dataset.
+        load_model_func (CacheableLoader): Função cacheada de carregamento do modelo.
+        load_dataset_func (CacheableLoader): Função cacheada de carregamento do dataset.
         api_healthy (bool): Status de saúde da API. Default: False.
 
     Returns:

@@ -6,6 +6,7 @@ from typing import Any, Dict
 from unittest.mock import MagicMock
 
 import numpy as np
+import pandas as pd
 import pytest
 
 if "streamlit" not in sys.modules:
@@ -141,8 +142,8 @@ def test_get_model_metrics_success(monkeypatch) -> None:
     """Deve retornar métricas calculadas."""
     dashboard_data, _st = _load_dashboard_data_module()
 
-    df = DummyDataFrame(["x", "TARGET"])
-    X = ["x1", "x2"]
+    df = DummyDataFrame(["x1", "x2", "TARGET"])
+    X = pd.DataFrame({"x1": [1, 2], "x2": [3, 4]})
     y = np.array([0, 1])
 
     monkeypatch.setattr(dashboard_data, "select_features", lambda _df: (X, y))
@@ -155,6 +156,7 @@ def test_get_model_metrics_success(monkeypatch) -> None:
     model = MagicMock()
     model.predict.return_value = np.array([0, 1])
     model.predict_proba.return_value = np.array([[0.8, 0.2], [0.1, 0.9]])
+    model.feature_names_in_ = ["x1", "x2"]
 
     metrics = dashboard_data.get_model_metrics(model, df)
 
@@ -195,7 +197,12 @@ def test_predict_via_api_success(monkeypatch) -> None:
             "risk_prediction": 1,
             "risk_probability": 0.7,
             "top_features": [
-                {"feature_name": "ida", "feature_value": 6.0, "contribution": 0.15, "direction": "aumenta_risco"},
+                {
+                    "feature_name": "ida",
+                    "feature_value": 6.0,
+                    "contribution": 0.15,
+                    "direction": "aumenta_risco",
+                },
             ],
         },
     )

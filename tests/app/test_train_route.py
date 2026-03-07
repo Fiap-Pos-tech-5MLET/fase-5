@@ -21,11 +21,13 @@ from app.routes.train_route import MlflowException, router
 @pytest.fixture
 def api_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """TestClient para a API FastAPI com rotas de treinamento."""
-    monkeypatch.setenv("API_KEY", "test-api-key")
+    monkeypatch.setenv("API_KEY", "test-api-key")  # pragma: allowlist secret
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app, raise_server_exceptions=False)
-    client.headers.update({"X-API-KEY": "test-api-key", "x-requested-by": "test-suite"})
+    client.headers.update(
+        {"X-API-KEY": "test-api-key", "x-requested-by": "test-suite"}
+    )  # pragma: allowlist secret
     return client
 
 
