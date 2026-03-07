@@ -250,12 +250,13 @@ jobs:
       - name: Executar Detect-Secrets
         id: detect-secrets-check
         run: |
+          set -o pipefail
           # Escanear com baseline para ignorar falsos positivos já conhecidos
-          if ! detect-secrets scan --all-files --baseline .secrets.baseline > .secrets.scan 2>/tmp/detect-secrets.log; then
+          if ! detect-secrets scan --all-files --baseline .secrets.baseline 2>&1 | tee .secrets.scan; then
             {
               echo "### ❌ Erro em Detect-Secrets"
               echo '```text'
-              tail -n 120 /tmp/detect-secrets.log
+              cat .secrets.scan
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1

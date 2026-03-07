@@ -356,7 +356,7 @@ class TestDashboardPages:
 
         st_mock = _make_streamlit_mock()
         st_mock.button.side_effect = [False, True, True, False]
-        st_mock.text_input.return_value = "test-api-key"  # Provide API key
+        st_mock.text_input.return_value = "test-api-key"  # pragma: allowlist secret
         st_mock.session_state = {
             "candidate_ready": True,
             "candidate_metrics": {"accuracy": 0.9},
