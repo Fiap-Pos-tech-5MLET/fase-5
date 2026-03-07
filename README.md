@@ -16,6 +16,7 @@
 - [🔄 CI/CD Pipeline](#-cicd-pipeline)
 - [🤖 IA para Code Review](#-ia-para-code-review)
 - [📖 Documentação da API](#-documentação-da-api)
+- [🤖 Como Funciona o Modelo de Machine Learning](#-como-funciona-o-modelo-de-machine-learning)
 - [📊 Monitoramento e MLflow](#-monitoramento-e-mlflow)
 - [🎥 Vídeo Demonstrativo](#-vídeo-demonstrativo)
 - [🤝 Desenvolvedores](#-desenvolvedores)
@@ -2229,7 +2230,114 @@ Logs auxiliam em auditorias futuras (quem acessou drift, quando, por quê).
 
 ---
 
-## �📊 Monitoramento e MLflow
+## 🤖 Como Funciona o Modelo de Machine Learning
+
+Esta seção detalha o modelo preditivo usado no projeto: algoritmo, features, processo de treinamento, retreinamento e atualização de dados.
+
+### 🎯 Visão Geral do Modelo
+
+**Objetivo:** Predizer se um aluno está em risco de defasagem educacional (Ponto de Virada).
+
+**Tipo de Problema:** Classificação binária supervisionada
+- **Classe 0:** Aluno NÃO está em risco de defasagem
+- **Classe 1:** Aluno ESTÁ em risco de defasagem
+
+**Métrica Principal:** F1-Score (balanço entre precisão e recall)
+- **Target atual:** F1 ≥ 0.85
+- **Outras métricas:** Acurácia, AUC-ROC, Precisão, Recall, Matriz de Confusão
+
+### 🧬 Algoritmo Utilizado
+
+**Algoritmo:** `RandomForestClassifier` (scikit-learn)
+
+**Por que Random Forest?**
+| Critério | Justificativa |
+|----------|---------------|
+| ✅ **Interpretabilidade** | Feature importance nativa, compatível com SHAP |
+| ✅ **Robustez** | Lida bem com outliers e valores ausentes |
+| ✅ **Sem GPU** | Roda em qualquer máquina, deploy gratuito no Render |
+| ✅ **Dataset pequeno** | ~1000 registros não justificam deep learning |
+| ✅ **Balanceamento de classes** | Suporta `class_weight='balanced'` nativamente |
+| ✅ **Estabilidade** | Menos overfitting que árvores únicas |
+
+**Hiperparâmetros Principais:**
+```python
+RandomForestClassifier(
+    n_estimators=100,        # Número de árvores na floresta
+    max_depth=10,            # Profundidade máxima de cada árvore
+    min_samples_split=5,     # Mínimo de amostras para dividir nó
+    min_samples_leaf=2,      # Mínimo de amostras em folha
+    class_weight='balanced', # Balanceamento automático de classes
+    random_state=42,         # Reprodutibilidade
+    n_jobs=-1                # Paralelização (usa todos os cores)
+)
+```
+
+**Alternativas avaliadas:**
+- ❌ **Deep Learning (LSTM/Transformers):** Complexidade excessiva para dataset pequeno, requer GPU
+- ❌ **XGBoost/LightGBM:** Boa performance, mas menor interpretabilidade nativa
+- ✅ **Logistic Regression:** Baseline simples, mas menor capacidade de capturar interações não-lineares
+
+### 📊 Features Utilizadas
+
+O modelo usa **12+ features principais** após engenharia. Principais:
+- `INDE` (Índice de desenvolvimento)
+- `DELTA_INDE` (evol ução ano a ano) ← **Feature mais importante**
+- `NOTAS` (Português, Matemática, Inglês)
+- `IDADE`, `ANO_INGRESSO`, `TEMPO_PROGRAMA`
+- Features derivadas (médias, flags, one-hot encoding)
+
+Consulte `src/feature_engineering.py` para lista completa e transformações.
+
+### 🔄 Processo de Treinamento
+
+Pipeline padronizado (9 etapas):
+1. Carregar Dataset
+2. Limpeza (duplicatas, outliers, padronização)
+3. Criar Target ("Ponto de Virada")
+4. Tratar Ausentes (mediana/moda)
+5. Feature Engineering
+6. Train/Test Split (80/20, stratified)
+7. Treinar Random Forest
+8. Avaliar Métricas
+9. Salvar Artefatos (model.pkl + MLflow)
+
+### 📥 Fluxo de Atualização de Dados (POST /update-data)
+
+```bash
+curl -X POST '/api/update-data' -H 'x-api-key: KEY' -F 'file=@dados_2025.xlsx'
+```
+
+**O que acontece:**
+1. API valida formato (.xlsx ou .csv)
+2. Salva versionado com timestamp
+3. Sobrescreve arquivo atual
+4. Log de auditoria
+5. Retorna: "Próximo passo: GET /drift"
+
+### 🔄 Ciclo de Retreinamento (Champion/Challenger)
+
+**Fluxo:**
+1. **Detectar Drift** → GET /drift (>30% features → retreinar)
+2. **Treinar Challenger** → POST /retrain (não afeta produção)
+3. **Comparar Métricas** → Dashboard compara champion vs challenger
+4. **Promover** → POST /promote (se challenger ≥ champion)
+5. **OU Descartar** → POST /discard (se challenger < champion)
+
+**Rastreabilidade:** Cada modelo tem `run_id` no MLflow via `champion_run_id.txt`.
+
+### 🎯 Critérios de Retreino
+
+| Situação | Gatilho | Ação |
+|----------|---------|------|
+| **Data Drift > 30%** | >30% features alteradas | ✅ Retreinar obrigatório |
+| **Métricas em queda** | F1 < 0.80 ou AUC < 0.85 | ✅ Retreinar recomendado |
+| **Novos dados anuais** | Dataset anual (PEDE 2025) | ✅ Retreinar preventivo |
+| **Feedback da ONG** | Predições incorretas | ⚠️ Investigar e retreinar |
+
+---
+
+## 📊 Monitoramento e MLflow
 
 O projeto utiliza **MLflow** como plataforma central de rastreamento de experimentos, métricas, parâmetros e artefatos de treinamento. Garante **reprodutibilidade**, **auditoria** e **rastreabilidade** de cada modelo treinado.
 
