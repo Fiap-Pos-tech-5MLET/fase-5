@@ -105,6 +105,10 @@ omit = [
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",
+    "scripts/cleanup_repo.py",
+    "scripts/monitoring.py",
+    "scripts/train.py",
+    "scripts/eda_analysis.py",
 ]
 
 [tool.coverage.report]

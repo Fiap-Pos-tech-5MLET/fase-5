@@ -5,13 +5,18 @@ Organização:
 - TestFeatureCreation: Testes para criação de features
 - TestFeatureSelection: Testes para seleção de features
 - TestFeatureValidation: Testes para validação de features
+- TestBuildFeatureMatrix: Testes para build_feature_matrix_for_model
 """
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from src.feature_engineering import create_features, select_features
+from src.feature_engineering import (
+    build_feature_matrix_for_model,
+    create_features,
+    select_features,
+)
 
 
 # ==================== FIXTURES ====================
@@ -294,3 +299,158 @@ class TestFeatureValidation:
             .any()
             .any()
         )
+
+
+@pytest.mark.unit
+@pytest.mark.feature_engineering
+class TestBuildFeatureMatrix:
+    """Testes para build_feature_matrix_for_model."""
+
+    def test_build_feature_matrix_normalizes_columns(self):
+        """Testa normalização de nomes de colunas."""
+        df = pd.DataFrame(
+            {
+                "IDADE": [15, 16],
+                "GENERO": ["M", "F"],
+                "ANO_DE_INGRESSO": [2020, 2021],
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        # Verifica nomes normalizados
+        assert "idade" in result.columns
+        assert "genero" in result.columns
+        assert "ano_de_ingresso" in result.columns
+
+    def test_build_feature_matrix_creates_veterano(self):
+        """Testa criação automática da feature veterano."""
+        df = pd.DataFrame(
+            {
+                "ano_de_ingresso": [2020, 2023, 2024, 2025],
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        assert "veterano" in result.columns
+        # Veterano = 1 se ano_de_ingresso < 2024
+        assert result.loc[0, "veterano"] == 1  # 2020
+        assert result.loc[1, "veterano"] == 1  # 2023
+        assert result.loc[2, "veterano"] == 0  # 2024
+        assert result.loc[3, "veterano"] == 0  # 2025
+
+    def test_build_feature_matrix_creates_em_fase(self):
+        """Testa criação automática da feature em_fase."""
+        df = pd.DataFrame(
+            {
+                "nivel_de_defasagem": [0, 1, -1, 0],
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        assert "em_fase" in result.columns
+        # Em fase = 1 se nivel_de_defasagem == 0
+        assert result.loc[0, "em_fase"] == 1
+        assert result.loc[1, "em_fase"] == 0
+        assert result.loc[2, "em_fase"] == 0
+        assert result.loc[3, "em_fase"] == 1
+
+    def test_build_feature_matrix_converts_genero(self):
+        """Testa conversão de gênero para numérico."""
+        df = pd.DataFrame(
+            {
+                "genero": ["M", "F", "MASCULINO", "FEMININO", "HOMEM", "MULHER"],
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        assert result.loc[0, "genero"] == 1  # M
+        assert result.loc[1, "genero"] == 0  # F
+        assert result.loc[2, "genero"] == 1  # MASCULINO
+        assert result.loc[3, "genero"] == 0  # FEMININO
+        assert result.loc[4, "genero"] == 1  # HOMEM
+        assert result.loc[5, "genero"] == 0  # MULHER
+
+    def test_build_feature_matrix_handles_aliases(self):
+        """Testa mapeamento de aliases de colunas."""
+        df = pd.DataFrame(
+            {
+                "IDADE": [15],
+                "GÊNERO": ["M"],
+                "ANO_INGRESSO": [2020],
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        assert "idade" in result.columns
+        assert "genero" in result.columns
+        assert "ano_de_ingresso" in result.columns
+
+    def test_build_feature_matrix_fills_missing_with_zero(self):
+        """Testa preenchimento de valores faltantes com zero."""
+        df = pd.DataFrame(
+            {
+                "idade": [15, None, 17],
+                "genero": ["M", "F", None],
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        # Valores None devem ser preenchidos com 0
+        assert not result["idade"].isna().any()
+        assert not result["genero"].isna().any()
+
+    def test_build_feature_matrix_returns_only_model_features(self):
+        """Testa que retorna apenas features esperadas pelo modelo."""
+        df = pd.DataFrame(
+            {
+                "idade": [15, 16],
+                "genero": ["M", "F"],
+                "ano_de_ingresso": [2020, 2021],
+                "qtde_aval_realizadas": [5, 3],
+                "extra_column": ["A", "B"],  # Não deve aparecer no resultado
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        # Deve conter model features
+        assert "idade" in result.columns
+        assert "genero" in result.columns
+        assert "ano_de_ingresso" in result.columns
+        assert "veterano" in result.columns
+        assert "qtde_aval_realizadas" in result.columns
+
+        # Não deve conter colunas extras
+        assert "extra_column" not in result.columns
+
+    def test_build_feature_matrix_handles_empty_dataframe(self):
+        """Testa comportamento com DataFrame vazio."""
+        df = pd.DataFrame()
+
+        result = build_feature_matrix_for_model(df)
+
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+
+    def test_build_feature_matrix_converts_all_to_numeric(self):
+        """Testa conversão de todas as features para numérico."""
+        df = pd.DataFrame(
+            {
+                "idade": ["15", "16"],  # String
+                "genero": ["M", "F"],
+                "qtde_aval_realizadas": ["5", "3"],  # String
+            }
+        )
+
+        result = build_feature_matrix_for_model(df)
+
+        # Todas as colunas devem ser numéricas
+        for col in result.columns:
+            assert pd.api.types.is_numeric_dtype(result[col])
+

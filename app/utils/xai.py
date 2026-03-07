@@ -180,9 +180,9 @@ def explain_prediction(
             row_contrib = np.asarray(shap_values[0])
 
         return _build_contributions(feature_names, row_values, row_contrib, top_n), "shap"
-    except ImportError:
+    except ImportError:  # pragma: no cover
         logger.info("SHAP não instalado; usando fallback por importância global.")
-    except (AttributeError, TypeError, ValueError, RuntimeError, IndexError) as exc:
+    except (AttributeError, TypeError, ValueError, RuntimeError, IndexError) as exc:  # pragma: no cover
         logger.warning("Falha ao gerar explicação SHAP: %s", exc)
 
     if hasattr(classifier, "feature_importances_"):
