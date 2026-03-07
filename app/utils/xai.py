@@ -107,7 +107,7 @@ def _build_contributions(
 def explain_prediction(
     model: Any,
     feature_matrix: pd.DataFrame,
-    top_n: int = 5,
+    top_n: int = 10,
 ) -> tuple[list[dict[str, Any]], str]:
     """Explica localmente uma predição com SHAP ou fallback determinístico.
 
