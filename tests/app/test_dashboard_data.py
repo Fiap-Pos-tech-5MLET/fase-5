@@ -197,7 +197,12 @@ def test_predict_via_api_success(monkeypatch) -> None:
             "risk_prediction": 1,
             "risk_probability": 0.7,
             "top_features": [
-                {"feature_name": "ida", "feature_value": 6.0, "contribution": 0.15, "direction": "aumenta_risco"},
+                {
+                    "feature_name": "ida",
+                    "feature_value": 6.0,
+                    "contribution": 0.15,
+                    "direction": "aumenta_risco",
+                },
             ],
         },
     )
